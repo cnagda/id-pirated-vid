@@ -15,4 +15,4 @@ jobs:
         cd build
         cmake ../
     - name: make
-      run: cmake --build .
+      run: make
