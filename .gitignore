@@ -1,2 +1,4 @@
 build/**/*
 .vagrant/**/*
+*.jpg
+*.mp4
