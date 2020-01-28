@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/aoblebea/ECS193/id-pirated-vid/main.cxx
+stdio.h
+-
+opencv2/opencv.hpp
+-
+opencv2/features2d.hpp
+-
+
