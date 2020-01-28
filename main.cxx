@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
-#include <opencv2/features2d.hpp>
+// #include <opencv2/features2d.hpp>
+#include <opencv2/xfeatures2d.hpp>
 
 using namespace cv;
+using namespace cv::xfeatures2d;
 using namespace std;
 int main(int argc, char** argv )
 {
@@ -15,9 +17,12 @@ int main(int argc, char** argv )
 
     namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
 
-    SiftFeatureDetector detector;
+//     cv::Ptr<cv::SimpleBlobDetector> detector = cv::SimpleBlobDetector::create(params);
+// detector->detect( img, keypoints );
+
+    cv::Ptr<SiftFeatureDetector> detector = SiftFeatureDetector::create();
     vector<cv::KeyPoint> keypoints;
-    detector.detect(image, keypoints);
+    detector->detect(image, keypoints);
 
     // Add results to image and save.
     Mat output;
@@ -25,7 +30,7 @@ int main(int argc, char** argv )
 
     VideoCapture cap(argv[1], CAP_ANY);
     while(cap.read(image)) {
-	detector.detect(image, keypoints);
+	detector->detect(image, keypoints);
 	drawKeypoints(image, keypoints, output);
 
 

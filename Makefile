@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/aoblebea/ECS193/id-pirated-vid
+CMAKE_SOURCE_DIR = /mnt/c/Users/emkri/OneDrive/Documents/ECS193/id-pirated-vid
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/aoblebea/ECS193/id-pirated-vid
+CMAKE_BINARY_DIR = /mnt/c/Users/emkri/OneDrive/Documents/ECS193/id-pirated-vid
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/aoblebea/ECS193/id-pirated-vid/CMakeFiles /home/aoblebea/ECS193/id-pirated-vid/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/c/Users/emkri/OneDrive/Documents/ECS193/id-pirated-vid/CMakeFiles /mnt/c/Users/emkri/OneDrive/Documents/ECS193/id-pirated-vid/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/aoblebea/ECS193/id-pirated-vid/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/c/Users/emkri/OneDrive/Documents/ECS193/id-pirated-vid/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
