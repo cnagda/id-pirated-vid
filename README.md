@@ -7,6 +7,12 @@ vagrant up
 
 Alternatively, run provisionVM.sh in Ubuntu
 
+Alternatively, build opencv itself with opencv_contrib.
+My build string:
+```
+cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules -D WITH_FFMPEG=ON -D WITH_OPENMP=ON -DOPENCV_ENABLE_NONFREE=ON -D BUILD_EXAMPLES=OFF -D BUILD_opencv_apps=OFF -D BUILD_DOCS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF <opencv_src_path>
+```
+
 ## Using ffmpeg
 
 To read in an mp4 and dump all the frames through ffmpeg ->
