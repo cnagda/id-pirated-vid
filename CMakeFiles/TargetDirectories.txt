@@ -1,3 +1,0 @@
-/home/aoblebea/ECS193/id-pirated-vid/CMakeFiles/rebuild_cache.dir
-/home/aoblebea/ECS193/id-pirated-vid/CMakeFiles/main.dir
-/home/aoblebea/ECS193/id-pirated-vid/CMakeFiles/edit_cache.dir
