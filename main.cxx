@@ -15,7 +15,7 @@ int main(int argc, char** argv )
     }
     Mat image;
 
-    namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
+    namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
 
 //     cv::Ptr<cv::SimpleBlobDetector> detector = cv::SimpleBlobDetector::create(params);
 // detector->detect( img, keypoints );
@@ -30,13 +30,11 @@ int main(int argc, char** argv )
 
     VideoCapture cap(argv[1], CAP_ANY);
     while(cap.read(image)) {
-	detector->detect(image, keypoints);
-	drawKeypoints(image, keypoints, output);
-
-
+    	detector->detect(image, keypoints);
+    	drawKeypoints(image, keypoints, output);
         cout << "size: " << output.total() << endl;
         imshow("Display window", output);
-	waitKey(0);
+    	waitKey(0);
     }
     return 0;
 }
