@@ -8,27 +8,23 @@ using namespace cv::xfeatures2d;
 using namespace std;
 int main(int argc, char** argv )
 {
-    if ( argc != 2 )
+    if ( argc < 2 )
     {
         printf("usage: ./main <Image_Path>\n");
         return -1;
     }
-    Mat image;
+    Mat image, output;
 
     namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
 
 //     cv::Ptr<cv::SimpleBlobDetector> detector = cv::SimpleBlobDetector::create(params);
 // detector->detect( img, keypoints );
-
-    cv::Ptr<SiftFeatureDetector> detector = SiftFeatureDetector::create();
-    vector<cv::KeyPoint> keypoints;
-    detector->detect(image, keypoints);
-
-    // Add results to image and save.
-    Mat output;
-
+    Ptr<FeatureDetector> detector = xfeatures2d::SiftFeatureDetector::create();
 
     VideoCapture cap(argv[1], CAP_ANY);
+
+    vector<KeyPoint> keypoints;
+
     while(cap.read(image)) {
     	detector->detect(image, keypoints);
     	drawKeypoints(image, keypoints, output);
