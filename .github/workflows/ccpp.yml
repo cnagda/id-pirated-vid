@@ -10,7 +10,10 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: deps
-      run: sudo ./provisionVM.sh
+      run: |
+        pwd
+        ls
+        sudo ./provisionVM.sh
     - name: configure
       run: |
         mkdir build
