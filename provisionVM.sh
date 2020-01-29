@@ -1,6 +1,6 @@
 #! /bin/bash
 apt-get update
-apt-get install -y build-essential cmake libavcodec-dev libgtk-3-dev
+apt-get install -y build-essential cmake libavcodec-dev libavresample-dev libavformat-dev libswscale-dev libgtk-3-dev
 mkdir /OpenCV
 cd /OpenCV
 git clone --depth=1 --branch 4.2.0 https://github.com/opencv/opencv.git
