@@ -1,11 +1,23 @@
 # id-pirated-vid
 
 # Install
+
+## Using Vagrant
+
+First install vagrant. (Exercise left to reader)
+
+Then from the host machine use vagrant to provision a VM
+
+To start the VM with virtualbox default provider:
 ```
 vagrant up
 ```
 
-Alternatively, run provisionVM.sh in Ubuntu
+This will run provisioning if provisioning has not been started. To restart the vm use `vagrant reload` which will skip provisioning.
+
+To connect to the vm, either use `vagrant ssh` or open up virtualbox/VMWare/hyperv and connect graphically. The project folder stays synced to the host machine under `/vagrant` in the ubuntu client OS. We will add an option to run our programs without debug GUI in the future.
+
+Alternatively, run provisionVM.sh in Ubuntu to install dependencies and build opencv with SIFT
 
 Alternatively, build opencv itself with opencv_contrib.
 My build string:
@@ -26,4 +38,12 @@ ffmpeg -i Ambulance_selector2.mp4 frames%d.bmp
 To read in an mp4 and dump frames at 24fps
 ```
 ffmpeg -i Ambulance_selector2.mp4 -r 24 frames%d.bmp
+```
+
+## Building project
+```
+mkdir build
+cd build
+cmake ..
+make
 ```
