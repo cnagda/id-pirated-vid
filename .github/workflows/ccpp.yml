@@ -11,8 +11,7 @@ jobs:
     - uses: actions/checkout@v1
     - name: deps
       run: |
-        pwd
-        ls
+        sudo chmod +x provisionVM.sh
         sudo ./provisionVM.sh
     - name: configure
       run: |
