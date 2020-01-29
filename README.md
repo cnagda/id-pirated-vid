@@ -1,3 +1,5 @@
+![C/C++ CI](https://github.com/cnagda/id-pirated-vid/workflows/C/C++%20CI/badge.svg?branch=master)
+
 # id-pirated-vid
 
 # Install
