@@ -8,9 +8,8 @@ ExternalProject_Add(benchmark
   GIT_TAG           master
   SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/benchmark-src"
   BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/benchmark-build"
-  CONFIGURE_COMMAND ""
   BUILD_COMMAND     ""
   INSTALL_COMMAND   ""
   TEST_COMMAND      ""
-  CMAKE_ARGS        "BENCHMARK_ENABLE_GTEST_TESTS=OFF" "VERBOSE=ON"
+  CMAKE_ARGS        "-DBENCHMARK_ENABLE_TESTING=OFF"
 )

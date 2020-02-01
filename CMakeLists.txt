@@ -56,6 +56,7 @@ if(BUILD_TESTING)
                     ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
                     EXCLUDE_FROM_ALL)
 
+    set(BENCHMARK_ENABLE_TESTING OFF)
     # Add benchmark directly to our build. This defines
     # the benchmark and benchmark_main targets.
     add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/benchmark-src
@@ -70,13 +71,14 @@ if(BUILD_TESTING)
     endif()
     
     add_executable(database_test tests/database_test.cpp)
+    add_executable(database_benchmark tests/database_benchmark.cpp)
 
     target_link_libraries(database_test gtest_main)
+    target_link_libraries(database_benchmark benchmark_main)
 
     add_test(NAME db_test COMMAND database_test)
 endif(BUILD_TESTING)
 
 add_executable(main main.cxx)
-
 
 target_link_libraries( main ${OpenCV_LIBS} )
