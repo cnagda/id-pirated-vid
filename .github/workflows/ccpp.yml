@@ -17,6 +17,10 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake ../
+        cmake ../ -DBUILD_TESTING=ON
     - name: make
       run: cmake --build build/ 
+    - name: test
+      run: |
+        cd build
+        ctest -R "db_test"
