@@ -47,4 +47,4 @@ jobs:
     - name: test
       run: |
         cd build
-        ctest -R "db_test"
+        make test
