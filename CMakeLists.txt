@@ -5,6 +5,13 @@ project(Pirate_Detector VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
+find_package( OpenCV REQUIRED core videoio xfeatures2d highgui )
+
+include_directories(include)
+
+enable_testing()
+
 option(BUILD_TESTING "Build tests" OFF)
 
 if(BUILD_TESTING)
@@ -61,10 +68,15 @@ if(BUILD_TESTING)
     if (CMAKE_VERSION VERSION_LESS 2.8.11)
     include_directories("${gtest_SOURCE_DIR}/include")
     endif()
+    
+    add_executable(database_test tests/database_test.cpp)
+
+    target_link_libraries(database_test gtest_main)
+
+    add_test(NAME db_test COMMAND database_test)
 endif(BUILD_TESTING)
 
-find_package( OpenCV REQUIRED core videoio xfeatures2d highgui )
-
 add_executable(main main.cxx)
+
 
 target_link_libraries( main ${OpenCV_LIBS} )
