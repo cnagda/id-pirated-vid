@@ -17,7 +17,7 @@ jobs:
       id: cache-opencv
       uses: actions/cache@v1
       with:
-        path: $GITHUB_WORKSPACE/OpenCV # npm cache files are stored in `~/.npm` on Linux/macOS
+        path: /OpenCV # npm cache files are stored in `~/.npm` on Linux/macOS
         key: OpenCV
     - name: OpenCV
       if: steps.cache-opencv.outputs.cache-hit != 'true'
