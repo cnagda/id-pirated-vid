@@ -4,7 +4,7 @@ project(Pirate_Detector VERSION 0.1)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+set(CMAKE_CXX_EXTENSIONS ON)
 
 find_package( OpenCV REQUIRED core videoio xfeatures2d highgui )
 
@@ -13,6 +13,10 @@ include_directories(include)
 enable_testing()
 
 option(BUILD_TESTING "Build tests" OFF)
+
+add_subdirectory(src)
+
+add_custom_target(sample_videos cp ${CMAKE_CURRENT_SOURCE_DIR}/sample.mp4 ${CMAKE_CURRENT_BINARY_DIR}/sample.mp4)
 
 if(BUILD_TESTING)
     # Download and unpack googletest at configure time
@@ -73,8 +77,10 @@ if(BUILD_TESTING)
     add_executable(database_test tests/database_test.cpp)
     add_executable(database_benchmark tests/database_benchmark.cpp)
 
-    target_link_libraries(database_test gtest_main)
-    target_link_libraries(database_benchmark benchmark_main)
+    target_link_libraries(database_test gtest_main database stdc++fs)
+    add_dependencies(database_test sample_videos)
+
+    target_link_libraries(database_benchmark benchmark_main database)
 
     add_test(NAME db_test COMMAND database_test)
 endif(BUILD_TESTING)
