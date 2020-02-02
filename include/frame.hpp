@@ -17,9 +17,10 @@ inline bool compareKeyPoint(cv::KeyPoint a, cv::KeyPoint b) {
 class Frame {
 public:
     std::vector<cv::KeyPoint> keyPoints;
-    cv::OutputArray descriptors;
+    cv::Mat descriptors;
     bool operator==(const Frame& f2) const {
-        return std::equal(keyPoints.begin(), keyPoints.end(), f2.keyPoints.begin(), compareKeyPoint);
+        return std::equal(keyPoints.begin(), keyPoints.end(), f2.keyPoints.begin(), compareKeyPoint) &&
+            std::equal(descriptors.begin<float>(), descriptors.end<float>(), f2.descriptors.begin<float>());
     }
 };
 
