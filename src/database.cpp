@@ -30,8 +30,8 @@ void SIFTwrite(const string& filename, const Mat& mat, const vector<KeyPoint>& k
         }
     }
 
-    for(KeyPoint k : keyPoints) {
-    	fs << k.angle << k.class_id << k.octave << k.pt.x << k.pt.y << k.response << k.size;
+    for(auto k : keyPoints) {
+    	fs.write((char*)&k, sizeof(KeyPoint));
     }
 }
 
@@ -55,8 +55,8 @@ pair<Mat, vector<KeyPoint>> SIFTread(const string& filename)
     
 	for(int r = 0; r < rows; r++) {
 	    KeyPoint k;
-		fs >> k.angle >> k.class_id >> k.octave >> k.pt.x >> k.pt.y >> k.response >> k.size;
-   		keyPoints.push_back(k);
+		fs.read((char*)&k, sizeof(KeyPoint));
+        keyPoints.push_back(k);
 	}
     return make_pair(mat, keyPoints);
 }
