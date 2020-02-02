@@ -28,12 +28,12 @@ public:
 
         size_t index = 0;
 
-        while(cap.read(image)) {
+        while(cap.read(image) && index < 2) { // test only loading 2 frames
             detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
             frames.push_back(Frame{keyPoints, descriptors});
 
-            SIFTwrite(video_dir / to_string(index), descriptors, keyPoints);
-            index++;
+            SIFTwrite(video_dir / to_string(index++), descriptors, keyPoints);
+            break;
         }
 
         return make_unique<SIFTVideo>(frames);
@@ -41,9 +41,14 @@ public:
     unique_ptr<IVideo> loadVideo(const std::string& filepath) {
         fs::path video_dir = fs::current_path() / fs::path("database") / filepath;
         vector<Frame> frames;
-        
-        for(auto frame_path : fs::directory_iterator{video_dir}) {
-            cout << "path: " << frame_path.path();
+
+        auto it = fs::directory_iterator{video_dir};
+        vector<fs::directory_entry> files(it, fs::end(it));
+        sort(files.begin(), files.end(), [](auto a, auto b){
+            return stoi(a.path().filename()) < stoi(b.path().filename());
+        });
+
+        for(auto frame_path : files) {
             auto [mat, keyPoints] = SIFTread(frame_path.path());
             frames.push_back(Frame{keyPoints, mat});
         }
