@@ -30,7 +30,7 @@ public:
 
         while(cap.read(image) && index < 2) { // test only loading 2 frames
             detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
-            frames.push_back(Frame{keyPoints, descriptors});
+            frames.push_back(Frame{keyPoints, descriptors.clone()});
 
             SIFTwrite(video_dir / to_string(index++), descriptors, keyPoints);
             break;
@@ -50,7 +50,7 @@ public:
 
         for(auto frame_path : files) {
             auto [mat, keyPoints] = SIFTread(frame_path.path());
-            frames.push_back(Frame{keyPoints, mat});
+            frames.push_back(Frame{keyPoints, mat.clone()});
         }
         return make_unique<SIFTVideo>(frames);
     }
