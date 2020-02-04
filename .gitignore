@@ -13,3 +13,4 @@ CTestTestfile.cmake
 _deps
 main
 *.jpg
+data/**/*
