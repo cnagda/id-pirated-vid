@@ -49,3 +49,12 @@ cd build
 cmake ..
 make
 ```
+
+## Running Tests
+```
+mkdir build
+cd build
+cmake .. -DBUILD_TESTING=ON
+make
+make test
+```
