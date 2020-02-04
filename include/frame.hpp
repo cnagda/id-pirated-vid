@@ -20,6 +20,7 @@ public:
     cv::Mat descriptors;
     bool operator==(const Frame& f2) const {
         return std::equal(keyPoints.begin(), keyPoints.end(), f2.keyPoints.begin(), compareKeyPoint) &&
+            descriptors.size == f2.descriptors.size &&
             std::equal(descriptors.begin<float>(), descriptors.end<float>(), f2.descriptors.begin<float>());
     }
 };

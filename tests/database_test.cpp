@@ -1,69 +1,46 @@
 #include "gtest/gtest.h"
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
-#include <experimental/filesystem>
+#include <iostream>
 #include "database.hpp"
 
 using namespace std;
 using namespace cv;
 
-namespace fs = std::experimental::filesystem::v1;
-
-void SIFTwrite(const string& filename, const Mat& mat, const vector<KeyPoint>& keyPoints);
-pair<Mat, vector<KeyPoint>> SIFTread(const string& filename);
-
-class DatabaseAdaptor : public IDatabase {
-public:
-    unique_ptr<IVideo> addVideo(const std::string& filepath) {
-        fs::path video_dir = fs::current_path() / fs::path("database") / filepath;
-        fs::create_directories(video_dir);
-        vector<Frame> frames;
-
-        Ptr<FeatureDetector> detector = xfeatures2d::SiftFeatureDetector::create(500);
-
-        VideoCapture cap(filepath, CAP_ANY);
-
-        vector<KeyPoint> keyPoints;
-        Mat descriptors, image;
-
-        size_t index = 0;
-
-        while(cap.read(image) && index < 2) { // test only loading 2 frames
-            detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
-            frames.push_back(Frame{keyPoints, descriptors.clone()});
-
-            SIFTwrite(video_dir / to_string(index++), descriptors, keyPoints);
-            break;
-        }
-
-        return make_unique<SIFTVideo>(frames);
-    }
-    unique_ptr<IVideo> loadVideo(const std::string& filepath) {
-        fs::path video_dir = fs::current_path() / fs::path("database") / filepath;
-        vector<Frame> frames;
-
-        auto it = fs::directory_iterator{video_dir};
-        vector<fs::directory_entry> files(it, fs::end(it));
-        sort(files.begin(), files.end(), [](auto a, auto b){
-            return stoi(a.path().filename()) < stoi(b.path().filename());
-        });
-
-        for(auto frame_path : files) {
-            auto [mat, keyPoints] = SIFTread(frame_path.path());
-            frames.push_back(Frame{keyPoints, mat.clone()});
-        }
-        return make_unique<SIFTVideo>(frames);
-    }
-};
-
-bool videoLoadSaveTest(IDatabase& database) {
-    auto result = database.addVideo("sample.mp4")->frames();
-    auto loaded = database.loadVideo("sample.mp4")->frames();
-
-    return equal(result.begin(), result.end(), loaded.begin());
+TEST(DatabaseSuite, getAlphas) {
+    string input = "this is a{} good";
+    ASSERT_TRUE(getAlphas(input) == "thisisagood");
 }
 
-TEST(DatabaseSuite, InstantiateTest) {
-    DatabaseAdaptor db;
-    ASSERT_TRUE(videoLoadSaveTest(db));
+TEST(DatabaseSuite, SIFTrwTest) {
+    Mat mat1({2, 4}, {1, 2, 3, 4, 5, 6, 7, 8});
+    Mat mat2({3, 2}, {10, 11, 12, 13, 14, 15});
+
+    vector<KeyPoint> k1{KeyPoint(0.1f, 0.2f, 0.3f), KeyPoint(0.15f, 0.25f, 0.35f)};
+    vector<KeyPoint> k2{KeyPoint(0.2f, 0.3f, 0.4f), KeyPoint(0.25f, 0.35f, 0.45f), KeyPoint(0.4f, 0.5f, 0.6f)};
+
+    vector<Frame>result {Frame{k1, mat1}, Frame{k2, mat2}};
+    
+    SIFTwrite("test_frame1", mat1, k1);
+    SIFTwrite("test_frame2", mat2, k2);
+
+    auto[m1, k] = SIFTread("test_frame1");
+    auto[m2, kk] = SIFTread("test_frame2");
+    vector<Frame> loaded{Frame{k, m1}, Frame{kk, m2}};
+
+    ASSERT_TRUE(result.size() > 0);
+    ASSERT_TRUE(result.size() == loaded.size());
+    ASSERT_TRUE(equal(result.begin(), result.end(), loaded.begin()));
+}
+
+TEST(DatabaseSuit, FileDatabase) {
+    FileDatabase db;
+    auto vid = db.addVideo("sample.mp4")->frames();
+    auto loaded = db.loadVideo("sample.mp4")->frames();
+
+    cout << "size: " << vid.size() << endl;
+
+    ASSERT_TRUE(vid.size() > 0);
+    ASSERT_TRUE(vid.size() == loaded.size());
+    ASSERT_TRUE(equal(vid.begin(), vid.end(), loaded.begin()));
 }
