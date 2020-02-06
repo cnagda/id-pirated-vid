@@ -77,7 +77,7 @@ if(BUILD_TESTING)
     add_executable(database_test tests/database_test.cpp)
     add_executable(database_benchmark tests/database_benchmark.cpp)
 
-    target_link_libraries(database_test gtest_main database stdc++fs)
+    target_link_libraries(database_test gtest_main database)
     add_dependencies(database_test sample_videos)
 
     target_link_libraries(database_benchmark benchmark_main database)

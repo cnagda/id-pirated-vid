@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace cv;
-namespace fs = std::experimental::filesystem::v1;
+namespace fs = std::experimental::filesystem;
 
 /* creates folder if it doesn't exist, otherwise throws an exception */
 void createFolder(string folder_name) {
@@ -20,8 +20,10 @@ string getAlphas(string input)
     return output;
 }
 
-void SIFTwrite(const string &filename, const Mat &mat, const vector<KeyPoint> &keyPoints)
+void SIFTwrite(const string &filename, const Frame& frame)
 {
+    const auto& mat = frame.descriptors;
+    const auto& keyPoints = frame.keyPoints;
     ofstream fs(filename, fstream::binary);
 
     // Header
@@ -49,7 +51,7 @@ void SIFTwrite(const string &filename, const Mat &mat, const vector<KeyPoint> &k
     fs.write((char *)&keyPoints[0], keyPoints.size() * sizeof(KeyPoint));
 }
 
-pair<Mat, vector<KeyPoint>> SIFTread(const string &filename)
+Frame SIFTread(const string &filename)
 {
     ifstream fs(filename, fstream::binary);
 
@@ -74,12 +76,16 @@ pair<Mat, vector<KeyPoint>> SIFTread(const string &filename)
         fs.read((char *)&k, sizeof(KeyPoint));
         keyPoints.push_back(k);
     }
-    return make_pair(mat, keyPoints);
+    return Frame{keyPoints, mat};
+}
+
+FileDatabase::FileDatabase(const string& databasePath) {
+    databaseRoot = fs::current_path() / "database";
 }
 
 unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::function<void(Mat, Frame)> callback)
 {
-    fs::path video_dir = fs::current_path() / fs::path("database") / getAlphas(filepath);
+    fs::path video_dir = databaseRoot / getAlphas(filepath);
     fs::create_directories(video_dir);
     vector<Frame> frames;
 
@@ -100,16 +106,16 @@ unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::func
 
         frames.push_back(frame);
 
-        SIFTwrite(video_dir / to_string(index++), descriptors, keyPoints);
+        SIFTwrite(video_dir / to_string(index++), frame);
 
         if(callback) callback(image, frame);
     }
 
     return make_unique<SIFTVideo>(frames);
 }
-unique_ptr<IVideo> FileDatabase::loadVideo(const std::string &filepath)
+unique_ptr<IVideo> FileDatabase::loadVideo(const std::string &filepath) const
 {
-    fs::path video_dir = fs::current_path() / fs::path("database") / getAlphas(filepath);
+    fs::path video_dir = databaseRoot / getAlphas(filepath);
     vector<Frame> frames;
 
     auto it = fs::directory_iterator{video_dir};
@@ -120,8 +126,15 @@ unique_ptr<IVideo> FileDatabase::loadVideo(const std::string &filepath)
 
     for (auto frame_path : files)
     {
-        auto [mat, keyPoints] = SIFTread(frame_path.path());
-        frames.push_back(Frame{keyPoints, mat.clone()});
+        auto frame = SIFTread(frame_path.path());
+        frames.push_back(frame);
     }
     return make_unique<SIFTVideo>(frames);
+}
+
+vector<string> FileDatabase::listVideos() const {
+    auto it = fs::directory_iterator{fs::current_path() / fs::path("database")};
+    vector<string> out;
+    transform(it, fs::end(it), back_inserter(out), [](auto d){ return d.path().filename(); });
+    return out;
 }
