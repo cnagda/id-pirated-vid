@@ -2,10 +2,12 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <iostream>
+#include <experimental/filesystem>
 #include "database.hpp"
 
 using namespace std;
 using namespace cv;
+namespace fs = experimental::filesystem;
 
 TEST(DatabaseSuite, getAlphas) {
     string input = "this is a{} good";
@@ -21,19 +23,19 @@ TEST(DatabaseSuite, SIFTrwTest) {
 
     vector<Frame>result {Frame{k1, mat1}, Frame{k2, mat2}};
     
-    SIFTwrite("test_frame1", mat1, k1);
-    SIFTwrite("test_frame2", mat2, k2);
+    SIFTwrite("test_frame1", result[0]);
+    SIFTwrite("test_frame2", result[1]);
 
-    auto[m1, k] = SIFTread("test_frame1");
-    auto[m2, kk] = SIFTread("test_frame2");
-    vector<Frame> loaded{Frame{k, m1}, Frame{kk, m2}};
+    auto f1 = SIFTread("test_frame1");
+    auto f2 = SIFTread("test_frame2");
+    vector<Frame> loaded{f1, f2};
 
     ASSERT_TRUE(result.size() > 0);
     ASSERT_TRUE(result.size() == loaded.size());
     ASSERT_TRUE(equal(result.begin(), result.end(), loaded.begin()));
 }
 
-TEST(DatabaseSuit, FileDatabase) {
+TEST(DatabaseSuite, FileDatabase) {
     FileDatabase db;
     auto vid = db.addVideo("sample.mp4")->frames();
     auto loaded = db.loadVideo("sample.mp4")->frames();

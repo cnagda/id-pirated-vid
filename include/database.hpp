@@ -6,15 +6,19 @@
 #include <string>
 #include <opencv2/opencv.hpp>
 #include <functional>
+#include <experimental/filesystem>
 
-void SIFTwrite(const std::string& filename, const cv::Mat& mat, const std::vector<cv::KeyPoint>& keyPoints);
-std::pair<cv::Mat, std::vector<cv::KeyPoint>> SIFTread(const std::string& filename);
+namespace fs = std::experimental::filesystem;
+
+void SIFTwrite(const std::string& filename, const Frame& frame);
+Frame SIFTread(const std::string& filename);
 std::string getAlphas(std::string input);
 void createFolder(std::string folder_name);
 
 class IVideo {
 public:
     virtual std::vector<Frame> frames() = 0;
+    virtual ~IVideo() = default;
 };
 
 class SIFTVideo : public IVideo {
@@ -29,13 +33,20 @@ public:
 class IDatabase {
 public:
     virtual std::unique_ptr<IVideo> addVideo(const std::string& filepath, std::function<void(cv::Mat, Frame)> callback = nullptr) = 0;
-    virtual std::unique_ptr<IVideo> loadVideo(const std::string& filepath) = 0;
+    virtual std::unique_ptr<IVideo> loadVideo(const std::string& filepath) const = 0;
+    virtual std::vector<std::string> listVideos() const = 0;
+    virtual ~IDatabase() = default;
 };
 
 class FileDatabase : public IDatabase {
+private:
+    fs::path databaseRoot;
 public:
-    std::unique_ptr<IVideo> addVideo(const std::string& filepath, std::function<void(cv::Mat, Frame)> callback = nullptr);
-    std::unique_ptr<IVideo> loadVideo(const std::string& filepath);
+    FileDatabase() : FileDatabase(fs::current_path() / "database") {};
+    FileDatabase(const std::string& databasePath);
+    std::unique_ptr<IVideo> addVideo(const std::string& filepath, std::function<void(cv::Mat, Frame)> callback = nullptr) override;
+    std::unique_ptr<IVideo> loadVideo(const std::string& filepath) const override;
+    std::vector<std::string> listVideos() const override;
 };
 
 #endif
