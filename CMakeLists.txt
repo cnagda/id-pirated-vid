@@ -86,5 +86,10 @@ if(BUILD_TESTING)
 endif(BUILD_TESTING)
 
 add_executable(main main.cxx)
+add_executable(matcher matcher.cxx)
 
-target_link_libraries( main ${OpenCV_LIBS} database)
+target_link_libraries( main ${OpenCV_LIBS} database )
+
+add_dependencies(main sample_videos)
+
+target_link_libraries( matcher ${OpenCV_LIBS} database )

@@ -5,6 +5,7 @@
 #include <string>
 #include <sys/stat.h>
 #include "database.hpp"
+#include "bow.hpp"
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -12,10 +13,14 @@ using namespace std;
 
 int main(int argc, char** argv )
 {
+    bool DEBUG = false;
     if ( argc < 2 )
     {
         printf("usage: ./main <Image_Path>\n");
         return -1;
+    }
+    if ( argc == 3 ) {
+        DEBUG = true;
     }
 
     namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
@@ -26,17 +31,13 @@ int main(int argc, char** argv )
         auto descriptors = frame.descriptors;
         auto keyPoints = frame.keyPoints;
 
-        cout << descriptors.at<float>(37, 54) << endl;
-        cout << descriptors.cols << endl;
-        cout << descriptors.rows << endl;
-        cout << descriptors.elemSize() << endl;
-        cout << keyPoints.size() << endl << endl;
+        if(DEBUG) {
+            drawKeypoints(image, keyPoints, output);
+            cout << "size: " << output.total() << endl;
+            imshow("Display window", output);
 
-        drawKeypoints(image, keyPoints, output);
-        cout << "size: " << output.total() << endl;
-        imshow("Display window", output);
-
-        waitKey(0);
+            waitKey(0);
+        }
     });
     return 0;
 }
