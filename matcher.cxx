@@ -6,6 +6,7 @@
 #include "bow.hpp"
 #include <experimental/filesystem>
 #include <unistd.h>
+#include <sys/stat.h>
 
 namespace fs = std::experimental::filesystem;
 using namespace cv;
@@ -89,7 +90,7 @@ int main(int argc, char** argv )
     }   
 
     chdir("..");
-    system("python3 ../python/graphs.py");
+    system("python3 python/graphs.py");
 
     return 0;
 }
