@@ -49,7 +49,8 @@ int main(int argc, char** argv )
     bool first = 1;
     Frame firstFrame;
 
-    for(auto videopath : videopaths){
+    // for each video, compare first frame to rest of frames
+    /*for(auto videopath : videopaths){
 
         auto video = fd.loadVideo(videopath);
         auto frames = video->frames();
@@ -66,7 +67,18 @@ int main(int argc, char** argv )
 
             //Mat mymat = baggify(frame, myvocab);
         }
-    }
-   
+    }*/
+
+    // similarity between each two videos
+    for(int i = 0; i < videopaths.size() - 1; i++){
+        for(int j = i + 1; j < videopaths.size(); j++){
+            auto s1 = videopaths[i], s2 = videopaths[j];
+            std::cout << "Comparing " << s1 << " to " << s2 << std::endl;
+            auto v1 = fd.loadVideo(s1), v2 = fd.loadVideo(s2);
+            std::cout << "Similarity: " << boneheadedSimilarity(*v1, *v2, myvocab) << std::endl << std::endl;
+        }
+    }   
+
+
     return 0;
 }
