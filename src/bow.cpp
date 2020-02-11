@@ -87,5 +87,5 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, cv::Mat vocab){
         total += (t != -1)? t : 0;
     }
 
-    return total;
+    return total/len;
 }
