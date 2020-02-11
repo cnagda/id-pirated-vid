@@ -6,14 +6,15 @@
 #include "database.hpp"
 #include "bow.hpp"
 #include <sys/stat.h>
+#include <unistd.h>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
 bool file_exists(string fname){
-  struct stat buf;   
-  return (stat(fname.c_str(), &buf) == 0); 
+  struct stat buf;
+  return (stat(fname.c_str(), &buf) == 0);
 }
 
 int main(int argc, char** argv )
@@ -26,9 +27,9 @@ int main(int argc, char** argv )
 
     if ( !file_exists(argv[2]) ){
         namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
-    
+
         Mat vocab = constructVocabulary(argv[1], 200, 10);
-    
+
         cv::FileStorage file(argv[2], cv::FileStorage::WRITE);
 
         file << "Vocabulary" << vocab;
@@ -69,16 +70,26 @@ int main(int argc, char** argv )
         }
     }*/
 
+    mkdir("Temp", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    chdir("Temp");
+
     // similarity between each two videos
     for(int i = 0; i < videopaths.size() - 1; i++){
+        mkdir(videopaths[i].c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        chdir(videopaths[i].c_str());
         for(int j = i + 1; j < videopaths.size(); j++){
             auto s1 = videopaths[i], s2 = videopaths[j];
             std::cout << "Comparing " << s1 << " to " << s2 << std::endl;
             auto v1 = fd.loadVideo(s1), v2 = fd.loadVideo(s2);
             std::cout << "Similarity: " << boneheadedSimilarity(*v1, *v2, myvocab) << std::endl << std::endl;
-        }
-    }   
 
+            rename("temp.txt", (videopaths[j] + ".txt").c_str());
+            remove("temp.txt");
+        }
+        chdir("..");
+    }
+    chdir("..");
+    system("python3 ../python/graphs.py");
 
     return 0;
 }
