@@ -2,18 +2,17 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <string>
-#include <sys/stat.h>
 #include "database.hpp"
 #include "bow.hpp"
-#include <sys/stat.h>
+#include <experimental/filesystem>
 
+namespace fs = std::experimental::filesystem;
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-bool file_exists(string fname){
-  struct stat buf;   
-  return (stat(fname.c_str(), &buf) == 0); 
+bool file_exists(const string& fname){
+  return fs::exists(fname);
 }
 
 int main(int argc, char** argv )
@@ -49,6 +48,9 @@ int main(int argc, char** argv )
     bool first = 1;
     Frame firstFrame;
 
+    auto extractor = [&myvocab](Frame f) { return baggify(f, myvocab); };
+    auto mycomp = [extractor](Frame f1, Frame f2) { return frameSimilarity(f1, f2, extractor); };
+
     // for each video, compare first frame to rest of frames
     /*for(auto videopath : videopaths){
 
@@ -70,12 +72,12 @@ int main(int argc, char** argv )
     }*/
 
     // similarity between each two videos
-    for(int i = 0; i < videopaths.size() - 1; i++){
-        for(int j = i + 1; j < videopaths.size(); j++){
+    for(int i = 0; i < videopaths.size(); i++){
+        for(int j = i; j < videopaths.size(); j++){
             auto s1 = videopaths[i], s2 = videopaths[j];
             std::cout << "Comparing " << s1 << " to " << s2 << std::endl;
             auto v1 = fd.loadVideo(s1), v2 = fd.loadVideo(s2);
-            std::cout << "Similarity: " << boneheadedSimilarity(*v1, *v2, myvocab) << std::endl << std::endl;
+            std::cout << "Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp) << std::endl << std::endl;
         }
     }   
 

@@ -92,4 +92,4 @@ target_link_libraries( main ${OpenCV_LIBS} database )
 
 add_dependencies(main sample_videos)
 
-target_link_libraries( matcher ${OpenCV_LIBS} database )
+target_link_libraries( matcher ${OpenCV_LIBS} database stdc++fs )
