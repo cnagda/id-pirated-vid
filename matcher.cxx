@@ -5,6 +5,7 @@
 #include "database.hpp"
 #include "bow.hpp"
 #include <experimental/filesystem>
+#include <unistd.h>
 
 namespace fs = std::experimental::filesystem;
 using namespace cv;
@@ -25,9 +26,9 @@ int main(int argc, char** argv )
 
     if ( !file_exists(argv[2]) ){
         namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
-    
+
         Mat vocab = constructVocabulary(argv[1], 200, 10);
-    
+
         cv::FileStorage file(argv[2], cv::FileStorage::WRITE);
 
         file << "Vocabulary" << vocab;
@@ -71,6 +72,9 @@ int main(int argc, char** argv )
         }
     }*/
 
+    mkdir("Temp", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    chdir("Temp");
+
     // similarity between each two videos
     for(int i = 0; i < videopaths.size(); i++){
         for(int j = i; j < videopaths.size(); j++){
@@ -78,9 +82,14 @@ int main(int argc, char** argv )
             std::cout << "Comparing " << s1 << " to " << s2 << std::endl;
             auto v1 = fd.loadVideo(s1), v2 = fd.loadVideo(s2);
             std::cout << "Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp) << std::endl << std::endl;
+            rename("temp.txt", (videopaths[j] + ".txt").c_str());
+            remove("temp.txt");
         }
+        chdir("..");
     }   
 
+    chdir("..");
+    system("python3 ../python/graphs.py");
 
     return 0;
 }

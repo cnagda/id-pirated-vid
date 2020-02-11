@@ -1,4 +1,5 @@
 #include <opencv2/features2d.hpp>
+#include <fstream>
 #include "database.hpp"
 
 cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
@@ -19,16 +20,19 @@ cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
             // construct vocab based on only one out of every speedinator frames
             if(count % speedinator) continue;
 
+            // won't be able to vconcat if cols are different sizes
+            if (frame.descriptors.cols == 0) continue;
+
 			allFeatures.push_back(frame.descriptors.clone());
 		}
 	}
 
     std::cout << "Collected: " << allFeatures.size() << std::endl;
 
-    for(int i = 0; i < 10; i++){
-        auto& af = allFeatures;
-        std::cout << af[i].rows << " X " << af[i].cols << std::endl;
-    }
+    // for(int i = 0; i < 30; i++){
+    //     auto& af = allFeatures;
+    //     std::cout << af[i].rows << " X " << af[i].cols << std::endl;
+    // }
 
 
 	cv::Mat descriptors;
@@ -48,7 +52,7 @@ cv::Mat baggify(Frame f, cv::Mat vocab){
     cv::BOWImgDescriptorExtractor extractor(cv::FlannBasedMatcher::create());
 
     extractor.setVocabulary(vocab);
-    
+
     cv::Mat output;
 
 
@@ -81,11 +85,13 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 
     int len = std::min(frames1.size(), frames2.size());
 
+    std::ofstream ofile("temp.txt");
+
     for(int i = 0; i < len; i++){
         auto t = comparator(frames1[i], frames2[i]);
-        std::cout << "f_sim " << t << std::endl;
+        ofile << "f_sim " << t << std::endl;
         total += (t != -1)? t : 0;
     }
-    
+
     return total/len;
 }
