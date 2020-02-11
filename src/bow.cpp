@@ -16,6 +16,7 @@ cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
 		auto frames = video->frames();
 		for(auto& frame : frames){
             count++;
+            // construct vocab based on only one out of every speedinator frames
             if(count % speedinator) continue;
 
 			allFeatures.push_back(frame.descriptors.clone());
@@ -50,7 +51,13 @@ cv::Mat baggify(Frame f, cv::Mat vocab){
     
     cv::Mat output;
 
-    extractor.compute(f.descriptors, output);
+
+    if(f.descriptors.rows){
+        extractor.compute(f.descriptors, output);
+    }
+    else{
+        //std::cerr << "In baggify: Frame has no key points" << std::endl;
+    }
 
     return output;
 }
@@ -60,5 +67,25 @@ double frameSimilarity(Frame f1, Frame f2, cv::Mat vocab){
     auto b1n = sqrt(b1.dot(b1));
     auto b2n = sqrt(b2.dot(b2));
 
-    return b1.dot(b2)/(b1n * b2n);
+    auto denom = b1n * b2n;
+
+    if(!denom) return -1;
+
+    return b1.dot(b2)/denom;
+}
+
+double boneheadedSimilarity(IVideo& v1, IVideo& v2, cv::Mat vocab){
+    auto frames1 = v1.frames();
+    auto frames2 = v2.frames();
+
+    double total = 0;
+
+    int len = std::min(frames1.size(), frames2.size());
+
+    for(int i = 0; i < len; i++){
+        auto t = frameSimilarity(frames1[i], frames2[i], vocab);
+        total += (t != -1)? t : 0;
+    }
+
+    return total;
 }
