@@ -17,6 +17,7 @@ option(BUILD_TESTING "Build tests" OFF)
 add_subdirectory(src)
 
 add_custom_target(sample_videos cp ${CMAKE_CURRENT_SOURCE_DIR}/sample.mp4 ${CMAKE_CURRENT_BINARY_DIR}/sample.mp4)
+add_custom_target(python_scripts cp -R ${CMAKE_CURRENT_SOURCE_DIR}/python ${CMAKE_CURRENT_BINARY_DIR}/python)
 
 if(BUILD_TESTING)
     # Download and unpack googletest at configure time
@@ -91,5 +92,6 @@ add_executable(matcher matcher.cxx)
 target_link_libraries( main ${OpenCV_LIBS} database )
 
 add_dependencies(main sample_videos)
+add_dependencies(matcher python_scripts)
 
 target_link_libraries( matcher ${OpenCV_LIBS} database stdc++fs )
