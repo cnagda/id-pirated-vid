@@ -111,7 +111,7 @@ unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::func
         if(callback) callback(image, frame);
     }
 
-    return make_unique<SIFTVideo>(frames);
+    return make_unique<SIFTVideo>(video_dir.filename(), frames);
 }
 unique_ptr<IVideo> FileDatabase::loadVideo(const std::string &filepath) const
 {
@@ -129,7 +129,7 @@ unique_ptr<IVideo> FileDatabase::loadVideo(const std::string &filepath) const
         auto frame = SIFTread(frame_path.path());
         frames.push_back(frame);
     }
-    return make_unique<SIFTVideo>(frames);
+    return make_unique<SIFTVideo>(video_dir.filename(), frames);
 }
 
 vector<string> FileDatabase::listVideos() const {

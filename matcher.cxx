@@ -4,6 +4,7 @@
 #include <string>
 #include "database.hpp"
 #include "bow.hpp"
+#include "instrumentation.hpp"
 #include <experimental/filesystem>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -73,24 +74,22 @@ int main(int argc, char** argv )
         }
     }*/
 
-    mkdir("Temp", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    chdir("Temp");
-
     // similarity between each two videos
-    for(int i = 0; i < videopaths.size(); i++){
-        for(int j = i; j < videopaths.size(); j++){
-            auto s1 = videopaths[i], s2 = videopaths[j];
-            std::cout << "Comparing " << s1 << " to " << s2 << std::endl;
-            auto v1 = fd.loadVideo(s1), v2 = fd.loadVideo(s2);
-            std::cout << "Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp) << std::endl << std::endl;
-            rename("temp.txt", (videopaths[j] + ".txt").c_str());
-            remove("temp.txt");
-        }
-        chdir("..");
-    }   
+    for(int i = 0; i < videopaths.size() - 1; i++){
+        auto s1 = videopaths[i];
+        auto v1 = fd.loadVideo(s1);
 
-    chdir("..");
-    system("python3 python/graphs.py");
+        VideoMatchingInstrumenter instrumenter(*v1);
+        auto reporter = getReporter(instrumenter);
+        for(int j = i + 1; j < videopaths.size(); j++){
+            auto s2 = videopaths[j];
+            std::cout << "Comparing " << s1 << " to " << s2 << std::endl;
+            auto v2 = fd.loadVideo(s2);
+            std::cout << "Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp, reporter) << std::endl << std::endl;
+        }
+
+        EmmaExporter().exportTimeseries(s1, "frame no.", "cosine distance", instrumenter.getTimeSeries());
+    }   
 
     return 0;
 }
