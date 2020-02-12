@@ -66,19 +66,18 @@ cv::Mat baggify(Frame f, cv::Mat vocab){
     return output;
 }
 
-double frameSimilarity(Frame f1, Frame f2, cv::Mat vocab){
-    auto b1 = baggify(f1, vocab), b2 = baggify(f2, vocab);
-    auto b1n = sqrt(b1.dot(b1));
-    auto b2n = sqrt(b2.dot(b2));
+double frameSimilarity(Frame f1, Frame f2, std::function<cv::Mat(Frame)> extractor){
+    auto b1 = extractor(f1), b2 = extractor(f2);
 
-    auto denom = b1n * b2n;
+    if(b1.size() != b2.size()) return -1;
 
-    if(!denom) return -1;
+    auto b1n = b1.dot(b1);
+    auto b2n = b2.dot(b2);
 
-    return b1.dot(b2)/denom;
+    return b1.dot(b2)/(sqrt(b1n * b2n) + 1e-10);
 }
 
-double boneheadedSimilarity(IVideo& v1, IVideo& v2, cv::Mat vocab){
+double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator){
     auto frames1 = v1.frames();
     auto frames2 = v2.frames();
 
@@ -86,17 +85,13 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, cv::Mat vocab){
 
     int len = std::min(frames1.size(), frames2.size());
 
-    std::ofstream ofile;
-    ofile.open("temp.txt");
+    std::ofstream ofile("temp.txt");
 
     for(int i = 0; i < len; i++){
-        auto t = frameSimilarity(frames1[i], frames2[i], vocab);
-        if (t != -1)
-            ofile << t << "\n";
+        auto t = comparator(frames1[i], frames2[i]);
+        ofile << "f_sim " << t << std::endl;
         total += (t != -1)? t : 0;
     }
-
-    ofile.close();
 
     return total/len;
 }
