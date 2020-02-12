@@ -1,6 +1,7 @@
 #include <opencv2/features2d.hpp>
 #include <fstream>
 #include "database.hpp"
+#include "instrumentation.hpp"
 
 cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
 	FileDatabase fd(path);
@@ -77,7 +78,7 @@ double frameSimilarity(Frame f1, Frame f2, std::function<cv::Mat(Frame)> extract
     return b1.dot(b2)/(sqrt(b1n * b2n) + 1e-10);
 }
 
-double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator){
+double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter = nullptr){
     auto frames1 = v1.frames();
     auto frames2 = v2.frames();
 
@@ -85,11 +86,10 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 
     int len = std::min(frames1.size(), frames2.size());
 
-    std::ofstream ofile("temp.txt");
-
     for(int i = 0; i < len; i++){
         auto t = comparator(frames1[i], frames2[i]);
-        ofile << "f_sim " << t << std::endl;
+        if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i, v1, v2});
+
         total += (t != -1)? t : 0;
     }
 
