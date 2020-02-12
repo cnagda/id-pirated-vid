@@ -77,8 +77,8 @@ int main(int argc, char** argv )
     chdir("Temp");
 
     // similarity between each two videos
-    for(int i = 0; i < videopaths.size(); i++){
-        for(int j = i; j < videopaths.size(); j++){
+    for(int i = 0; i < videopaths.size() - 1; i++){
+        for(int j = i + 1; j < videopaths.size(); j++){
             auto s1 = videopaths[i], s2 = videopaths[j];
             std::cout << "Comparing " << s1 << " to " << s2 << std::endl;
             auto v1 = fd.loadVideo(s1), v2 = fd.loadVideo(s2);
