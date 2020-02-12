@@ -17,6 +17,9 @@ void createFolder(std::string folder_name);
 
 class IVideo {
 public:
+    IVideo(const std::string& name) : name(name) {};
+    const std::string name;
+    using size_type = std::vector<Frame>::size_type;
     virtual std::vector<Frame> frames() = 0;
     virtual ~IVideo() = default;
 };
@@ -25,8 +28,8 @@ class SIFTVideo : public IVideo {
 private:
     std::vector<Frame> SIFTFrames;
 public:
-    SIFTVideo(const std::vector<Frame>& frames) : SIFTFrames(frames) {};
-    SIFTVideo(std::vector<Frame>&& frames) : SIFTFrames(frames) {};
+    SIFTVideo(const std::string& name, const std::vector<Frame>& frames) : IVideo(name), SIFTFrames(frames) {};
+    SIFTVideo(const std::string& name, std::vector<Frame>&& frames) : IVideo(name), SIFTFrames(frames) {};
     std::vector<Frame> frames() { return SIFTFrames; };
 };
 

@@ -17,7 +17,7 @@ option(BUILD_TESTING "Build tests" OFF)
 add_subdirectory(src)
 
 add_custom_target(sample_videos cp ${CMAKE_CURRENT_SOURCE_DIR}/sample.mp4 ${CMAKE_CURRENT_BINARY_DIR}/sample.mp4)
-add_custom_target(python_scripts cp -R ${CMAKE_CURRENT_SOURCE_DIR}/python ${CMAKE_CURRENT_BINARY_DIR}/python)
+add_custom_target(python_scripts cp -R ${CMAKE_CURRENT_SOURCE_DIR}/python ${CMAKE_CURRENT_BINARY_DIR})
 
 if(BUILD_TESTING)
     # Download and unpack googletest at configure time
