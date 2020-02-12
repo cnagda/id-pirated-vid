@@ -94,4 +94,4 @@ target_link_libraries( main ${OpenCV_LIBS} database )
 add_dependencies(main sample_videos)
 add_dependencies(matcher python_scripts)
 
-target_link_libraries( matcher ${OpenCV_LIBS} database stdc++fs )
+target_link_libraries( matcher ${OpenCV_LIBS} instrumentation database stdc++fs )
