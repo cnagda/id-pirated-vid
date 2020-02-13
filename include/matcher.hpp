@@ -9,7 +9,7 @@
 struct MatchInfo {
     double matchConfidence;
     IVideo::size_type startFrame, endFrame;
-    const IVideo* video;
+    std::string video;
 };
 
 cv::Mat constructVocabulary(const std::string& path, int K = -1, int speedinator = 1);

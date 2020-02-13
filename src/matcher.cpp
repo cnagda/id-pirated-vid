@@ -111,7 +111,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, cv::Mat vocab)
         auto v2 = db.loadVideo(s2);
         double score = boneheadedSimilarity(target, *v2, mycomp, reporter);
         if(score > match.matchConfidence) {
-            match = MatchInfo{score, 0, 0, v2.get()};
+            match = MatchInfo{score, 0, 0, v2->name};
         }
     }
 
