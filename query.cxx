@@ -3,7 +3,7 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <string>
 #include "database.hpp"
-#include "bow.hpp"
+#include "matcher.hpp"
 #include "instrumentation.hpp"
 #include <experimental/filesystem>
 #include <unistd.h>

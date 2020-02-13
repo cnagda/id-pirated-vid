@@ -4,7 +4,7 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <string>
 #include "database.hpp"
-#include "bow.hpp"
+#include "matcher.hpp"
 
 using namespace cv;
 using namespace cv::xfeatures2d;

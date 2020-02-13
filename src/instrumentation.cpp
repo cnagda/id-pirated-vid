@@ -11,8 +11,8 @@ SimilarityReporter getReporter(VideoMatchingInstrumenter& instrumenter) {
 
 void VideoMatchingInstrumenter::addFrameSimilarity(FrameSimilarityInfo info) {
     if(info.v1 && info.v2) {
-        auto& v1_ = info.v1->get();
-        auto& v2_ = info.v2->get();
+        auto& v1_ = *info.v1;
+        auto& v2_ = *info.v2;
         auto& known = (v1_.name == target.name) ? v2_ : v1_ ;
 
         videoTracker[known.name].push_back({info.f1Idx, info.similarity}); 

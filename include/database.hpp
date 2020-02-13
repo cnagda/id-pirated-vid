@@ -20,6 +20,8 @@ public:
     IVideo(const std::string& name) : name(name) {};
     const std::string name;
     using size_type = std::vector<Frame>::size_type;
+
+    virtual size_type frameCount() = 0;
     virtual std::vector<Frame> frames() = 0;
     virtual ~IVideo() = default;
 };
@@ -30,7 +32,8 @@ private:
 public:
     SIFTVideo(const std::string& name, const std::vector<Frame>& frames) : IVideo(name), SIFTFrames(frames) {};
     SIFTVideo(const std::string& name, std::vector<Frame>&& frames) : IVideo(name), SIFTFrames(frames) {};
-    std::vector<Frame> frames() { return SIFTFrames; };
+    std::vector<Frame> frames() override { return SIFTFrames; };
+    size_type frameCount() override { return SIFTFrames.size(); };
 };
 
 class IDatabase {

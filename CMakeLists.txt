@@ -87,11 +87,11 @@ if(BUILD_TESTING)
 endif(BUILD_TESTING)
 
 add_executable(main main.cxx)
-add_executable(matcher matcher.cxx)
+add_executable(query query.cxx)
 
 target_link_libraries( main ${OpenCV_LIBS} database )
 
 add_dependencies(main sample_videos)
-add_dependencies(matcher python_scripts)
+add_dependencies(query python_scripts)
 
-target_link_libraries( matcher ${OpenCV_LIBS} instrumentation database stdc++fs )
+target_link_libraries( query ${OpenCV_LIBS} database stdc++fs )

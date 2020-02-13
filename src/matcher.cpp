@@ -2,6 +2,7 @@
 #include <fstream>
 #include "database.hpp"
 #include "instrumentation.hpp"
+#include "matcher.hpp"
 
 cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
 	FileDatabase fd(path);
@@ -78,7 +79,7 @@ double frameSimilarity(Frame f1, Frame f2, std::function<cv::Mat(Frame)> extract
     return b1.dot(b2)/(sqrt(b1n * b2n) + 1e-10);
 }
 
-double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter = nullptr){
+double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter){
     auto frames1 = v1.frames();
     auto frames2 = v2.frames();
 
@@ -88,10 +89,37 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 
     for(int i = 0; i < len; i++){
         auto t = comparator(frames1[i], frames2[i]);
-        if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i, v1, v2});
+        if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i, &v1, &v2});
 
         total += (t != -1)? t : 0;
     }
 
     return total/len;
+}
+
+std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, cv::Mat vocab) {
+    auto videopaths = db.listVideos();
+
+    VideoMatchingInstrumenter instrumenter(target);
+    auto reporter = getReporter(instrumenter);
+    auto extractor = [&vocab](Frame f) { return baggify(f, vocab); };
+    auto mycomp = [extractor](Frame f1, Frame f2) { return frameSimilarity(f1, f2, extractor); };
+
+    MatchInfo match;
+
+    for(auto s2 : videopaths) {
+        auto v2 = db.loadVideo(s2);
+        double score = boneheadedSimilarity(target, *v2, mycomp, reporter);
+        if(score > match.matchConfidence) {
+            match = MatchInfo{score, 0, 0, v2.get()};
+        }
+    }
+
+    EmmaExporter().exportTimeseries(target.name, "frame no.", "cosine distance", instrumenter.getTimeSeries());
+    
+    if(match.matchConfidence > 0.5) {
+        return match;
+    }
+
+    return std::nullopt;
 }

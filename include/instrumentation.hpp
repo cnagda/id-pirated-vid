@@ -16,7 +16,8 @@ public:
     double similarity;
     Frame f1, f2;
     IVideo::size_type f1Idx, f2Idx;
-    optional_ref<IVideo> v1, v2;
+    const IVideo* v1;
+    const IVideo* v2;
 };
 
 typedef const std::string& Label;
