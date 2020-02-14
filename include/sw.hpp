@@ -35,7 +35,7 @@ std::pair<int, int> slowMatrixMax(std::vector<std::vector<int>> & matrix){
 }
 
 template <typename It, typename Cmp> 
-std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknown, It unknownEnd, Cmp comp, int threshold, int gapScore){
+std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknown, It unknownEnd, Cmp comp, int threshold, unsigned int gapScore){
     using Alignment = ItAlignment<It>;
 
     int m = std::distance(unknown, unknownEnd);
@@ -52,14 +52,14 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
             int score = 0;
 
             // first comparison: west cell (deletion)
-            score = matrix[i][j-1] + gapScore;
+            score = matrix[i][j-1] - gapScore;
             if(score > max){
                 max = score;
                 sources[i][j] = 0;
             }
             
             // second comparison: north cell (insertion)
-            score = matrix[i-1][j] + gapScore;
+            score = matrix[i-1][j] - gapScore;
             if(score > max){
                 max = score;
                 sources[i][j] = 2;
@@ -119,7 +119,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
 }
 
 template <typename T>
-std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T> & unknown, std::function<int(T, T)> comp, int threshold, int gapScore){
+std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T> & unknown, std::function<int(T, T)> comp, int threshold, unsigned int gapScore){
     auto alignments = calculateAlignment(known.begin(), known.end(), unknown.begin(), unknown.end(), comp, threshold, gapScore);
     std::vector<Alignment> ret;
     ret.reserve(alignments.size());

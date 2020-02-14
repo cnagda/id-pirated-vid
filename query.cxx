@@ -31,7 +31,7 @@ int main(int argc, char** argv )
         return (c1 == c2) * 6 - 3;
     };
 
-    int gapScore = -2;
+    int gapScore = 2;
     int threshold = 3;
     
     auto as = calculateAlignment(v1, v2, comp, threshold, gapScore);
