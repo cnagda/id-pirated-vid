@@ -3,10 +3,14 @@
 #include <functional>
 #include <iostream>
 
-struct Alignment{
-    int startKnown, startUnknown, endKnown, endUnknown;
-    int score;
 
+template<typename It>
+struct ItAlignment {
+    It startKnown, startUnknown, endKnown, endUnknown;
+    int score;
+};
+
+struct Alignment : ItAlignment<int> {
     operator std::string(){
         return std::to_string(startKnown) + " " + std::to_string(endKnown) + 
                " " + std::to_string(startUnknown) + " " + std::to_string(endUnknown) + " " +
@@ -30,10 +34,12 @@ std::pair<int, int> slowMatrixMax(std::vector<std::vector<int>> & matrix){
     return std::make_pair(mi, mj);
 }
 
-template <class T>
-std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T> & unknown, std::function<int (T, T)> comp, int threshold, int gapScore){
-    int m = unknown.size();
-    int n = known.size();
+template <typename It, typename Cmp> 
+std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknown, It unknownEnd, Cmp comp, int threshold, int gapScore){
+    using Alignment = ItAlignment<It>;
+
+    int m = std::distance(unknown, unknownEnd);
+    int n = std::distance(known, knownEnd);
 
     std::vector<std::vector<int>> matrix(m + 1, std::vector<int>(n + 1, 0));
     // 0 for left, 1 for diagonal, 2 for up
@@ -91,14 +97,14 @@ std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T>
 
         Alignment a;
 
-        a.endUnknown = i;
-        a.endKnown = j;
+        a.endUnknown = unknown + i;
+        a.endKnown = known + j;
         a.score = matrix[i][j];
         
         do{
             if(matrix[i][j] == 0){
-                a.startUnknown = i;
-                a.startKnown = j;
+                a.startUnknown = unknown + i;
+                a.startKnown = known + j;
                 alignments.push_back(a);
                 break;
             }
@@ -110,4 +116,23 @@ std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T>
 
         } while(matrix[i][j] >= 0);
     }
+}
+
+template <typename T>
+std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T> & unknown, std::function<int(T, T)> comp, int threshold, int gapScore){
+    auto alignments = calculateAlignment(known.begin(), known.end(), unknown.begin(), unknown.end(), comp, threshold, gapScore);
+    std::vector<Alignment> ret;
+    ret.reserve(alignments.size());
+
+    std::transform(alignments.begin(), alignments.end(), std::back_inserter(ret), [&known, &unknown](auto val) -> Alignment {
+        return Alignment{
+            std::distance(known.begin(), val.startKnown),
+            std::distance(known.begin(), val.endKnown),
+            std::distance(unknown.begin(), val.startUnknown),
+            std::distance(unknown.begin(), val.endUnknown),
+            val.score
+        };
+    });
+
+    return ret;    
 }
