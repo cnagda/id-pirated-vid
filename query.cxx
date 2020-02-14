@@ -8,6 +8,7 @@
 #include <experimental/filesystem>
 #include <unistd.h>
 #include <sys/stat.h>
+#include "sw.hpp"
 
 namespace fs = std::experimental::filesystem;
 using namespace cv;
@@ -20,6 +21,27 @@ bool file_exists(const string& fname){
 
 int main(int argc, char** argv )
 {
+    std::string s1 = "hello there";
+    std::string s2 = "I said hello";
+
+    std::vector<char> v1(s1.begin(), s1.end());
+    std::vector<char> v2(s2.begin(), s2.end());
+
+    auto comp = [](char c1, char c2) -> int{
+        return (c1 == c2) * 6 - 3;
+    };
+
+    int gapScore = -2;
+    int threshold = 3;
+    
+    auto as = calculateAlignment<char>(v1, v2, comp, threshold, gapScore);
+    std::cout << as.size() << std::endl << std::endl;
+    std::cout << s1 << std::endl << s2 << std::endl;
+    for(auto& a : as){
+        std::cout << (std::string)a << std::endl;
+    }
+
+
     if ( argc < 3 )
     {
         printf("usage: ./main <Database_Path> <BOW_matrix_path>\n");
