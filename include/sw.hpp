@@ -1,7 +1,11 @@
+#ifndef SW_HPP
+#define SW_HPP
+
 #include <vector>
 #include <utility>
 #include <functional>
 #include <iostream>
+#include <iomanip>
 
 
 template<typename It>
@@ -134,3 +138,5 @@ std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T>
 
     return ret;    
 }
+
+#endif
