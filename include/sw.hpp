@@ -36,8 +36,6 @@ std::pair<int, int> slowMatrixMax(std::vector<std::vector<int>> & matrix){
 
 template <typename It, typename Cmp> 
 std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknown, It unknownEnd, Cmp comp, int threshold, unsigned int gapScore){
-    using Alignment = ItAlignment<It>;
-
     int m = std::distance(unknown, unknownEnd);
     int n = std::distance(known, knownEnd);
 
@@ -84,7 +82,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
         std::cout << std::endl;
     }
 
-    std::vector<Alignment> alignments;
+    std::vector<ItAlignment<It>> alignments;
 
     while(1){
         auto [i, j] = slowMatrixMax(matrix);
@@ -95,7 +93,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
             return alignments;
         }
 
-        Alignment a;
+        ItAlignment<It> a;
 
         a.endUnknown = unknown + i;
         a.endKnown = known + j;
