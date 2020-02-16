@@ -6,8 +6,6 @@
 #include "matcher.hpp"
 #include "instrumentation.hpp"
 #include <experimental/filesystem>
-#include <unistd.h>
-#include <sys/stat.h>
 #include "sw.hpp"
 
 namespace fs = std::experimental::filesystem;
