@@ -37,8 +37,8 @@ TEST(DatabaseSuite, SIFTrwTest) {
 
 TEST(DatabaseSuite, FileDatabase) {
     FileDatabase db;
-    auto vid = db.addVideo("sample.mp4")->frames();
-    auto loaded = db.loadVideo("sample.mp4")->frames();
+    auto vid = db.addVideo("../sample.mp4")->frames();
+    auto loaded = db.loadVideo("../sample.mp4")->frames();
 
     cout << "size: " << vid.size() << endl;
 

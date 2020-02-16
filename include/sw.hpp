@@ -1,7 +1,11 @@
+#ifndef SW_HPP
+#define SW_HPP
+
 #include <vector>
 #include <utility>
 #include <functional>
 #include <iostream>
+#include <iomanip>
 
 
 template<typename It>
@@ -36,8 +40,6 @@ std::pair<int, int> slowMatrixMax(std::vector<std::vector<int>> & matrix){
 
 template <typename It, typename Cmp> 
 std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknown, It unknownEnd, Cmp comp, int threshold, unsigned int gapScore){
-    using Alignment = ItAlignment<It>;
-
     int m = std::distance(unknown, unknownEnd);
     int n = std::distance(known, knownEnd);
 
@@ -66,7 +68,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
             }
             
             // last comparison: north-west cell (alignment)
-            if(max < (score = comp(known[j], unknown[i]) + matrix[i - 1][j - 1])){
+            if(max < (score = comp(known[j - 1], unknown[i - 1]) + matrix[i - 1][j - 1])){
                 max = score;
                 sources[i][j] = 1;
             }
@@ -84,7 +86,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
         std::cout << std::endl;
     }
 
-    std::vector<Alignment> alignments;
+    std::vector<ItAlignment<It>> alignments;
 
     while(1){
         auto [i, j] = slowMatrixMax(matrix);
@@ -95,7 +97,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
             return alignments;
         }
 
-        Alignment a;
+        ItAlignment<It> a;
 
         a.endUnknown = unknown + i;
         a.endKnown = known + j;
@@ -127,8 +129,8 @@ std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T>
     std::transform(alignments.begin(), alignments.end(), std::back_inserter(ret), [&known, &unknown](auto val) -> Alignment {
         return Alignment{
             std::distance(known.begin(), val.startKnown),
-            std::distance(known.begin(), val.endKnown),
             std::distance(unknown.begin(), val.startUnknown),
+            std::distance(known.begin(), val.endKnown),
             std::distance(unknown.begin(), val.endUnknown),
             val.score
         };
@@ -136,3 +138,5 @@ std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T>
 
     return ret;    
 }
+
+#endif
