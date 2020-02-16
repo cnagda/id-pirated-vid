@@ -127,8 +127,8 @@ std::vector<Alignment> calculateAlignment(std::vector<T> & known, std::vector<T>
     std::transform(alignments.begin(), alignments.end(), std::back_inserter(ret), [&known, &unknown](auto val) -> Alignment {
         return Alignment{
             std::distance(known.begin(), val.startKnown),
-            std::distance(known.begin(), val.endKnown),
             std::distance(unknown.begin(), val.startUnknown),
+            std::distance(known.begin(), val.endKnown),
             std::distance(unknown.begin(), val.endUnknown),
             val.score
         };
