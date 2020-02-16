@@ -50,16 +50,21 @@ public:
 
 SimilarityReporter getReporter(VideoMatchingInstrumenter& instrumenter);
 
-class CSVExporter : public IExporter {
+class FSExporter : public IExporter {
+protected:
+    const fs::path outputDir;
 public:
+    FSExporter(fs::path dir = fs::current_path() / "Temp") : outputDir(dir) { };
+};
+
+class CSVExporter : public FSExporter {
+public:
+    const std::string delimiter = ",";
     void exportTimeseries(Label title, Label xaxis, Label yaxis, const std::vector<TimeSeries>& series) override;
 };
 
-class EmmaExporter : public IExporter {
-private:
-    const fs::path outputDir;
+class EmmaExporter : public FSExporter {
 public:
-    EmmaExporter(fs::path dir = fs::current_path() / "Temp") : outputDir(dir) {};
     void exportTimeseries(Label title, Label xaxis, Label yaxis, const std::vector<TimeSeries>& series) override; 
 };
 
