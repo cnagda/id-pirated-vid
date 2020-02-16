@@ -16,7 +16,7 @@ option(BUILD_TESTING "Build tests" OFF)
 
 add_subdirectory(src)
 
-add_custom_target(sample_videos cp ${CMAKE_CURRENT_SOURCE_DIR}/sample.mp4 ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_target(sample_videos cp ${CMAKE_CURRENT_SOURCE_DIR}/sample.mp4 ${CMAKE_CURRENT_SOURCE_DIR}/coffee.mp4 ${CMAKE_CURRENT_SOURCE_DIR}/crab.mp4 ${CMAKE_CURRENT_BINARY_DIR})
 add_custom_target(python_scripts cp -R ${CMAKE_CURRENT_SOURCE_DIR}/python ${CMAKE_CURRENT_BINARY_DIR})
 
 if(BUILD_TESTING)

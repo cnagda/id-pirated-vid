@@ -79,12 +79,14 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
     }
 
     //FIXME
+#ifdef SW_COUT
     for(auto& a : matrix){
         for(auto& b : a){
             std::cout << std::setw(2) << b << " ";
         }
         std::cout << std::endl;
     }
+#endif
 
     std::vector<ItAlignment<It>> alignments;
 

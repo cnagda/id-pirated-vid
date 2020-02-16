@@ -8,11 +8,11 @@ using namespace cv;
 namespace fs = std::experimental::filesystem;
 
 /* creates folder if it doesn't exist, otherwise throws an exception */
-void createFolder(string folder_name) {
+void createFolder(const string& folder_name) {
     fs::create_directories(fs::current_path() / folder_name);
 }
 
-string getAlphas(string input)
+string getAlphas(const string& input)
 {
     // TODO: check for at least one alpha char
     string output;
@@ -79,14 +79,7 @@ Frame SIFTread(const string &filename)
     return Frame{keyPoints, mat};
 }
 
-FileDatabase::FileDatabase(const string& databasePath) {
-    databaseRoot = fs::current_path() / "database";
-}
-
-unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::function<void(Mat, Frame)> callback)
-{
-    fs::path video_dir = databaseRoot / getAlphas(filepath);
-    fs::create_directories(video_dir);
+SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Frame)> callback) {
     vector<Frame> frames;
 
     Ptr<FeatureDetector> detector = xfeatures2d::SiftFeatureDetector::create(500);
@@ -106,12 +99,27 @@ unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::func
 
         frames.push_back(frame);
 
-        SIFTwrite(video_dir / to_string(index++), frame);
-
         if(callback) callback(image, frame);
     }
 
-    return make_unique<SIFTVideo>(video_dir.filename(), frames);
+    return SIFTVideo(getAlphas(filepath), frames);
+}
+
+FileDatabase::FileDatabase(const string& databasePath) {
+    databaseRoot = fs::current_path() / "database";
+}
+
+unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::function<void(Mat, Frame)> callback)
+{
+    fs::path video_dir = databaseRoot / getAlphas(filepath);
+    fs::create_directories(video_dir);
+    auto video = make_unique<SIFTVideo>(getSIFTVideo(filepath, callback));
+    auto& frames = video->frames();
+    for(size_t i = 0; i < frames.size(); i++) {
+        SIFTwrite(video_dir / std::to_string(i), frames[i]);
+    }
+
+    return video;
 }
 unique_ptr<IVideo> FileDatabase::loadVideo(const std::string &filepath) const
 {
