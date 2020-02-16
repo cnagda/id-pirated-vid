@@ -68,7 +68,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
             }
             
             // last comparison: north-west cell (alignment)
-            if(max < (score = comp(known[j], unknown[i]) + matrix[i - 1][j - 1])){
+            if(max < (score = comp(known[j - 1], unknown[i - 1]) + matrix[i - 1][j - 1])){
                 max = score;
                 sources[i][j] = 1;
             }
