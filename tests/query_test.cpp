@@ -10,13 +10,13 @@ namespace fs = std::experimental::filesystem;
 class DatabaseFixture : public ::testing::Test {
 protected:
     void SetUp() override {
-        fs::remove_all(fs::current_path() / "database_test");
-        db = FileDatabase(fs::current_path() / "database_test");
+        fs::remove_all(fs::current_path() / "database_test_dir");
+        db = FileDatabase(fs::current_path() / "database_test_dir");
 
         db.addVideo("../coffee.mp4");
         db.addVideo("../crab.mp4");
 
-        vocab = constructVocabulary(fs::current_path() / "database_test", 200, 10);
+        vocab = constructVocabulary(fs::current_path() / "database_test_dir", 200, 10);
     }
 
     FileDatabase db;

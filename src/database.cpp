@@ -115,7 +115,7 @@ FileDatabase::FileDatabase(const string& databasePath) {
 
 unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::function<void(Mat, Frame)> callback)
 {
-    fs::path video_dir = databaseRoot / getAlphas(filepath);
+    fs::path video_dir = databaseRoot / fs::path(filepath).filename();
     fs::create_directories(video_dir);
     auto video = make_unique<SIFTVideo>(getSIFTVideo(filepath, callback));
     auto& frames = video->frames();
@@ -145,7 +145,7 @@ unique_ptr<IVideo> FileDatabase::loadVideo(const std::string &filepath) const
 }
 
 vector<string> FileDatabase::listVideos() const {
-    auto it = fs::directory_iterator{fs::current_path() / fs::path("database")};
+    auto it = fs::directory_iterator{databaseRoot};
     vector<string> out;
     transform(it, fs::end(it), back_inserter(out), [](auto d){ return d.path().filename(); });
     return out;
