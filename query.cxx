@@ -8,11 +8,15 @@
 #include <experimental/filesystem>
 #include "sw.hpp"
 #include "keyframes.hpp"
+#include "kmeans2.hpp"
+#include <chrono>
+
 
 namespace fs = std::experimental::filesystem;
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
+using namespace chrono;
 
 bool file_exists(const string& fname){
   return fs::exists(fname);
@@ -20,6 +24,24 @@ bool file_exists(const string& fname){
 
 int main(int argc, char** argv )
 {
+    //srand(time(0));    
+    srand(500);
+
+    cv::Mat randm(100, 2, CV_32F);
+    for(int i = 0; i < randm.rows; i++){
+        for(int j = 0; j < randm.cols; j++){
+            randm.at<float>(i, j) = ((float)rand())/RAND_MAX;
+        }
+    }
+
+    auto start = high_resolution_clock::now(); 
+    cv::Mat centers = kmeans2(randm, 3, 1);
+    auto stop = high_resolution_clock::now(); 
+
+    auto duration = duration_cast<seconds>(stop - start); 
+
+    std::cout << "Kmeans took " << duration.count() << " seconds" << std::endl;
+
     std::string s1 = "hello there";
     std::string s2 = "I said hello";
 
@@ -52,12 +74,30 @@ int main(int argc, char** argv )
     if ( !file_exists(argv[2]) ){
         namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
 
+
+        std::cout << "About to start old kmeans" << std::endl;
+        auto start = high_resolution_clock::now();
         Mat vocab = constructVocabulary(argv[1], 200, 10);
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<seconds>(stop - start);
+        std::cout << "Old constructVocabulary took " << duration.count() << " seconds (3 attempts)" << std::endl;
 
         cv::FileStorage file(argv[2], cv::FileStorage::WRITE);
 
         file << "Vocabulary" << vocab;
         file.release();
+
+        std::cout << "About to start new kmeans" << std::endl;
+        start = high_resolution_clock::now();
+        Mat vocab2 = constructMyVocabulary(argv[1], 200, 10);
+        stop = high_resolution_clock::now();
+        duration = duration_cast<seconds>(stop - start);
+        std::cout << "constructMyVocabulary took " << duration.count() << " seconds (1 attempt)" << std::endl;
+
+        cv::FileStorage file2("dump_mykmeans", cv::FileStorage::WRITE);
+
+        file2 << "Vocabulary" << vocab2;
+        file2.release();
     }
 
     Mat myvocab;

@@ -3,6 +3,7 @@
 #include "database.hpp"
 #include "instrumentation.hpp"
 #include "matcher.hpp"
+#include "kmeans2.hpp"
 
 cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
 	FileDatabase fd(path);
@@ -48,6 +49,48 @@ cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
     std::cout << "About to return" << std::endl;
 
 	return trainer.cluster(descriptors);
+}
+
+cv::Mat constructMyVocabulary(const std::string& path, int K, int speedinator){
+	FileDatabase fd(path);
+
+	auto videopaths = fd.listVideos();
+	std::vector<cv::Mat> allFeatures;
+
+	// collect all features
+	for(auto videopath : videopaths){
+
+        int count = 0;
+
+		auto video = fd.loadVideo(videopath);
+		auto frames = video->frames();
+		for(auto& frame : frames){
+            count++;
+            // construct vocab based on only one out of every speedinator frames
+            if(count % speedinator) continue;
+
+            // won't be able to vconcat if cols are different sizes
+            if (frame.descriptors.cols == 0) continue;
+
+			allFeatures.push_back(frame.descriptors.clone());
+		}
+	}
+
+    std::cout << "Collected: " << allFeatures.size() << std::endl;
+
+    // for(int i = 0; i < 30; i++){
+    //     auto& af = allFeatures;
+    //     std::cout << af[i].rows << " X " << af[i].cols << std::endl;
+    // }
+
+
+	cv::Mat descriptors;
+	cv::vconcat(allFeatures, descriptors);
+
+    std::cout << "Concatenated" << std::endl;
+
+	K = (K == -1)? (descriptors.rows / 20) : K;
+    return kmeans2(descriptors, K, 1);
 }
 
 cv::Mat baggify(Frame f, cv::Mat vocab){
