@@ -7,6 +7,7 @@
 #include "instrumentation.hpp"
 #include <experimental/filesystem>
 #include "sw.hpp"
+#include "keyframes.hpp"
 
 namespace fs = std::experimental::filesystem;
 using namespace cv;
@@ -40,6 +41,8 @@ int main(int argc, char** argv )
     }
 
 
+
+
     if ( argc < 3 )
     {
         printf("usage: ./main <Database_Path> <BOW_matrix_path>\n");
@@ -65,6 +68,31 @@ int main(int argc, char** argv )
     fs.release();
 
     // ==============================
+
+    {
+        // key frame stuff
+        std::cout << "Key frame stuff" << std::endl;
+        auto extractor = [&myvocab](Frame f) { return baggify(f, myvocab); };
+        FileDatabase fd(argv[1]);
+
+        auto videopaths = fd.listVideos();
+        std::cout << "Got video path list" << std::endl;
+
+        for(auto& vp : videopaths){
+            auto vid = fd.loadVideo(vp);
+            auto ss = flatScenes(*vid, extractor, .5);
+            std::cout << "Video: " << vp << ", scenes: " << ss.size() << std::endl;
+            for(auto& a : ss){
+                std::cout << a << ", ";
+            }
+            std::cout << std::endl;
+
+            visualizeSubset(vp, ss);
+        }
+    }
+
+    // ==============================    
+
     FileDatabase fd(argv[1]);
 
     auto videopaths = fd.listVideos();

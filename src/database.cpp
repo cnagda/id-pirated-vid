@@ -14,10 +14,14 @@ void createFolder(const string& folder_name) {
 
 string getAlphas(const string& input)
 {
+#ifdef CLEAN_NAMES
     // TODO: check for at least one alpha char
     string output;
     copy_if(input.begin(), input.end(), back_inserter(output), [](auto c) -> bool { return isalnum(c); });
     return output;
+#else
+    return input;
+#endif
 }
 
 void SIFTwrite(const string &filename, const Frame& frame)
