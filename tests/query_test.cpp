@@ -27,7 +27,7 @@ TEST_F(DatabaseFixture, NotInDatabase) {
     auto video = getSIFTVideo("../sample.mp4");
     auto match = findMatch(video, db, vocab);
     if(match) {
-        std::cout << "confidence: " << match.matchConfidence << " video: " << match.video << std::endl;
+        std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;
     }
     ASSERT_FALSE(match.has_value());
 }

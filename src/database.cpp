@@ -110,7 +110,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
 }
 
 FileDatabase::FileDatabase(const string& databasePath) {
-    databaseRoot = fs::current_path() / "database";
+    databaseRoot = databasePath;
 }
 
 unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::function<void(Mat, Frame)> callback)
