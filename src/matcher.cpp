@@ -1,9 +1,11 @@
 #include <opencv2/features2d.hpp>
 #include <fstream>
+#include <iostream>
 #include "database.hpp"
 #include "instrumentation.hpp"
 #include "matcher.hpp"
 #include "kmeans2.hpp"
+#include "sw.hpp"
 
 cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
 	FileDatabase fd(path);
@@ -41,7 +43,7 @@ cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
 	cv::Mat descriptors;
 	cv::vconcat(allFeatures, descriptors);
 
-    std::cout << "Concatenated" << std::endl;
+    std::cout << "Concatenated: " << descriptors.rows << std::endl;
 
 	K = (K == -1)? (descriptors.rows / 20) : K;
 	cv::BOWKMeansTrainer trainer(K);
@@ -147,15 +149,26 @@ std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, cv::Mat vocab)
     auto reporter = getReporter(instrumenter);
     auto extractor = [&vocab](Frame f) { return baggify(f, vocab); };
     auto mycomp = [extractor](Frame f1, Frame f2) { return frameSimilarity(f1, f2, extractor); };
+    std::function intcomp = [mycomp](Frame f1, Frame f2) { return mycomp(f1, f2) > 0.8 ? 3 : -3; };
 
     MatchInfo match;
 
     for(auto s2 : videopaths) {
         auto v2 = db.loadVideo(s2);
+        std::cout << "Calculating match for " << v2->name << std::endl;
+
         double score = boneheadedSimilarity(target, *v2, mycomp, reporter);
         if(score > match.matchConfidence) {
             match = MatchInfo{score, 0, 0, v2->name};
         }
+        /* auto&& alignments = calculateAlignment(target.frames(), v2->frames(), intcomp, 20, 2);
+        if(alignments.size() > 0) {
+            auto& a = alignments[0];
+            if(a.score > match.matchConfidence) {
+                match = MatchInfo{a.score, a.startKnown, a.endKnown, v2->name};
+            }
+        } */
+        
     }
 
     EmmaExporter().exportTimeseries(target.name, "frame no.", "cosine distance", instrumenter.getTimeSeries());

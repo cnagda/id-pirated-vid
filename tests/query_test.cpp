@@ -17,6 +17,7 @@ protected:
         db.addVideo("../crab.mp4");
 
         vocab = constructVocabulary(fs::current_path() / "database_test_dir", 200, 10);
+        std::cout << "Setup done" << std::endl;
     }
 
     FileDatabase db;

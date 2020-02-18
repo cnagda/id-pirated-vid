@@ -12,9 +12,9 @@ add_dependencies(database_test sample_videos)
 target_link_libraries(query_test gtest_main database ${OpenCV_LIBS})
 add_dependencies(query_test sample_videos)
 
-target_link_libraries(sw_benchmark benchmark_main)
+target_link_libraries(sw_benchmark benchmark_main database)
 target_link_libraries(database_benchmark benchmark_main database)
-target_link_libraries(sw_test gtest_main)
+target_link_libraries(sw_test gtest_main database)
 
 add_test(NAME db_test COMMAND database_test)
 add_test(NAME sw_test COMMAND sw_test)

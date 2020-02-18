@@ -6,6 +6,7 @@
 #include <functional>
 #include <iostream>
 #include <iomanip>
+#include "matrix.hpp"
 
 
 template<typename It>
@@ -22,21 +23,7 @@ struct Alignment : ItAlignment<int> {
     }
 };
 
-std::pair<int, int> slowMatrixMax(std::vector<std::vector<int>> & matrix){
-    int max = -1, mi = -1, mj = -1;
 
-    for(int i = 0; i < matrix.size(); i++){
-        for(int j = 0; j < matrix[0].size(); j++){
-            if(max < matrix[i][j]){
-                max = matrix[i][j];
-                mi = i;
-                mj = j;
-            }
-        }
-    }
-
-    return std::make_pair(mi, mj);
-}
 
 template <typename It, typename Cmp> 
 std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknown, It unknownEnd, Cmp comp, int threshold, unsigned int gapScore){
@@ -50,6 +37,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
     // populate matrix
     for(int i = 1; i <= m; i++){
         for(int j = 1; j <= n; j++){
+            std::cout << "Inner loop: " << i * m + j << " out of " << m * n << std::endl;
             int max = 0;
             int score = 0;
 
@@ -72,9 +60,6 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
                 max = score;
                 sources[i][j] = 1;
             }
-
-            // finished all comparisons
-            matrix[i][j] = std::max(0, max);
         }
     }
 
