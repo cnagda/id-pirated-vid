@@ -25,8 +25,12 @@ endif(BUILD_TESTING)
 
 add_executable(main main.cxx)
 add_executable(query query.cxx)
+add_executable(bench bench.cxx)
+add_executable(keyframes keyframes.cxx)
 
 target_link_libraries( main database )
+target_link_libraries( bench database )
+target_link_libraries( keyframes database )
 
 add_dependencies(main sample_videos)
 add_dependencies(query python_scripts)
