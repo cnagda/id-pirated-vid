@@ -222,6 +222,7 @@ cv::Mat kmeans2(cv::Mat input, int K, int attempts, float halt, int epochs){
         }while((prev_error - error > 0.0005) && (++run < epochs) && (max_distance/min_initial_distance > halt));
 
         std::cout << "Done with all attempts, error: " << error << ", lowest: " << lowest_error << std::endl;
+        std::cout << "Took " << run << " runs" << std::endl;
         if(error < lowest_error){
             lowest_error = error;
             best_centers = centers;
@@ -235,6 +236,207 @@ cv::Mat kmeans2(cv::Mat input, int K, int attempts, float halt, int epochs){
     //printMat(best_centers);
 
     return mytocv(best_centers);
+}
+
+std::vector<int> zeroton(int n){
+    std::vector<int> retval;
+    for(int i = 0; i < n; i++){
+        retval.push_back(i);
+    }
+    return retval;
+}
+
+std::vector<int> randvector(int n, int K){
+    std::vector<int> retval;
+    for(int i = 0; i < n; i++){
+        retval.push_back(rand()%K);
+    }
+    return retval;
+}
+
+void plusequals(std::vector<float>& v1, std::vector<float>& v2){
+    for(int i = 0; i < v1.size(); i++){
+        v1[i] += v2[i];
+    }
+}
+
+void divequals(std::vector<float>& v, float d){
+    for(auto& a : v){
+        a /= d;
+    }
+}
+
+cv::Mat fastkmeans2(cv::Mat input, int K, int epochs){
+    mymatrix data = cvtomy(input);
+    std::cout << "Data, " << data.size() << " by " << data[0].size() << std::endl;
+    //printMat(data); 
+   
+    // assign WIDTH
+    float WIDTH = .05;
+
+    // initialize centers matrix
+    mymatrix centers = zeroMatrix(K, data[0].size());
+    // initialize intervals
+    //std::vector<std::vector<int>> intervals((int)(2/WIDTH));
+    //intervals[0] = zeroton(data.size());
+    std::vector<float> intervals(data.size(), -.5); // use variable instead of intervals
+
+    // bins left of this are negative/to be revisited
+    int middle = 1/WIDTH;
+
+    // store the closest center to each point
+    // initialize as random but guarantee each center gets at least one point
+    std::vector<int> closest_centers = randvector(data.size(), K);
+    for(int i = 0; i < K; i++){
+        closest_centers[i] = i;
+    }
+    
+    // terminates loop
+    bool done = false;
+
+    // max movement of center
+    float D = 0;
+    // to terminate early
+    int run = 0;
+
+    // first time populate centers
+    {
+        mymatrix totals = zeroMatrix(K, data[0].size());
+        std::vector<int> counts = std::vector<int>(K);
+
+        for(int i = 0; i < data.size(); i++){
+            int cc = closest_centers[i];
+            plusequals(totals[cc], data[i]);
+            counts[cc]++;
+        }
+
+        for(int i = 0; i < K; i++){
+            if(counts[i]){
+                divequals(totals[i], counts[i]);
+                centers[i] = totals[i];
+            }
+        }
+    }
+
+    
+    // sorts two doubles together based on first
+    auto sortdoubles = [](std::vector<float>& v, std::vector<int>& v2) -> void{
+        if(v[0] <= v[1]) return;
+        float temp = v[0];
+        v[0] = v[1];
+        v[1] = temp;
+        int temp2 = v2[0];
+        v2[0] = v2[1];
+        v2[1] = temp2;
+    };
+
+    while(!done && run++ < epochs){
+        /*
+        std::cout << "Run number " << run << std::endl;
+        std::cout << "Centers: " << std::endl;
+        printMat(centers);
+        std::cout << "Closest centers to each point:" << std::endl;
+        for(auto& cc : closest_centers){
+            std::cout << cc << " ";
+        }
+        std::cout << std::endl << "==============================" << std::endl << std::endl;
+        */
+
+        // to calculate new centers
+        mymatrix totals = zeroMatrix(K, data[0].size());
+        std::vector<int> counts = std::vector<int>(K);
+
+        // sorts two doubles together based on first
+        auto sortdoubles = [](std::vector<float>& v, std::vector<int>& v2) -> void{
+            if(v[0] <= v[1]) return;
+            float temp = v[0];
+            v[0] = v[1];
+            v[1] = temp;
+            int temp2 = v2[0];
+            v2[0] = v2[1];
+            v2[1] = temp2;
+        };
+
+        int visited = 0;
+
+        done = true;
+        // all points
+        for(int i = 0; i < data.size(); i++){
+            if((intervals[i] -= 2*D) < 0){ // calculate center
+                visited++;
+
+                done = false;
+
+                // find closest and second closest centers
+                auto& point = data[i];
+                std::vector<float> dclosest_distances = {10, 10};
+                std::vector<int> dclosest_centers = {-1, -1};
+
+                for(int j = 0; j < K; j++){ // check against all centers
+                    float d = distance(point, centers[j]);
+                    if(d < dclosest_distances[1]){
+                        dclosest_distances[1] = d;
+                        dclosest_centers[1] = j;
+                        sortdoubles(dclosest_distances, dclosest_centers);
+                    }
+                }
+
+                // FIXME
+                /*
+                std::cout << "Run " << run << " point " << i << " dcc and dcd" << std::endl;
+                for(auto& a : dclosest_centers){
+                    std::cout << a << " ";
+                } std::cout << std::endl;
+                for(auto& a : dclosest_distances){
+                    std::cout << a << " ";
+                } std::cout << std::endl;
+                */
+
+                // set closest center
+                closest_centers[i] = dclosest_centers[0];
+                // find new interval value
+                intervals[i] = dclosest_distances[1] - dclosest_distances[0];
+            }
+
+            // used to find new center positions
+            plusequals(totals[closest_centers[i]], data[i]);
+            ++counts[closest_centers[i]];
+
+        }
+
+        std::cout << "Visited " << visited << "/" << data.size() << " = " << (float)visited/data.size() * 100 << "%" << std::endl;
+
+        // reset max distance
+        D = 0;
+        // move centers, set D
+        for(int i = 0; i < K; i++){
+            if(counts[i]){
+                divequals(totals[i], counts[i]);
+                auto dis = distance(centers[i], totals[i]);
+                if(dis > D){
+                    D = dis;
+                }
+                centers[i] = totals[i];
+            }
+        }
+
+        // shift intervals by 2D
+        //for(auto& interv : intervals){
+        //    interv -= 2*D;
+        //}
+
+    }
+
+    std::cout << "Done with " << run << " runs" << std::endl;
+    /*std::cout << "Done with " << run << " runs, centers:" << std::endl;
+    printMat(centers);
+    std::cout << "Closest centers to each point:" << std::endl;
+    for(auto& cc : closest_centers){
+        std::cout << cc << " ";
+    }
+    std::cout << std::endl;*/
+
+    return mytocv(centers);
 }
 
 cv::Mat kmeans2(cv::Mat input, int K, int attempts, cv::Mat centers){

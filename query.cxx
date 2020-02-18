@@ -27,20 +27,31 @@ int main(int argc, char** argv )
     //srand(time(0));    
     srand(500);
 
-    cv::Mat randm(100, 2, CV_32F);
+    cv::Mat randm(100000, 128, CV_32F);
     for(int i = 0; i < randm.rows; i++){
         for(int j = 0; j < randm.cols; j++){
             randm.at<float>(i, j) = ((float)rand())/RAND_MAX;
         }
     }
 
-    auto start = high_resolution_clock::now(); 
-    cv::Mat centers = kmeans2(randm, 3, 1);
-    auto stop = high_resolution_clock::now(); 
+    int ncenters = 4;
 
-    auto duration = duration_cast<seconds>(stop - start); 
+    auto start = high_resolution_clock::now();
+    cv::Mat centers = kmeans2(randm, ncenters, 1);
+    auto stop = high_resolution_clock::now();
 
-    std::cout << "Kmeans took " << duration.count() << " seconds" << std::endl;
+    auto duration = duration_cast<seconds>(stop - start);
+
+    std::cout << "normal Kmeans took " << duration.count() << " seconds" << std::endl;
+
+
+    start = high_resolution_clock::now(); 
+    centers = fastkmeans2(randm, ncenters);
+    stop = high_resolution_clock::now(); 
+
+    duration = duration_cast<seconds>(stop - start); 
+
+    std::cout << "fast Kmeans took " << duration.count() << " seconds" << std::endl;
 
     std::string s1 = "hello there";
     std::string s2 = "I said hello";
