@@ -64,9 +64,6 @@ int main(int argc, char** argv )
     }
 
     if ( argc >= 2 ){
-        namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
-
-
         std::cout << "About to start old kmeans" << std::endl;
         auto start = high_resolution_clock::now();
         Mat vocab = constructVocabulary(argv[1], 200, 10);
