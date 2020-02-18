@@ -26,9 +26,9 @@ endif(BUILD_TESTING)
 add_executable(main main.cxx)
 add_executable(query query.cxx)
 
-target_link_libraries( main ${OpenCV_LIBS} database )
+target_link_libraries( main database )
 
 add_dependencies(main sample_videos)
 add_dependencies(query python_scripts)
 
-target_link_libraries( query ${OpenCV_LIBS} database stdc++fs )
+target_link_libraries( query database )
