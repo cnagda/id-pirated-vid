@@ -7,10 +7,12 @@ using namespace std;
 using namespace cv;
 namespace fs = experimental::filesystem;
 
+#ifdef CLEAN_NAMES
 TEST(DatabaseSuite, getAlphas) {
     string input = "this is a{} good";
     ASSERT_TRUE(getAlphas(input) == "thisisagood");
 }
+#endif
 
 TEST(DatabaseSuite, SIFTrwTest) {
     Mat mat1({2, 4}, {1, 2, 3, 4, 5, 6, 7, 8});
@@ -36,7 +38,7 @@ TEST(DatabaseSuite, SIFTrwTest) {
 TEST(DatabaseSuite, FileDatabase) {
     FileDatabase db;
     auto vid = db.addVideo("../sample.mp4")->frames();
-    auto loaded = db.loadVideo("../sample.mp4")->frames();
+    auto loaded = db.loadVideo("sample.mp4")->frames();
 
     cout << "size: " << vid.size() << endl;
 
