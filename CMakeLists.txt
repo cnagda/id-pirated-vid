@@ -13,6 +13,11 @@ include_directories(include)
 enable_testing()
 
 option(BUILD_TESTING "Build tests" OFF)
+option(PRINT_DEBUG "Add debug messages" OFF)
+
+if(PRINT_DEBUG)
+    add_definitions(-DSW_COUT)
+endif(PRINT_DEBUG)
 
 add_subdirectory(src)
 
