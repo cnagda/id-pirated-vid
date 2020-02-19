@@ -19,24 +19,20 @@ TEST(Classifier, getAccuracy) {
     {
         auto&& results = BinaryResults::runClassifier(tests.begin(), tests.end(), alwaysTrueClassifier<int>);
         auto&& matrix = results.getConfusionMatrix();
-        std::cout << "tp: " << matrix.tp 
-                    << "tn: " << matrix.tn 
-                    << "fp: " << matrix.fp 
-                    << "fn: " << matrix.fn << std::endl;
-        ASSERT_EQ(0.5, getAccuracy(matrix));
+        EXPECT_EQ(0.5, getAccuracy(matrix));
     }
 
     std::generate_n(tests.begin(), 100, []{ return std::make_pair(false, 0); });
 
     {
         auto&& results = BinaryResults::runClassifier(tests.begin(), tests.end(), alwaysTrueClassifier<int>);
-        ASSERT_EQ(0, getAccuracy(results.getConfusionMatrix()));
+        EXPECT_EQ(0, getAccuracy(results.getConfusionMatrix()));
     }
 
     std::generate_n(tests.begin(), 100, []{ return std::make_pair(true, 0); });
 
     {
         auto&& results = BinaryResults::runClassifier(tests.begin(), tests.end(), alwaysTrueClassifier<int>);
-        ASSERT_EQ(1, getAccuracy(results.getConfusionMatrix()));
+        EXPECT_EQ(1, getAccuracy(results.getConfusionMatrix()));
     }
 }

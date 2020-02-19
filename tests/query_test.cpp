@@ -30,10 +30,10 @@ TEST_F(DatabaseFixture, NotInDatabase) {
     if(match) {
         std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;
     }
-    ASSERT_FALSE(match.has_value());
+    EXPECT_FALSE(match.has_value());
 }
 
 TEST_F(DatabaseFixture, InDatabase) {
     auto video = db.loadVideo(db.listVideos()[0]);
-    ASSERT_TRUE(findMatch(*video, db, vocab).has_value());
+    EXPECT_TRUE(findMatch(*video, db, vocab).has_value());
 }

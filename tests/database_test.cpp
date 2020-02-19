@@ -10,7 +10,7 @@ namespace fs = experimental::filesystem;
 #ifdef CLEAN_NAMES
 TEST(DatabaseSuite, getAlphas) {
     string input = "this is a{} good";
-    ASSERT_TRUE(getAlphas(input) == "thisisagood");
+    EXPECT_TRUE(getAlphas(input) == "thisisagood");
 }
 #endif
 
@@ -30,9 +30,9 @@ TEST(DatabaseSuite, SIFTrwTest) {
     auto f2 = SIFTread("test_frame2");
     vector<Frame> loaded{f1, f2};
 
-    ASSERT_TRUE(result.size() > 0);
-    ASSERT_TRUE(result.size() == loaded.size());
-    ASSERT_TRUE(equal(result.begin(), result.end(), loaded.begin()));
+    EXPECT_TRUE(result.size() > 0);
+    EXPECT_TRUE(result.size() == loaded.size());
+    EXPECT_TRUE(equal(result.begin(), result.end(), loaded.begin()));
 }
 
 TEST(DatabaseSuite, FileDatabase) {
@@ -42,7 +42,7 @@ TEST(DatabaseSuite, FileDatabase) {
 
     cout << "size: " << vid.size() << endl;
 
-    ASSERT_TRUE(vid.size() > 0);
-    ASSERT_TRUE(vid.size() == loaded.size());
-    ASSERT_TRUE(equal(vid.begin(), vid.end(), loaded.begin()));
+    EXPECT_TRUE(vid.size() > 0);
+    EXPECT_TRUE(vid.size() == loaded.size());
+    EXPECT_TRUE(equal(vid.begin(), vid.end(), loaded.begin()));
 }
