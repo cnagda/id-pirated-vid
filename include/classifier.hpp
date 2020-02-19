@@ -41,7 +41,7 @@ public:
         std::vector<classification_results> results;
         for(auto i = testBegin; i != testEnd; i++) 
             results.push_back(
-                std::make_pair(i->first, c(std::forward<decltype(i->second)>(i->second))));
+                std::make_pair(i->first, std::invoke(c, std::forward<decltype(i->second)>(i->second))));
 
         return BinaryResults{results};
     }
