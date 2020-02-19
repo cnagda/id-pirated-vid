@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 #include <cmath>
+#include <iterator>
 
 /* given a classifier, a labelled set of good values, and a labelled set of bad values
  * run the classifier on the tests and collect the results */
@@ -13,27 +14,30 @@ template<typename T> struct ConfusionMatrix {
     T tp, tn, fp, fn;
 };
 
+template<typename It> ConfusionMatrix<typename std::iterator_traits<It>::difference_type> computeConfusion(It begin, It end) {
+    typedef typename std::iterator_traits<It>::difference_type s_type;
+    ConfusionMatrix<s_type> r{};
+    for(auto i = begin; i != end; i++) {
+        r.tp += static_cast<bool>(i->first && i->second);
+        r.tn += static_cast<bool>(!i->first && !i->second);
+        r.fp += static_cast<bool>(!i->first && i->second);
+        r.fn += static_cast<bool>(i->first && !i->second);
+    }
+
+    return r;
+}
+
 class BinaryResults {
 // pair label, guess
 typedef std::pair<bool, bool> classification_results;
 const std::vector<classification_results> results;
-typedef decltype(results)::size_type size_type;
 
 BinaryResults(std::vector<classification_results>&& results) : results(results) {}
 BinaryResults(const std::vector<classification_results>& results) : results(results) {}
 
 public:
-    ConfusionMatrix<size_type> getConfusionMatrix() const {
-        // zero initialize with brackets
-        ConfusionMatrix<size_type> r{};
-        for(auto& i : results) {
-            r.tp += static_cast<bool>(i.first && i.second);
-            r.tn += static_cast<bool>(!i.first && !i.second);
-            r.fp += static_cast<bool>(!i.first && i.second);
-            r.fn += static_cast<bool>(i.first && !i.second);
-        }
-
-        return r;
+    decltype(auto) getConfusionMatrix() const {
+        return computeConfusion(results.begin(), results.end());
     }
     // It -> first the class of the test
     // It -> second the data of the test
