@@ -22,7 +22,7 @@ int main(int argc, char** argv )
         DEBUG = true;
     }
 
-    namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
+    namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
 
     FileDatabase db;
     db.addVideo(argv[1], [&](Mat image, Frame frame){
@@ -35,6 +35,11 @@ int main(int argc, char** argv )
             cout << "size: " << output.total() << endl;
             imshow("Display window", output);
 
+            waitKey(0);
+
+            auto im2 = scaleToTarget(image, 500, 700);
+            imshow("Display window", im2);
+    
             waitKey(0);
         }
     });

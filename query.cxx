@@ -34,8 +34,8 @@ int main(int argc, char** argv )
 
 
         std::cout << "About to start old kmeans" << std::endl;
-        Mat vocab = constructVocabulary(argv[1], 200, 10);
-        std::cout << "Done kmeans" << std::endl;
+        Mat vocab = constructVocabulary(argv[1], 2000, 10);
+        std::cout << "Done with kmeans" << std::endl;
 
         cv::FileStorage file(argv[2], cv::FileStorage::WRITE);
 

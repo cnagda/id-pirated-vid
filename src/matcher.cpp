@@ -7,8 +7,8 @@
 #include "kmeans2.hpp"
 #include "sw.hpp"
 
-cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
-	FileDatabase fd(path);
+cv::Mat constructVocabulary(const std::string& path, int K, int speedinator, cv::Mat centers, bool online){
+    FileDatabase fd(path);
 
 	auto videopaths = fd.listVideos();
 	std::vector<cv::Mat> allFeatures;
@@ -46,11 +46,65 @@ cv::Mat constructVocabulary(const std::string& path, int K, int speedinator){
     std::cout << "Concatenated: " << descriptors.rows << std::endl;
 
 	K = (K == -1)? (descriptors.rows / 20) : K;
-	cv::BOWKMeansTrainer trainer(K);
+	//cv::BOWKMeansTrainer trainer(K);
+    
+    cv::Mat retval;
+
+    kmeans(descriptors, K, centers, cv::TermCriteria(), 1, online? cv::KMEANS_USE_INITIAL_LABELS : cv::KMEANS_PP_CENTERS, retval);
 
     std::cout << "About to return" << std::endl;
 
-	return trainer.cluster(descriptors);
+    return retval;
+	//return trainer.cluster(descriptors);
+}
+
+// bag of frames
+cv::Mat constructFrameVocabulary(const std::string& path, cv::Mat vocab, int K, int speedinator, cv::Mat centers, bool online){
+    FileDatabase fd(path);
+
+	auto videopaths = fd.listVideos();
+	std::vector<cv::Mat> allFeatures;
+
+	// collect all features
+	for(auto videopath : videopaths){
+
+        int count = 0;
+
+		auto video = fd.loadVideo(videopath);
+		auto frames = video->frames();
+		for(auto& frame : frames){
+            count++;
+            // construct vocab based on only one out of every speedinator frames
+            if(count % speedinator) continue;
+
+            // won't be able to vconcat if cols are different sizes
+            if (frame.descriptors.cols == 0) continue;
+
+            if(frame.descriptors.rows == 0) continue;
+
+			//allFeatures.push_back(frame.descriptors.clone());
+            allFeatures.push_back(baggify(frame, vocab));
+		}
+	}
+
+    std::cout << "Collected: " << allFeatures.size() << std::endl;
+
+    // matrix containing all collected bags of words
+	cv::Mat descriptors;
+	cv::vconcat(allFeatures, descriptors);
+
+    std::cout << "Concatenated: " << descriptors.rows << std::endl;
+
+	K = (K == -1)? (descriptors.rows / 20) : K;
+	//cv::BOWKMeansTrainer trainer(K);
+    
+    cv::Mat retval;
+
+    kmeans(descriptors, K, centers, cv::TermCriteria(), 1, online? cv::KMEANS_USE_INITIAL_LABELS : cv::KMEANS_PP_CENTERS, retval);
+
+    std::cout << "About to return" << std::endl;
+
+    return retval;
 }
 
 cv::Mat constructMyVocabulary(const std::string& path, int K, int speedinator){
@@ -105,6 +159,25 @@ cv::Mat baggify(Frame f, cv::Mat vocab){
 
     if(f.descriptors.rows){
         extractor.compute(f.descriptors, output);
+    }
+    else{
+        //std::cerr << "In baggify: Frame has no key points" << std::endl;
+    }
+
+    return output;
+}
+
+cv::Mat baggifyFrames(std::vector<cv::Mat>& bags, cv::Mat frameVocab){
+    cv::BOWImgDescriptorExtractor extractor(cv::FlannBasedMatcher::create());
+
+    extractor.setVocabulary(frameVocab);
+
+    cv::Mat output, descriptors;
+
+    if(bags.size()){
+        cv::vconcat(bags, descriptors);
+
+        extractor.compute(descriptors, output);
     }
     else{
         //std::cerr << "In baggify: Frame has no key points" << std::endl;

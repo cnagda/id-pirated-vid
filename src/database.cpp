@@ -83,7 +83,19 @@ Frame SIFTread(const string &filename)
     return Frame{keyPoints, mat};
 }
 
-SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Frame)> callback) {
+cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight){
+    int srcWidth = image.cols;
+    int srcHeight = image.rows;
+
+    double ratio = std::min((double)targetHeight/srcHeight, (double)targetWidth/srcWidth);
+
+    cv::Mat retval;
+
+    resize(image, retval, Size(), ratio, ratio);
+    return retval;
+}
+
+SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Frame)> callback, std::pair<int, int> cropsize) {
     vector<Frame> frames;
 
     Ptr<FeatureDetector> detector = xfeatures2d::SiftFeatureDetector::create(500);
@@ -95,8 +107,16 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
 
     size_t index = 0;
 
+    int num_frames = cap.get(CAP_PROP_FRAME_COUNT);
+
     while (cap.read(image))
     { // test only loading 2 frames
+        if(!(++index % 10)){
+            std::cout << "Frame " << index << "/" << num_frames << std::endl;
+        }
+
+        image = scaleToTarget(image, cropsize.first, cropsize.second);
+
         detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
 
         Frame frame{keyPoints, descriptors.clone()};

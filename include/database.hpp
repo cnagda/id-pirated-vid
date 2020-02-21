@@ -16,7 +16,8 @@ void SIFTwrite(const std::string& filename, const Frame& frame);
 Frame SIFTread(const std::string& filename);
 std::string getAlphas(const std::string& input);
 void createFolder(const std::string& folder_name);
-SIFTVideo getSIFTVideo(const std::string& filename, std::function<void(cv::Mat, Frame)> callback = nullptr);
+SIFTVideo getSIFTVideo(const std::string& filename, std::function<void(cv::Mat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
+cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight);
 
 class IVideo {
 public:
