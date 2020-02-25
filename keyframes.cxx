@@ -15,7 +15,7 @@ bool file_exists(const string& fname){
 int main(int argc, char** argv) {
     if ( argc < 3 )
     {
-        printf("usage: ./main <Database_Path> <BOW_matrix_path>\n");
+        printf("usage: ./main <Database_Path> <BOW_matrix_path> [Frame_vocabulary_matrix_path]\n");
         return -1;
     }
 
@@ -26,6 +26,20 @@ int main(int argc, char** argv) {
 
         file << "Vocabulary" << vocab;
         file.release();
+    }
+
+    if ( argc >= 4 ){
+        if ( !file_exists(argv[3]) ){
+            Mat frameVocab = constructFrameVocabulary();
+
+            cv::FileStorage file(argv[3], cv::FileStorage::WRITE);
+
+            file << "Vocabulary" << vocab;
+            file.release();
+
+        }
+
+
     }
 
     namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
@@ -47,7 +61,7 @@ int main(int argc, char** argv) {
 
     for(auto& vp : videopaths){
         auto vid = fd.loadVideo(vp);
-        auto ss = flatScenes(*vid, extractor, .5);
+        auto ss = flatScenes(*vid, extractor, .15);
         std::cout << "Video: " << vp << ", scenes: " << ss.size() << std::endl;
         for(auto& a : ss){
             std::cout << a << ", ";
