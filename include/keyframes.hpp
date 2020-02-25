@@ -1,3 +1,6 @@
+#ifndef KEYFRAMES_HPP
+#define KEYFRAMES_HPP
+
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
@@ -103,3 +106,4 @@ void visualizeSubset(std::string fname, std::vector<int> subset = {}){
     destroyWindow("Display window");
 }
 
+#endif
