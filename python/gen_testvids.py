@@ -12,7 +12,8 @@ import argparse
 def insert(original_fname, pirated_fnames, outpath):
     """Insert a clip of pirated into original."""
 
-    print('Inserting {0} clips into {1}'.format(len(pirated_fnames), original_fname))
+    print('Inserting {0} clips into {1}'.format(
+        len(pirated_fnames), original_fname))
 
     original = VideoFileClip(original_fname)
     pirated = list(map(VideoFileClip, pirated_fnames))
@@ -28,7 +29,8 @@ def insert(original_fname, pirated_fnames, outpath):
             end_original = original.duration
         original_clip = original.subclip(start_original, end_original)
 
-        print('i: {0}, filename: {1}, start: {2}, end: {3}'.format(i, original.filename, start_original, end_original))
+        print('i: {0}, filename: {1}, start: {2}, end: {3}'.format(
+            i, original.filename, start_original, end_original))
         start_original += (end_original - start_original)
 
         # Generate a random pirated clip
@@ -37,7 +39,8 @@ def insert(original_fname, pirated_fnames, outpath):
         if end_pirated > pirated[i].duration:
             end_pirated = pirated[i].duration
 
-        print('i: {0}, filename: {1}, start: {2}, end: {3}'.format(i, pirated[i].filename, start_pirated, end_pirated))
+        print('i: {0}, filename: {1}, start: {2}, end: {3}'.format(
+            i, pirated[i].filename, start_pirated, end_pirated))
         pirated_clip = pirated[i].subclip(start_pirated, end_pirated)
 
         clips.append(original_clip)
@@ -46,24 +49,27 @@ def insert(original_fname, pirated_fnames, outpath):
     video = concatenate_videoclips(clips)
 
     # Export the video
-    video.write_videofile(outpath, audio = False)
+    video.write_videofile(outpath, audio=False)
 
 
 def main():
-    parser = argparse.ArgumentParser(description =
-        'Generate testing videos with inserter clips.')
+    parser = argparse.ArgumentParser(
+        description='Generate testing videos with inserter clips.')
 
     # Positional arguments
-    parser.add_argument('srcdir', metavar = 'SOURCEDIR', type = str,
-        help = 'path to directory of full videos to use as a base')
-    parser.add_argument('destdir', metavar = 'DESTDIR', type = str,
-        help = 'path to directory to output testing videos')
+    parser.add_argument(
+        'srcdir',
+        metavar='SOURCEDIR',
+        type=str,
+        help='path to directory of full videos to use as a base')
+    parser.add_argument('destdir', metavar='DESTDIR', type=str,
+                        help='path to directory to output testing videos')
 
     # Optional arguments
-    args = parser.add_argument('-n', type = int,
-        help = 'number of testing videos to generate')
-    args = parser.add_argument('-i', type = int,
-        help = 'number of clips to insert per video')
+    args = parser.add_argument('-n', type=int,
+                               help='number of testing videos to generate')
+    args = parser.add_argument('-i', type=int,
+                               help='number of clips to insert per video')
 
     args = parser.parse_args()
 

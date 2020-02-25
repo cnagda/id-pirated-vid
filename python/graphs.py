@@ -1,8 +1,8 @@
+import numpy as np
+import matplotlib.pyplot as plt
 import os
 import matplotlib
 matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-import numpy as np
 
 
 for dir in os.listdir("Temp"):
@@ -22,9 +22,9 @@ for dir in os.listdir("Temp"):
                 if len(lines) > maxframes:
                     maxframes = len(lines)
 
-        xticks = list(np.linspace(0,maxframes-1,20,dtype=int))
+        xticks = list(np.linspace(0, maxframes - 1, 20, dtype=int))
         plt.xticks(xticks)
-        plt.legend(legendlist,loc=0, prop={'size': 6})
+        plt.legend(legendlist, loc=0, prop={'size': 6})
         plt.show()
 
 # TODO: delete Temp dir but I don't want to do that yet
