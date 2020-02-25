@@ -38,6 +38,40 @@ std::vector<int> flatScenes(IVideo& video, std::function<cv::Mat(Frame)> extract
     return retval;
 }
 
+std::vector<cv::Mat> flatScenesBags(IVideo& video, std::function<cv::Mat(Frame)> extractor, double threshold, cv::Mat frameVocab){
+    std::cout << "In flatScenesBags" << std::endl;
+
+    std::vector<std::vector<cv::Mat>> retval;    
+
+    auto frames = video.frames();
+    if(!frames.size()){
+        return {};
+    }
+
+    retval.push_back({});
+    int index = 0;
+
+    for(int i = 1; i < frames.size(); i++) {
+        if(double fs = frameSimilarity(frames[i], frames[i - 1], extractor); fs < threshold){
+            std::cout << "sim i: " << i << " " << fs << std::endl;
+            index++;
+            retval.push_back({});
+        }
+        auto b = extractor(frames[i]);
+        if(b.dot(b) > .000001){ // do not include black frames
+            retval[index].push_back(extractor(frames[i]));
+        }
+    }
+    
+    std::vector<cv::Mat> retval2;
+
+    for(auto& a : retval){
+        if(a.size() > 0)
+            retval2.push_back(baggifyFrames(a, frameVocab));
+    }
+    return retval2;
+}
+
 void visualizeSubset(std::string fname, std::vector<int> subset = {}){
     std::sort(subset.begin(), subset.end());
     std::cout << "In visualise subset" << std::endl;
@@ -68,3 +102,4 @@ void visualizeSubset(std::string fname, std::vector<int> subset = {}){
     };
     destroyWindow("Display window");
 }
+

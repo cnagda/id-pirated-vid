@@ -23,9 +23,9 @@ bool file_exists(const string& fname){
 
 int main(int argc, char** argv )
 {
-    if ( argc < 3 )
+    if ( argc < 4 )
     {
-        printf("usage: ./main <Database_Path> <BOW_matrix_path>\n");
+        printf("usage: ./main <Database_Path> <BOW_matrix_path> <Frame_vocab_matrix_path>\n");
         return -1;
     }
 
@@ -49,6 +49,13 @@ int main(int argc, char** argv )
 
     fs["Vocabulary"] >> myvocab;
     fs.release();
+
+    Mat myframevocab;
+
+    cv::FileStorage fs2(argv[3], FileStorage::READ);
+
+    fs2["Frame_Vocabulary"] >> myframevocab;
+    fs2.release();
 
     FileDatabase fd(argv[1]);
 
@@ -79,10 +86,26 @@ int main(int argc, char** argv )
         }
     }*/
 
+    auto scenecomp = [extractor](cv::Mat b1, cv::Mat b2) { 
+        if(b1.size() != b2.size()) return (double)0;
+
+        auto b1n = b1.dot(b1);
+        auto b2n = b2.dot(b2);
+
+        return b1.dot(b2)/(sqrt(b1n * b2n) + 1e-10);
+    };
+
+    std::function intcomp = [scenecomp](cv::Mat b1, cv::Mat b2) { 
+        auto a = scenecomp(b1, b2);
+        return a > 0.8 ? 3 : -3; 
+    };
+
     // similarity between each two videos
     for(int i = 0; i < videopaths.size() - 1; i++){
         auto s1 = videopaths[i];
         auto v1 = fd.loadVideo(s1);
+        
+        auto fb1 = flatScenesBags(*v1, extractor, .2, myframevocab);
 
         VideoMatchingInstrumenter instrumenter(*v1);
         auto reporter = getReporter(instrumenter);
@@ -90,7 +113,19 @@ int main(int argc, char** argv )
             auto s2 = videopaths[j];
             std::cout << "Comparing " << s1 << " to " << s2 << std::endl;
             auto v2 = fd.loadVideo(s2);
-            std::cout << "Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp, reporter) << std::endl << std::endl;
+            std::cout << "Boneheaded Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp, reporter) << std::endl << std::endl;
+
+            auto fb2 = flatScenesBags(*v2, extractor, .2, myframevocab);
+
+            std::cout << "fb1 size: " << fb1.size() << " fb2: " << fb2.size() << std::endl;        
+            auto&& alignments = calculateAlignment(fb1, fb2, intcomp, 0, 2);
+            
+            std::cout << "Scene sw: " << std::endl;
+            for(auto& al : alignments){
+                std::cout << (std::string)al << std::endl;
+            }
+
+
         }
 
         EmmaExporter().exportTimeseries(s1, "frame no.", "cosine distance", instrumenter.getTimeSeries());

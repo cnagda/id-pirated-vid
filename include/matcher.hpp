@@ -17,7 +17,7 @@ cv::Mat constructMyVocabulary(const std::string& path, int K = -1, int speedinat
 cv::Mat baggify(Frame f, cv::Mat vocab);
 cv::Mat baggifyFrames(std::vector<cv::Mat>& bags, cv::Mat frameVocab);
 
-cv::Mat constructFrameVocabulary(const std::string& path, cv::Mat vocab, int K, int speedinator, cv::Mat centers, bool online);
+cv::Mat constructFrameVocabulary(const std::string& path, cv::Mat vocab, int K, int speedinator = 1, cv::Mat centers = cv::Mat(), bool online = 0);
 
 
 

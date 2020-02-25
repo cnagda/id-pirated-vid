@@ -37,7 +37,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
     // populate matrix
     for(int i = 1; i <= m; i++){
         for(int j = 1; j <= n; j++){
-            std::cout << "Inner loop: " << i * m + j << " out of " << m * n << std::endl;
+            if((i * n + j) % 20 == 0) std::cout << "Inner loop: " << i * n + j << " out of " << m * n << std::endl;
             int max = 0;
             int score = 0;
 

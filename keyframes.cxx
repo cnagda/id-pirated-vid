@@ -15,31 +15,19 @@ bool file_exists(const string& fname){
 int main(int argc, char** argv) {
     if ( argc < 3 )
     {
-        printf("usage: ./main <Database_Path> <BOW_matrix_path> [Frame_vocabulary_matrix_path]\n");
+        printf("usage: ./keyframes <Database_Path> <BOW_matrix_path> [Frame_vocabulary_matrix_path]\n");
         return -1;
     }
 
     if ( !file_exists(argv[2]) ){
-        Mat vocab = constructVocabulary(argv[1], 200, 10);
+        std::cout << "Calculating SIFT vocab" << std::endl;
+
+        Mat vocab = constructVocabulary(argv[1], 2000, 10);
 
         cv::FileStorage file(argv[2], cv::FileStorage::WRITE);
 
         file << "Vocabulary" << vocab;
         file.release();
-    }
-
-    if ( argc >= 4 ){
-        if ( !file_exists(argv[3]) ){
-            Mat frameVocab = constructFrameVocabulary();
-
-            cv::FileStorage file(argv[3], cv::FileStorage::WRITE);
-
-            file << "Vocabulary" << vocab;
-            file.release();
-
-        }
-
-
     }
 
     namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
@@ -50,6 +38,19 @@ int main(int argc, char** argv) {
 
     fs["Vocabulary"] >> myvocab;
     fs.release();
+
+    if ( argc >= 4 ){
+        if ( !file_exists(argv[3]) ){
+            std::cout << "Calculating frame vocab" << std::endl;
+
+            Mat frameVocab = constructFrameVocabulary(argv[1], myvocab, 200, 1);
+
+            cv::FileStorage file(argv[3], cv::FileStorage::WRITE);
+
+            file << "Frame_Vocabulary" << frameVocab;
+            file.release();
+        }
+    }
 
     // key frame stuff
     std::cout << "Key frame stuff" << std::endl;
