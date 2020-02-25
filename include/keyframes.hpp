@@ -1,6 +1,7 @@
 #ifndef KEYFRAMES_HPP
 #define KEYFRAMES_HPP
 
+#include "concepts.hpp"
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
@@ -17,23 +18,25 @@ struct sortable{
     bool operator<(const sortable& a) const {  return rank < a.rank; }; 
 };
 
-std::vector<int> flatScenes(IVideo& video, std::function<cv::Mat(Frame)> extractor, double threshold){
+template<typename Cmp>
+std::vector<std::pair<IVideo::size_type, IVideo::size_type>> flatScenes(IVideo& video, Cmp comp, double threshold){
+    typedef IVideo::size_type index_t;
     std::cout << "In flatScenes" << std::endl;
 
-    std::vector<int> retval;    
+    std::vector<std::pair<IVideo::size_type, IVideo::size_type>> retval;    
 
-    auto frames = video.frames();
+    auto& frames = video.frames();
     if(!frames.size()){
         return retval;
     }
 
-    retval.push_back(0);
+    index_t last = 0;
 
     for(int i = 1; i < frames.size(); i++) {
-        if(double fs = frameSimilarity(frames[i], frames[i - 1], extractor) < threshold){
-            auto b = extractor(frames[i]);
-            if(b.dot(b) > .000001){ // do not include black frames
-                retval.push_back(i);
+        if(double fs = comp(frames[i], frames[i - 1]) < threshold){
+            if(!frames[i].descriptors.empty()){ // do not include black frames
+                retval.push_back({last, i - 1});
+                last = i;
             }
         }
     }
@@ -41,42 +44,54 @@ std::vector<int> flatScenes(IVideo& video, std::function<cv::Mat(Frame)> extract
     return retval;
 }
 
-std::vector<cv::Mat> flatScenesBags(IVideo& video, std::function<cv::Mat(Frame)> extractor, double threshold, cv::Mat frameVocab){
+template<typename RangeIt>
+std::vector<cv::Mat> flatScenesBags(RangeIt start, RangeIt end, cv::Mat frameVocab) {
+    static_assert(is_pair_iterator_v<RangeIt>, 
+        "flatScenesBags requires an iterator to a pair");
+
     std::cout << "In flatScenesBags" << std::endl;
-
-    std::vector<std::vector<cv::Mat>> retval;    
-
-    auto frames = video.frames();
-    if(!frames.size()){
-        return {};
-    }
-
-    retval.push_back({});
-    int index = 0;
-
-    for(int i = 1; i < frames.size(); i++) {
-        if(double fs = frameSimilarity(frames[i], frames[i - 1], extractor); fs < threshold){
-            std::cout << "sim i: " << i << " " << fs << std::endl;
-            index++;
-            retval.push_back({});
-        }
-        auto b = extractor(frames[i]);
-        if(b.dot(b) > .000001){ // do not include black frames
-            retval[index].push_back(extractor(frames[i]));
-        }
-    }
     
     std::vector<cv::Mat> retval2;
 
-    for(auto& a : retval){
-        if(a.size() > 0)
-            retval2.push_back(baggifyFrames(a, frameVocab));
+    for(auto i = start; i < end; i++){
+        retval2.push_back(baggify(i->first, i->second, frameVocab));
     }
     return retval2;
 }
 
-void visualizeSubset(std::string fname, std::vector<int> subset = {}){
-    std::sort(subset.begin(), subset.end());
+template<typename IndexIt>
+std::vector<cv::Mat> flatScenesBags(IVideo& video, IndexIt start, IndexIt end, cv::Mat frameVocab){
+    static_assert(is_pair_iterator_v<IndexIt>, 
+        "flatScenesBags requires an iterator to a pair");
+    auto& frames = video.frames();
+    std::vector<std::pair<decltype(frames.begin()), 
+                            decltype(frames.end())>> tran;
+
+    std::transform(start, end, 
+        std::back_inserter(tran), 
+        [&frames](auto i){ return { frames.begin() + i.first, frames.begin() + i.second }; });
+
+    return flatScenesBags(tran.begin(), tran.end(), frameVocab);
+}
+
+void visualizeSubset(std::string fname, const std::vector<int>& subset = {});
+
+template<typename RangeIt,
+        typename = std::enable_if_t<is_pair_iterator_v<RangeIt>>,
+        typename = void> 
+void visualizeSubset(std::string fname, RangeIt begin, RangeIt end) {
+    std::vector<int> subset;
+    for(auto i = begin; i < end; i++) 
+        for(auto j = begin->first; j < begin->second; j++) 
+        subset.push_back(j);
+
+    visualizeSubset(fname, subset);
+}
+
+template<typename It,
+        typename = std::enable_if_t<!is_pair_iterator_v<It>>>
+void visualizeSubset(std::string fname, It begin, It end) {
+    auto size = std::distance(begin, end);
     std::cout << "In visualise subset" << std::endl;
 
     using namespace cv;
@@ -92,18 +107,23 @@ void visualizeSubset(std::string fname, std::vector<int> subset = {}){
 
     while(cap.read(image)){
         ++count;
-        if(subset.size() && count != subset[index]){
+        if(size && count != begin[index]){
             continue;
         }
 
         index++;
-        if(index >= subset.size()){
+        if(index >= size){
             index = 0;
         }
         imshow("Display window", image);
         waitKey(0);
     };
     destroyWindow("Display window");
+}
+
+
+inline void visualizeSubset(std::string fname, const std::vector<int>& subset){
+    visualizeSubset(fname, subset.begin(), subset.end());
 }
 
 #endif
