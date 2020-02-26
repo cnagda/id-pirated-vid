@@ -2,11 +2,13 @@
 #define CONCEPTS_HPP
 #include <type_traits>
 
-template <typename, typename = void>
+template <typename, typename = void, typename = void>
 struct is_pair_iterator : std::false_type { };
 
 template <typename T>
-struct is_pair_iterator<T, std::void_t<decltype(std::declval<T>()->first)>>
+struct is_pair_iterator<T, 
+    std::void_t<decltype(std::declval<T>()->first)>, 
+    std::void_t<decltype(std::declval<T>()->second)>>
     : std::true_type { };
 
 template <typename T> 

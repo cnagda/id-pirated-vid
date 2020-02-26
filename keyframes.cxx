@@ -4,7 +4,6 @@
 
 namespace fs = std::experimental::filesystem;
 using namespace cv;
-using namespace cv::xfeatures2d;
 using namespace std;
 using namespace chrono;
 

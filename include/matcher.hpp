@@ -50,7 +50,8 @@ cv::Mat baggify(Matrix&& f, Vocab&& vocab) {
 template<typename It, typename Vocab>
 cv::Mat baggify(It rangeBegin, It rangeEnd, Vocab&& vocab) {
     cv::Mat accumulator;
-    std::copy(rangeBegin, rangeEnd, std::back_inserter(accumulator));
+    for(auto i = rangeBegin; i != rangeEnd; ++i)
+        accumulator.push_back(*i);
     return baggify(accumulator, vocab);
 }
 

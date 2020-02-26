@@ -4,12 +4,10 @@
 #include "concepts.hpp"
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <opencv2/xfeatures2d.hpp>
 #include <string>
 #include "database.hpp"
 #include "matcher.hpp"
 #include "instrumentation.hpp"
-#include <experimental/filesystem>
 
 template <class T, class RankType>
 struct sortable{
@@ -44,7 +42,8 @@ std::vector<std::pair<IVideo::size_type, IVideo::size_type>> flatScenes(IVideo& 
     return retval;
 }
 
-template<typename RangeIt>
+template<typename RangeIt,
+    typename = std::enable_if_t<is_pair_iterator_v<RangeIt>>>
 std::vector<cv::Mat> flatScenesBags(RangeIt start, RangeIt end, cv::Mat frameVocab) {
     static_assert(is_pair_iterator_v<RangeIt>, 
         "flatScenesBags requires an iterator to a pair");
@@ -63,15 +62,29 @@ template<typename IndexIt>
 std::vector<cv::Mat> flatScenesBags(IVideo& video, IndexIt start, IndexIt end, cv::Mat frameVocab){
     static_assert(is_pair_iterator_v<IndexIt>, 
         "flatScenesBags requires an iterator to a pair");
+    
+    auto accessor = [](const Frame& frame) { return frame.descriptors; };
     auto& frames = video.frames();
-    std::vector<std::pair<decltype(frames.begin()), 
-                            decltype(frames.end())>> tran;
+    std::vector<cv::Mat> matrices;
+    auto s = matrices.begin();
 
-    std::transform(start, end, 
-        std::back_inserter(tran), 
-        [&frames](auto i){ return { frames.begin() + i.first, frames.begin() + i.second }; });
+    std::transform(frames.begin(), frames.end(), std::back_inserter(matrices), accessor);
+
+    std::vector<std::pair<
+        decltype(s), 
+        decltype(s)>> tran;
+
+    std::transform(start, end, std::back_inserter(tran),
+    [&s](auto i){ return std::make_pair(s + i.first,
+        s + i.second); });
 
     return flatScenesBags(tran.begin(), tran.end(), frameVocab);
+}
+
+template<typename Cmp>
+std::vector<cv::Mat> flatScenesBags(IVideo &video, Cmp comp, double threshold, cv::Mat frameVocab) {
+    auto ss = flatScenes(video, comp, threshold);
+    return flatScenesBags(video, ss.begin(), ss.end(), frameVocab);
 }
 
 void visualizeSubset(std::string fname, const std::vector<int>& subset = {});
@@ -95,7 +108,6 @@ void visualizeSubset(std::string fname, It begin, It end) {
     std::cout << "In visualise subset" << std::endl;
 
     using namespace cv;
-    using namespace cv::xfeatures2d;
 
     namedWindow("Display window", WINDOW_NORMAL );
 

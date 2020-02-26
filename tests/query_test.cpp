@@ -16,7 +16,14 @@ protected:
         db.addVideo("../coffee.mp4");
         db.addVideo("../crab.mp4");
 
-        vocab = constructVocabulary(fs::current_path() / "database_test_dir", 200, 10);
+        cv::Mat descriptors;
+        for(auto &video : db.listVideos()) {
+            auto frames = db.loadVideo(video)->frames();
+            for(auto &&frame : frames)
+                descriptors.push_back(frame.descriptors);
+        }
+
+        vocab = constructVocabulary(descriptors, 200);
         std::cout << "Setup done" << std::endl;
     }
 
