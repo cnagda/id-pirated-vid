@@ -31,12 +31,17 @@ std::vector<std::pair<IVideo::size_type, IVideo::size_type>> flatScenes(IVideo& 
     index_t last = 0;
 
     for(int i = 1; i < frames.size(); i++) {
-        if(double fs = comp(frames[i], frames[i - 1]) < threshold){
+        if(double fs = comp(frames[i], frames[i - 1]); fs < threshold){
             if(!frames[i].descriptors.empty()){ // do not include black frames
-                retval.push_back({last, i - 1});
+                retval.push_back({last, i});
                 last = i;
             }
+        } else {
+            std::cout << "i: " << i << "sim: " << fs << std::endl;
         }
+    }
+    if(!frames.back().descriptors.empty()){ // do not include black frames
+        retval.push_back({last, frames.size()});
     }
     
     return retval;
@@ -44,7 +49,7 @@ std::vector<std::pair<IVideo::size_type, IVideo::size_type>> flatScenes(IVideo& 
 
 template<typename RangeIt,
     typename = std::enable_if_t<is_pair_iterator_v<RangeIt>>>
-std::vector<cv::Mat> flatScenesBags(RangeIt start, RangeIt end, cv::Mat frameVocab) {
+std::vector<cv::Mat> flatScenesBags(RangeIt start, RangeIt end, const cv::Mat& frameVocab) {
     static_assert(is_pair_iterator_v<RangeIt>, 
         "flatScenesBags requires an iterator to a pair");
 
@@ -59,30 +64,30 @@ std::vector<cv::Mat> flatScenesBags(RangeIt start, RangeIt end, cv::Mat frameVoc
 }
 
 template<typename IndexIt>
-std::vector<cv::Mat> flatScenesBags(IVideo& video, IndexIt start, IndexIt end, cv::Mat frameVocab){
+std::vector<cv::Mat> flatScenesBags(IVideo& video, IndexIt start, IndexIt end, const cv::Mat& frameVocab){
     static_assert(is_pair_iterator_v<IndexIt>, 
         "flatScenesBags requires an iterator to a pair");
     
     auto accessor = [](const Frame& frame) { return frame.descriptors; };
     auto& frames = video.frames();
     std::vector<cv::Mat> matrices;
-    auto s = matrices.begin();
 
     std::transform(frames.begin(), frames.end(), std::back_inserter(matrices), accessor);
+    auto s = matrices.begin();
 
     std::vector<std::pair<
         decltype(s), 
         decltype(s)>> tran;
 
     std::transform(start, end, std::back_inserter(tran),
-    [&s](auto i){ return std::make_pair(s + i.first,
+    [s](auto i){ return std::make_pair(s + i.first,
         s + i.second); });
 
     return flatScenesBags(tran.begin(), tran.end(), frameVocab);
 }
 
 template<typename Cmp>
-std::vector<cv::Mat> flatScenesBags(IVideo &video, Cmp comp, double threshold, cv::Mat frameVocab) {
+std::vector<cv::Mat> flatScenesBags(IVideo &video, Cmp comp, double threshold, const cv::Mat& frameVocab) {
     auto ss = flatScenes(video, comp, threshold);
     return flatScenesBags(video, ss.begin(), ss.end(), frameVocab);
 }

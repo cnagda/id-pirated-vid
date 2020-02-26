@@ -36,8 +36,8 @@ int main(int argc, char** argv )
         cv::Mat descriptors;
         for(auto &video : db.listVideos()) {
             auto frames = db.loadVideo(video)->frames();
-            for(auto &&frame : frames)
-                descriptors.push_back(frame.descriptors);
+            for(auto i = frames.begin(); i < frames.end(); i+=10)
+                descriptors.push_back(i->descriptors);
         }
             
 
