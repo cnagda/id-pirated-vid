@@ -17,11 +17,11 @@ struct sortable{
 };
 
 template<typename Cmp>
-std::vector<std::pair<IVideo::size_type, IVideo::size_type>> flatScenes(IVideo& video, Cmp comp, double threshold){
+auto flatScenes(IVideo& video, Cmp comp, double threshold){
     typedef IVideo::size_type index_t;
     std::cout << "In flatScenes" << std::endl;
 
-    std::vector<std::pair<IVideo::size_type, IVideo::size_type>> retval;    
+    std::vector<std::pair<index_t, index_t>> retval;    
 
     auto& frames = video.frames();
     if(!frames.size()){
@@ -47,9 +47,9 @@ std::vector<std::pair<IVideo::size_type, IVideo::size_type>> flatScenes(IVideo& 
     return retval;
 }
 
-template<typename RangeIt,
-    typename = std::enable_if_t<is_pair_iterator_v<RangeIt>>>
-std::vector<cv::Mat> flatScenesBags(RangeIt start, RangeIt end, const cv::Mat& frameVocab) {
+template<typename RangeIt>
+std::enable_if_t<is_pair_iterator_v<RangeIt>, std::vector<cv::Mat>> 
+flatScenesBags(RangeIt start, RangeIt end, const cv::Mat& frameVocab) {
     static_assert(is_pair_iterator_v<RangeIt>, 
         "flatScenesBags requires an iterator to a pair");
 
@@ -64,7 +64,9 @@ std::vector<cv::Mat> flatScenesBags(RangeIt start, RangeIt end, const cv::Mat& f
 }
 
 template<typename IndexIt>
-std::vector<cv::Mat> flatScenesBags(IVideo& video, IndexIt start, IndexIt end, const cv::Mat& frameVocab){
+std::enable_if_t<is_pair_iterator_v<IndexIt> &&
+    std::is_integral_v<decltype(std::declval<IndexIt>()->first)>, std::vector<cv::Mat>> 
+flatScenesBags(IVideo& video, IndexIt start, IndexIt end, const cv::Mat& frameVocab){
     static_assert(is_pair_iterator_v<IndexIt>, 
         "flatScenesBags requires an iterator to a pair");
     
@@ -94,10 +96,9 @@ std::vector<cv::Mat> flatScenesBags(IVideo &video, Cmp comp, double threshold, c
 
 void visualizeSubset(std::string fname, const std::vector<int>& subset = {});
 
-template<typename RangeIt,
-        typename = std::enable_if_t<is_pair_iterator_v<RangeIt>>,
-        typename = void> 
-void visualizeSubset(std::string fname, RangeIt begin, RangeIt end) {
+template<typename RangeIt>
+std::enable_if_t<is_pair_iterator_v<RangeIt>, void> 
+visualizeSubset(std::string fname, RangeIt begin, RangeIt end) {
     std::vector<int> subset;
     for(auto i = begin; i < end; i++) 
         for(auto j = begin->first; j < begin->second; j++) 
@@ -106,9 +107,9 @@ void visualizeSubset(std::string fname, RangeIt begin, RangeIt end) {
     visualizeSubset(fname, subset);
 }
 
-template<typename It,
-        typename = std::enable_if_t<!is_pair_iterator_v<It>>>
-void visualizeSubset(std::string fname, It begin, It end) {
+template<typename It>
+std::enable_if_t<!is_pair_iterator_v<It>, void> 
+visualizeSubset(std::string fname, It begin, It end) {
     auto size = std::distance(begin, end);
     std::cout << "In visualise subset" << std::endl;
 
