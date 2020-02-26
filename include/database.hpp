@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 #include <functional>
 #include <experimental/filesystem>
+#include <type_traits>
 
 namespace fs = std::experimental::filesystem;
 
@@ -37,7 +38,7 @@ public:
     virtual ~IScene() = default;
     const std::string key;
 
-    template<typename Extractor> virtual auto getDescriptor(Extractor&& ext) {
+    template<typename Extractor> virtual std::invoke_result_t<Extractor, decltype<getFrames()>> getDescriptor(Extractor&& ext) {
         return ext(getFrames());
     }
 
@@ -66,7 +67,7 @@ public:
 class IDatabase {
 public:
     virtual std::unique_ptr<IVideo> saveVideo(const IVideo& video) = 0;
-    virtual Cursor<IVideo> loadVideo(const std::string& key = "") const = 0;
+    virtual ICursor<IVideo> loadVideo(const std::string& key = "") const = 0;
     template<typename Vocab> virtual saveVocab(Vocab&& vocab, const std::string& key) = 0;
     template<typename Vocab> virtual Vocab loadVocab(const std::string& key) = 0;
     virtual ~IDatabase() = default;
