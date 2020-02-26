@@ -92,6 +92,6 @@ public:
 };
 
 double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter = nullptr);
-std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, cv::Mat vocab);
+std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, const cv::Mat& vocab, const cv::Mat& frameVocab);
 
 #endif

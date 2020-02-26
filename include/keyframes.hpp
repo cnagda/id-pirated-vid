@@ -17,7 +17,7 @@ struct sortable{
 };
 
 template<typename Cmp>
-auto flatScenes(IVideo& video, Cmp comp, double threshold){
+auto flatScenes(IVideo& video, Cmp&& comp, double threshold){
     typedef IVideo::size_type index_t;
     std::cout << "In flatScenes" << std::endl;
 
@@ -105,7 +105,7 @@ flatScenesBags(IVideo& video, IndexIt start, IndexIt end, const cv::Mat& frameVo
 }
 
 template<typename Cmp>
-std::vector<cv::Mat> flatScenesBags(IVideo &video, Cmp comp, double threshold, const cv::Mat& frameVocab) {
+std::vector<cv::Mat> flatScenesBags(IVideo &video, Cmp&& comp, double threshold, const cv::Mat& frameVocab) {
     auto ss = flatScenes(video, comp, threshold);
     return flatScenesBags(video, ss.begin(), ss.end(), frameVocab);
 }

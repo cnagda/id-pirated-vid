@@ -1,4 +1,3 @@
-#include <opencv2/features2d.hpp>
 #include <fstream>
 #include <iostream>
 #include "database.hpp"
@@ -6,6 +5,7 @@
 #include "matcher.hpp"
 #include "kmeans2.hpp"
 #include "sw.hpp"
+#include "keyframes.hpp"
 
 // bag of frames
 cv::Mat constructFrameVocabulary(const std::string& path, cv::Mat vocab, int K, int speedinator, cv::Mat centers, bool online){
@@ -116,36 +116,31 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
     return total/len;
 }
 
-std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, cv::Mat vocab) {
+std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, const cv::Mat& vocab, const cv::Mat& frameVocab) {
     auto videopaths = db.listVideos();
 
-    VideoMatchingInstrumenter instrumenter(target);
-    auto reporter = getReporter(instrumenter);
-    auto extractor = [&vocab](Frame f) { return baggify(f.descriptors, vocab); };
-    auto mycomp = [extractor](Frame f1, Frame f2) { return frameSimilarity(f1, f2, extractor); };
-    std::function intcomp = [mycomp](Frame f1, Frame f2) { return mycomp(f1, f2) > 0.8 ? 3 : -3; };
+    auto frameComp = BOWComparator(vocab);
+    
+    auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
 
     MatchInfo match;
+    auto targetFrames = target.frames();
+    auto targetScenes = flatScenesBags(target, frameComp, 0.2f, frameVocab);
 
     for(auto s2 : videopaths) {
         auto v2 = db.loadVideo(s2);
         std::cout << "Calculating match for " << v2->name << std::endl;
+        auto knownScenes = flatScenesBags(*v2, frameComp, 0.2f, frameVocab);
 
-        double score = boneheadedSimilarity(target, *v2, mycomp, reporter);
-        if(score > match.matchConfidence) {
-            match = MatchInfo{score, 0, 0, v2->name};
-        }
-        /* auto&& alignments = calculateAlignment(target.frames(), v2->frames(), intcomp, 20, 2);
+        auto&& alignments = calculateAlignment(targetScenes, knownScenes, intcomp, 0, 2);
         if(alignments.size() > 0) {
             auto& a = alignments[0];
             if(a.score > match.matchConfidence) {
                 match = MatchInfo{a.score, a.startKnown, a.endKnown, v2->name};
             }
-        } */
+        }
         
     }
-
-    EmmaExporter().exportTimeseries(target.name, "frame no.", "cosine distance", instrumenter.getTimeSeries());
     
     if(match.matchConfidence > 0.5) {
         return match;
