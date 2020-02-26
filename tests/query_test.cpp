@@ -9,7 +9,7 @@ namespace fs = std::experimental::filesystem;
 
 class DatabaseFixture : public ::testing::Test {
 protected:
-    void SetUp() override {
+    static void SetUpTestSuite() {
         fs::remove_all(fs::current_path() / "database_test_dir");
         db = FileDatabase(fs::current_path() / "database_test_dir");
 
@@ -37,9 +37,13 @@ protected:
         std::cout << "Setup done" << std::endl;
     }
 
-    FileDatabase db;
-    cv::Mat vocab, frameVocab;
+    static FileDatabase db;
+    static cv::Mat vocab, frameVocab;
 };
+
+FileDatabase DatabaseFixture::db;
+cv::Mat DatabaseFixture::vocab;
+cv::Mat DatabaseFixture::frameVocab;
 
 TEST_F(DatabaseFixture, NotInDatabase) {  
     auto video = getSIFTVideo("../sample.mp4");
