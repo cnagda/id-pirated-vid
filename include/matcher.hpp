@@ -29,6 +29,14 @@ cv::Mat constructVocabulary(Matrix&& descriptors, unsigned int K, cv::Mat labels
 	//return trainer.cluster(descriptors);
 }
 
+template<typename It>
+cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = cv::Mat()) {
+	cv::Mat accumulator;
+    for(auto i = start; i != end; ++i)
+        accumulator.push_back(*i);
+    return constructVocabulary(accumulator, K, labels);
+}
+
 template<typename Matrix, typename Vocab>
 cv::Mat baggify(Matrix&& f, Vocab&& vocab) {
     cv::BOWImgDescriptorExtractor extractor(cv::FlannBasedMatcher::create());
