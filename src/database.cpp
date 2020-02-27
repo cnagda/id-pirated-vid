@@ -187,6 +187,7 @@ std::unique_ptr<IVocab> FileDatabase::loadVocab(const std::string& key) const {
 }
 
 IVideo& EagerStorageStrategy::saveVideo(IVideo& video, IDatabase& database) const {
+    database.saveVideo(video);
     return video;
 }
 
