@@ -30,19 +30,19 @@ int main(int argc, char** argv )
         return -1;
     }
 
-    auto& fd = *database_factory(argv[1]).release();
+    auto& fd = *database_factory(argv[1], -1, -1).release();
     namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
 
     if ( argc >= 4 ){
-        saveVocab(constructFrameVocabulary(fd, 2000), fd);
+        saveVocabulary(constructFrameVocabulary(fd, 2000), fd);
     }
 
     if ( argc == 5 ){
-        saveVocab(constructSceneVocabulary(fd, 200), fd);
+        saveVocabulary(constructSceneVocabulary(fd, 200), fd);
     }
 
-    auto myvocab = loadVocab<Vocab<IScene>>(fd)->descriptors();
-    auto myframevocab = loadVocab<Vocab<Frame>>(fd)->descriptors();
+    auto myvocab = loadVocabulary<Vocab<IScene>>(fd)->descriptors();
+    auto myframevocab = loadVocabulary<Vocab<Frame>>(fd)->descriptors();
 
     auto videopaths = fd.loadVideo();
     bool first = 1;

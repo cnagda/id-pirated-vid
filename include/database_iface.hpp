@@ -48,7 +48,24 @@ public:
     virtual const T& getValue() const & = 0;
 };
 
+class IVideoStorageStrategy {
+public:
+    virtual bool shouldBaggifyFrames(IVideo& video) = 0;
+    virtual bool shouldComputeScenes(IVideo& video) = 0;
+    virtual bool shouldBaggifyScenes(IVideo& video) = 0;
+    virtual ~IVideoStorageStrategy() = default;
+};
+
+struct RuntimeArguments {
+    int KScenes;
+    int KFrame;
+};
+
 class IDatabase {
+protected:
+    std::unique_ptr<IVideoStorageStrategy> strategy;
+    RuntimeArguments args;
+    IDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) : strategy(std::move(strat)), args(args) {};
 public:
     virtual std::unique_ptr<IVideo> saveVideo(IVideo& video) = 0;
     virtual std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const = 0;
@@ -58,12 +75,12 @@ public:
 };
 
 template<typename V, typename Db>
-bool saveVocab(V&& vocab, Db&& db) { 
+bool saveVocabulary(V&& vocab, Db&& db) { 
     return db.saveVocab(std::forward<V>(vocab), V::vocab_name); 
 }
 
 template<typename V, typename Db>
-std::optional<V> loadVocab(Db&& db) { 
+std::optional<V> loadVocabulary(Db&& db) { 
     auto v = db.loadVocab(V::vocab_name);
     if(v) {
         return V(*v);

@@ -2,6 +2,8 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <cctype>
 #include <experimental/filesystem>
+#include "keyframes.hpp"
+#include "matcher.hpp"
 
 using namespace std;
 using namespace cv;
@@ -133,13 +135,42 @@ const std::string IScene::vocab_name = "SceneVocab.mat";
 const std::string Frame::vocab_name = "FrameVocab.mat";
 
 std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
-    fs::path video_dir(databaseRoot / video.name / "frames");
+    fs::path video_dir(databaseRoot / video.name);
     fs::create_directories(video_dir);
+
     auto frames = video.frames();
     decltype(frames)::size_type index = 0;
-    for(auto& frame : frames) {
-        SIFTwrite(video_dir / std::to_string(index++), frame);
+    
+    if(!frames.empty()) {
+        fs::create_directories(video_dir / "frames");
     }
+    for(auto& frame : frames) {
+        SIFTwrite(video_dir / "frames" / std::to_string(index++), frame);
+    }
+    
+    if(strategy->shouldBaggifyFrames(video)) {
+
+    }
+
+    if(strategy->shouldComputeScenes(video)) {
+        auto vocab = loadVocabulary<Vocab<Frame>>(*this);
+        if(!vocab) {
+            if(args.KFrame == -1) {
+                throw new runtime_error("need to compute frame vocabulary but not K provided");
+            }
+
+            saveVocabulary(constructFrameVocabulary(*this, args.KFrame), *this);
+            vocab.emplace(loadVocabulary<Vocab<Frame>>(*this).value());
+        }
+
+        auto comp = BOWComparator(vocab->descriptors());
+        auto scenes = flatScenes(video, comp, 0.2);
+    }
+
+    if(strategy->shouldBaggifyScenes(video)) {
+
+    }
+
     return std::make_unique<InputVideoAdapter<SIFTVideo>>(video);
 }
 

@@ -24,7 +24,7 @@ int main(int argc, char** argv )
 
     namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
 
-    FileDatabase db;
+    auto db = database_factory("database/", -1, -1);
     auto video = make_video_adapter(getSIFTVideo(argv[1], [DEBUG](Mat image, Frame frame){
         Mat output;
         auto descriptors = frame.descriptors;
@@ -44,6 +44,6 @@ int main(int argc, char** argv )
         }
     }), argv[1]);
 
-    db.saveVideo(video);
+    db->saveVideo(video);
     return 0;
 }

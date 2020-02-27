@@ -113,27 +113,44 @@ public:
     virtual ~IVideoLoadStrategy() = default;
 };
 
-class IVideoStorageStrategy {
+ */
+
+class AggressiveStorageStrategy : public IVideoStorageStrategy {
 public:
-    virtual IVideo& operator()(IVideo& video, IDatabase& database) const = 0;
-    virtual ~IVideoStorageStrategy() = default;
-}; */
+    inline bool shouldBaggifyFrames(IVideo& video) override { return true; };
+    inline bool shouldComputeScenes(IVideo& video) override { return true; };
+    inline bool shouldBaggifyScenes(IVideo& video) override { return true; };
+};
+
+class LazyStorageStrategy : public IVideoStorageStrategy {
+public:
+    inline bool shouldBaggifyFrames(IVideo& video) override { return false; };
+    inline bool shouldComputeScenes(IVideo& video) override { return false; };
+    inline bool shouldBaggifyScenes(IVideo& video) override { return false; };
+};
 
 class FileDatabase : public IDatabase {
 private:
     fs::path databaseRoot;
     std::vector<std::unique_ptr<IVideo>> loadVideos() const;
+
 public:
-    FileDatabase() : FileDatabase(fs::current_path() / "database") {};
-    FileDatabase(const std::string& databasePath) : databaseRoot(databasePath) {};
+    FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) : 
+    FileDatabase(fs::current_path() / "database", std::move(strat), args) {};
+    FileDatabase(const std::string& databasePath,
+        std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) 
+        : IDatabase(std::move(strat), args), databaseRoot(databasePath) {};
+
     std::unique_ptr<IVideo> saveVideo(IVideo& video) override;
     std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const override;
     bool saveVocab(const IVocab& vocab, const std::string& key) override;
     std::unique_ptr<IVocab> loadVocab(const std::string& key) const override;
 };
 
-inline std::unique_ptr<IDatabase> database_factory(const std::string& dbPath) {
-    return std::make_unique<FileDatabase>(dbPath);
+inline std::unique_ptr<IDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene) {
+    return std::make_unique<FileDatabase>(dbPath, 
+        std::make_unique<AggressiveStorageStrategy>(), 
+        RuntimeArguments{KScene, KFrame});
 }
 
 #endif

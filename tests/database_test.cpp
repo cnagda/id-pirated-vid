@@ -36,7 +36,7 @@ TEST(DatabaseSuite, SIFTrwTest) {
 }
 
 TEST(DatabaseSuite, FileDatabase) {
-    FileDatabase db;
+    FileDatabase db(std::make_unique<LazyStorageStrategy>(), RuntimeArguments{200, 20});
     auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
     
     auto vid = db.saveVideo(video)->frames();
