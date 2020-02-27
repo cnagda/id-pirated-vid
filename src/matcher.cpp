@@ -16,24 +16,25 @@ Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K,
                 descriptors.push_back(i->descriptors);
     }
 
-    return constructVocabulary(descriptors, K);
+    return Vocab<Frame>(constructVocabulary(descriptors, K));
 }
 
 Vocab<IScene> constructSceneVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator) {
-    auto vocab = database.loadVocab<Vocab<Frame>>().descriptors();
-    if(vocab.empty()) {
+    auto vocab = database.loadVocab<Vocab<Frame>>();
+    if(!vocab) {
         throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");
     }
+    auto d = vocab->descriptors();
 
     cv::Mat descriptors;
 
     for(auto &video : database.loadVideo()) {
         auto frames = video->frames();
         for(auto i = frames.begin(); i != frames.end(); i += speedinator)
-                descriptors.push_back(baggify(i->descriptors, vocab));
+                descriptors.push_back(baggify(i->descriptors, d));
     }
 
-    return constructVocabulary(descriptors, K);
+    return Vocab<IScene>(constructVocabulary(descriptors, K));
 }
 
 double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter){
@@ -54,7 +55,9 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
     return total/len;
 }
 
-std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, const cv::Mat& vocab, const cv::Mat& frameVocab) {
+std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db) {
+    auto vocab = db.loadVocab<Vocab<Frame>>()->descriptors();
+    auto frameVocab = db.loadVocab<Vocab<IScene>>()->descriptors();
     auto videopaths = db.loadVideo();
 
     auto frameComp = BOWComparator(vocab);

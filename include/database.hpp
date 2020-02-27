@@ -8,6 +8,7 @@
 #include <functional>
 #include <experimental/filesystem>
 #include <type_traits>
+#include <optional>
 
 namespace fs = std::experimental::filesystem;
 
@@ -51,20 +52,26 @@ template<typename T>
 const std::string LazyVocab<T>::vocab_name = T::vocab_name;
 */
 
-template<typename T>
-class Vocab : public IVocab {
+class ContainerVocab : public IVocab {
 private:
     const cv::Mat desc;
     std::string hash;
 public:
-    Vocab(const cv::Mat& descriptors) : desc(descriptors) {};
-    Vocab(const IVocab& vocab) : desc(vocab.descriptors()) {};
+    ContainerVocab(const cv::Mat& descriptors) : desc(descriptors) {};
+    ContainerVocab(const IVocab& vocab) : desc(vocab.descriptors()) {};
     std::string getHash() const override {
         return hash;
     }
     cv::Mat descriptors() const override {
         return desc;
     }
+    static const std::string vocab_name;
+};
+
+template<typename T>
+class Vocab : public ContainerVocab {
+public:
+    using ContainerVocab::ContainerVocab;
     static const std::string vocab_name;
 };
 
@@ -93,6 +100,7 @@ public:
 
     virtual size_type frameCount() = 0;
     virtual std::vector<Frame>& frames() & = 0;
+    virtual const std::vector<Frame>& frames() const & = 0;
     virtual std::vector<std::unique_ptr<IScene>>& getScenes() & = 0;
     virtual const std::vector<std::unique_ptr<IScene>>& getScenes() const & = 0;
     virtual ~IVideo() = default;
@@ -102,31 +110,31 @@ class SIFTVideo {
 private:
     std::vector<Frame> SIFTFrames;
     using size_type = std::vector<Frame>::size_type;
-    const std::string name;
 public:
     SIFTVideo(const std::string& name, const std::vector<Frame>& frames) : name(name), SIFTFrames(frames) {};
     SIFTVideo(const std::string& name, std::vector<Frame>&& frames) : name(name), SIFTFrames(frames) {};
     SIFTVideo(SIFTVideo&& vid) : name(vid.name), SIFTFrames(vid.SIFTFrames) {};
+    SIFTVideo(const SIFTVideo& vid) : name(vid.name), SIFTFrames(vid.SIFTFrames) {};
     std::vector<Frame>& frames() & { return SIFTFrames; };
+    const std::vector<Frame>& frames() const & { return SIFTFrames; };
     size_type frameCount() { return SIFTFrames.size(); };
+
+    const std::string name;
 };
 
 template<typename Base>
 class DatabaseVideo : public IVideo {
 private:
     Base base;
-    std::vector<IScene> scenes;
+    std::vector<std::unique_ptr<IScene>> scenes;
 public:
-    DatabaseVideo(Base&& base) : IVideo(base.name), base(base) {};
-    size_type frameCount() override {
-        return base.frameCount();
-    };
-    std::vector<Frame>& frames() & override {
-        return base.frames();
-    };
-    const std::vector<IScene>& getScenes() & override {
-        return scenes;
-    };
+    DatabaseVideo(Base&& b) : IVideo(b.name), base(b) {};
+    DatabaseVideo(const Base& b) : IVideo(b.name), base(b) {};
+    size_type frameCount() override { return base.frameCount(); };
+    std::vector<Frame>& frames() & override { return base.frames(); };
+    const std::vector<Frame>& frames() const & override { return base.frames(); };
+    const std::vector<std::unique_ptr<IScene>>& getScenes() const & override { return scenes; };
+    std::vector<std::unique_ptr<IScene>>& getScenes() & override { return scenes; }
 };
 
 template<typename T>
@@ -146,9 +154,15 @@ public:
     virtual ~IDatabase() = default;
 
     template<typename V>
-    bool saveVocab(const V& vocab) { return saveVocab(vocab, V::vocab_name); }
+    bool saveVocab(V&& vocab) { return saveVocab(std::forward<V>(vocab), V::vocab_name); }
     template<typename V>
-    V loadVocab() const { return V(*loadVocab(V::vocab_name)); }
+    std::optional<V> loadVocab() const { 
+        auto v = loadVocab(V::vocab_name);
+        if(v) {
+            return V(*v);
+        }
+        return std::nullopt;
+    }
 };
 
 /* Example strategies
@@ -172,7 +186,7 @@ public:
 
     template<typename FileReader, typename ...Args>
     auto operator()(const std::string& findKey, FileReader &&reader, Args&&... args) const {
-        return reader(directory / findKey, args...);
+        return std::invoke(reader, directory / findKey, args...);
     }
 };
 
@@ -200,11 +214,12 @@ public:
 class FileDatabase : public IDatabase {
 private:
     fs::path databaseRoot;
+    std::vector<std::unique_ptr<IVideo>> loadVideos() const;
 public:
     FileDatabase() : FileDatabase(fs::current_path() / "database") {};
-    FileDatabase(const std::string& databasePath);
-    virtual std::unique_ptr<IVideo> saveVideo(const IVideo& video) override;
-    virtual std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const override;
+    FileDatabase(const std::string& databasePath) : databaseRoot(databasePath) {};
+    std::unique_ptr<IVideo> saveVideo(const IVideo& video) override;
+    std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const override;
     bool saveVocab(const IVocab& vocab, const std::string& key) override;
     std::unique_ptr<IVocab> loadVocab(const std::string& key) const override;
 };

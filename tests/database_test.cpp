@@ -36,10 +36,20 @@ TEST(DatabaseSuite, SIFTrwTest) {
 }
 
 TEST(DatabaseSuite, FileDatabase) {
+    SubdirSearchStrategy strat("../");
+    EagerStorageStrategy store;
     FileDatabase db;
-    auto vid = db.addVideo("../sample.mp4")->frames();
-    auto loaded = db.loadVideo("sample.mp4")->frames();
+    SIFTVideo v = strat("sample.mp4", [](auto s) { return getSIFTVideo(s); });
+    DatabaseVideo<decltype(v)> video(v);
+    
+    auto vid = store.saveVideo(video, db).frames();
+    auto loaded_vid = db.loadVideo("sample.mp4");
 
+    ASSERT_FALSE(loaded_vid.empty());
+    auto& loaded_ptr = loaded_vid.front();
+    ASSERT_TRUE(loaded_ptr);
+
+    auto& loaded = loaded_ptr->frames();
     cout << "size: " << vid.size() << endl;
 
     EXPECT_TRUE(vid.size() > 0);

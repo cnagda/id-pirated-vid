@@ -41,8 +41,8 @@ int main(int argc, char** argv )
         fd.saveVocab(constructSceneVocabulary(fd, 200));
     }
 
-    auto myvocab = fd.loadVocab<Vocab<IScene>>().descriptors();
-    auto myframevocab = fd.loadVocab<Vocab<Frame>>().descriptors();
+    auto myvocab = fd.loadVocab<Vocab<IScene>>()->descriptors();
+    auto myframevocab = fd.loadVocab<Vocab<Frame>>()->descriptors();
 
     auto videopaths = fd.loadVideo();
     bool first = 1;

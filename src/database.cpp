@@ -129,12 +129,66 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
     return SIFTVideo(getAlphas(filepath), frames);
 }
 
-FileDatabase::FileDatabase(const string& databasePath) {
-    databaseRoot = databasePath;
-}
-
 const std::string IScene::vocab_name = "SceneVocab.mat";
 const std::string Frame::vocab_name = "FrameVocab.mat";
+
+std::unique_ptr<IVideo> FileDatabase::saveVideo(const IVideo& video) {
+    for(auto& frame : video.frames()) {
+        fs::path video_dir(databaseRoot / video.name / "frames");
+        fs::create_directories(video_dir);
+        SIFTwrite(video_dir, frame);
+    }
+}
+
+std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideos() const {
+    std::vector<std::unique_ptr<IVideo>> videos;
+    for(auto i : fs::directory_iterator(databaseRoot)) {
+        auto v = loadVideo(i.path().filename());
+        std::copy(std::make_move_iterator(v.begin()), std::make_move_iterator(v.end()), std::back_inserter(videos));
+    }
+    return videos;
+}
+
+std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideo(const std::string& key) const {
+    if(key == "") {
+        return loadVideos();
+    }
+
+    std::vector<Frame> frames;
+
+    auto it = fs::directory_iterator{databaseRoot / key / "frames"};
+    vector<fs::directory_entry> files(it, fs::end(it));
+    sort(files.begin(), files.end(), [](auto a, auto b) {
+        return stoi(a.path().filename()) < stoi(b.path().filename());
+    });
+
+    for (auto frame_path : files)
+    {
+        auto frame = SIFTread(frame_path.path());
+        frames.push_back(frame);
+    }    
+
+    std::vector<std::unique_ptr<IVideo>> vid;
+    vid.push_back(std::move(make_unique<DatabaseVideo<SIFTVideo>>(SIFTVideo(key, frames))));
+    return vid;
+}
+
+bool FileDatabase::saveVocab(const IVocab& vocab, const std::string& key) {
+
+}
+std::unique_ptr<IVocab> FileDatabase::loadVocab(const std::string& key) const {
+    if(!fs::exists(databaseRoot / key)) {
+        return nullptr;
+    }
+    cv::Mat myvocab;
+    cv::FileStorage fs(databaseRoot / key, cv::FileStorage::READ);
+    fs["Vocabulary"] >> myvocab;
+    return std::make_unique<ContainerVocab>(myvocab);
+}
+
+IVideo& EagerStorageStrategy::saveVideo(IVideo& video, IDatabase& database) const {
+    return video;
+}
 
 /*
 unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::function<void(Mat, Frame)> callback)
