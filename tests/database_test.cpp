@@ -37,7 +37,7 @@ TEST(DatabaseSuite, SIFTrwTest) {
 
 TEST(DatabaseSuite, FileDatabase) {
     FileDatabase db;
-    auto video = make_video_adapter(getSIFTVideo("sample.mp4"), "sample.mp4");
+    auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
     
     auto vid = db.saveVideo(video)->frames();
     auto loaded_vid = db.loadVideo("sample.mp4");

@@ -91,8 +91,8 @@ private:
     Base base;
     std::vector<std::unique_ptr<IScene>> emptyScenes;
 public:
-    InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(b) {};
-    InputVideoAdapter(const Base& b, const std::string& name) : IVideo(name), base(b) {};
+    InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
+    InputVideoAdapter(const Base& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
     InputVideoAdapter(IVideo&& vid) : IVideo(vid), base(vid.frames()) {};
     InputVideoAdapter(IVideo& vid) : IVideo(vid), base(vid.frames()) {};
     size_type frameCount() override { return base.frameCount(); };
