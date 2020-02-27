@@ -47,9 +47,9 @@ auto flatScenes(IVideo& video, Cmp&& comp, double threshold){
     return retval;
 }
 
-template<typename RangeIt>
+template<typename RangeIt, typename Vocab>
 std::vector<cv::Mat>
-flatScenesBags(RangeIt start, RangeIt end, const cv::Mat& frameVocab) {
+flatScenesBags(RangeIt start, RangeIt end, Vocab&& frameVocab) {
     std::cout << "In flatScenesBags" << std::endl;
     
     std::vector<cv::Mat> retval2;
@@ -60,10 +60,10 @@ flatScenesBags(RangeIt start, RangeIt end, const cv::Mat& frameVocab) {
     return retval2;
 }
 
-template<typename IndexIt>
+template<typename IndexIt, typename Vocab>
 std::enable_if_t<is_pair_iterator_v<IndexIt> &&
     std::is_integral_v<decltype(std::declval<IndexIt>()->first)>, std::vector<cv::Mat>> 
-flatScenesBags(IVideo& video, IndexIt start, IndexIt end, const cv::Mat& frameVocab){
+flatScenesBags(IVideo& video, IndexIt start, IndexIt end, Vocab&& frameVocab){
     static_assert(is_pair_iterator_v<IndexIt>, 
         "flatScenesBags requires an iterator to a pair");
     
@@ -85,8 +85,8 @@ flatScenesBags(IVideo& video, IndexIt start, IndexIt end, const cv::Mat& frameVo
     return flatScenesBags(tran.begin(), tran.end(), frameVocab);
 }
 
-template<typename Cmp>
-std::vector<cv::Mat> flatScenesBags(IVideo &video, Cmp&& comp, double threshold, const cv::Mat& frameVocab) {
+template<typename Cmp, typename Vocab>
+inline std::vector<cv::Mat> flatScenesBags(IVideo &video, Cmp&& comp, double threshold, Vocab&& frameVocab) {
     auto ss = flatScenes(video, comp, threshold);
     return flatScenesBags(video, ss.begin(), ss.end(), frameVocab);
 }

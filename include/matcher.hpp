@@ -69,7 +69,7 @@ cv::Mat baggify(It rangeBegin, It rangeEnd, Vocab&& vocab) {
 }
 
 template<typename It, typename Vocab>
-cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
+inline cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
     return baggify(pair.first, pair.second, vocab);
 }
 
