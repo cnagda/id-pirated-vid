@@ -16,20 +16,17 @@ protected:
         EagerStorageStrategy store;
 
         {
-            SIFTVideo v = strat("sample.mp4", [](auto s) { return getSIFTVideo(s); });
-            DatabaseVideo<decltype(v)> video(v);
+            DatabaseVideo<SIFTVideo> video = strat("sample.mp4", [](auto s) { return getSIFTVideo(s); });
             store.saveVideo(video, db);
         }
 
         {
-            SIFTVideo v = strat("coffee.mp4", [](auto s) { return getSIFTVideo(s); });
-            DatabaseVideo<decltype(v)> video(v);
+            DatabaseVideo<SIFTVideo> video = strat("coffee.mp4", [](auto s) { return getSIFTVideo(s); });
             store.saveVideo(video, db);
         }
 
         {
-            SIFTVideo v = strat("crab.mp4", [](auto s) { return getSIFTVideo(s); });
-            DatabaseVideo<decltype(v)> video(v);
+            DatabaseVideo<SIFTVideo> video = strat("crab.mp4", [](auto s) { return getSIFTVideo(s); });
             store.saveVideo(video, db);
         }
 

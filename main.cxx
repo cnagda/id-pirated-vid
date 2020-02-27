@@ -27,7 +27,7 @@ int main(int argc, char** argv )
     SubdirSearchStrategy strat;
     EagerStorageStrategy store;
     FileDatabase db;
-    SIFTVideo v = strat(argv[1], [DEBUG](auto s){
+    DatabaseVideo<SIFTVideo> video = strat(argv[1], [DEBUG](auto s){
         return getSIFTVideo(s, [DEBUG](Mat image, Frame frame){
             Mat output;
             auto descriptors = frame.descriptors;
@@ -47,7 +47,6 @@ int main(int argc, char** argv )
             }
         });
     });
-    DatabaseVideo<decltype(v)> video(v);
 
     store.saveVideo(video, db);
     return 0;

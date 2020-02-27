@@ -39,8 +39,7 @@ TEST(DatabaseSuite, FileDatabase) {
     SubdirSearchStrategy strat("../");
     EagerStorageStrategy store;
     FileDatabase db;
-    SIFTVideo v = strat("sample.mp4", [](auto s) { return getSIFTVideo(s); });
-    DatabaseVideo<decltype(v)> video(v);
+    DatabaseVideo<SIFTVideo> video = strat("sample.mp4", [](auto s) { return getSIFTVideo(s); });
     
     auto vid = store.saveVideo(video, db).frames();
     auto loaded_vid = db.loadVideo("sample.mp4");
