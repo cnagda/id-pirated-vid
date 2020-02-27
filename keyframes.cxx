@@ -4,7 +4,6 @@
 
 namespace fs = std::experimental::filesystem;
 using namespace cv;
-using namespace cv::xfeatures2d;
 using namespace std;
 using namespace chrono;
 
@@ -22,7 +21,13 @@ int main(int argc, char** argv) {
     if ( !file_exists(argv[2]) ){
         std::cout << "Calculating SIFT vocab" << std::endl;
 
-        Mat vocab = constructVocabulary(argv[1], 2000, 10);
+        FileDatabase db(argv[1]);
+        cv::Mat descriptors;
+        for(auto &video : db.listVideos())
+            for(auto &&frame : db.loadVideo(video)->frames())
+                descriptors.push_back(frame.descriptors);
+
+        Mat vocab = constructVocabulary(descriptors, 2000);
 
         cv::FileStorage file(argv[2], cv::FileStorage::WRITE);
 
@@ -43,7 +48,13 @@ int main(int argc, char** argv) {
         if ( !file_exists(argv[3]) ){
             std::cout << "Calculating frame vocab" << std::endl;
 
-            Mat frameVocab = constructFrameVocabulary(argv[1], myvocab, 200, 1);
+            FileDatabase db(argv[1]);
+            cv::Mat descriptors;
+            for(auto &video : db.listVideos())
+                for(auto &&frame : db.loadVideo(video)->frames())
+                    descriptors.push_back(baggify(frame.descriptors, myvocab));
+
+            Mat frameVocab = constructVocabulary(descriptors, 200);
 
             cv::FileStorage file(argv[3], cv::FileStorage::WRITE);
 
@@ -54,7 +65,7 @@ int main(int argc, char** argv) {
 
     // key frame stuff
     std::cout << "Key frame stuff" << std::endl;
-    auto extractor = [&myvocab](Frame f) { return baggify(f, myvocab); };
+    auto comp = BOWComparator(myvocab);
     FileDatabase fd(argv[1]);
 
     auto videopaths = fd.listVideos();
@@ -62,14 +73,14 @@ int main(int argc, char** argv) {
 
     for(auto& vp : videopaths){
         auto vid = fd.loadVideo(vp);
-        auto ss = flatScenes(*vid, extractor, .15);
+        auto ss = flatScenes(*vid, comp, .15);
         std::cout << "Video: " << vp << ", scenes: " << ss.size() << std::endl;
         for(auto& a : ss){
-            std::cout << a << ", ";
+            std::cout << a.first << ", ";
         }
         std::cout << std::endl;
 
-        visualizeSubset(vp, ss);
+        visualizeSubset(vp, ss.begin(), ss.end());
     }
     return 0;
 }
