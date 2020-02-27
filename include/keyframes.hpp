@@ -8,6 +8,7 @@
 #include "database.hpp"
 #include "matcher.hpp"
 #include "instrumentation.hpp"
+#include "boost/iterator/transform_iterator.hpp"
 
 template <class T, class RankType>
 struct sortable{
@@ -69,20 +70,16 @@ flatScenesBags(IVideo& video, IndexIt start, IndexIt end, Vocab&& frameVocab){
     
     auto accessor = [](const Frame& frame) { return frame.descriptors; };
     auto& frames = video.frames();
-    std::vector<cv::Mat> matrices;
+    auto begin = frames.begin();
 
-    std::transform(frames.begin(), frames.end(), std::back_inserter(matrices), accessor);
-    auto s = matrices.begin();
+    auto func = [begin, accessor](auto i) {
+        return std::make_pair(
+            boost::make_transform_iterator(begin + i.first, accessor), 
+            boost::make_transform_iterator(begin + i.second, accessor));
+    };
 
-    std::vector<std::pair<
-        decltype(s), 
-        decltype(s)>> tran;
-
-    std::transform(start, end, std::back_inserter(tran),
-    [s](auto i){ return std::make_pair(s + i.first,
-        s + i.second); });
-
-    return flatScenesBags(tran.begin(), tran.end(), frameVocab);
+    return flatScenesBags(boost::make_transform_iterator(start, func), 
+        boost::make_transform_iterator(end, func), frameVocab);
 }
 
 template<typename Cmp, typename Vocab>
