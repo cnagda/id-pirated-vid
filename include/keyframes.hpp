@@ -48,33 +48,14 @@ auto flatScenes(IVideo& video, Cmp&& comp, double threshold){
 }
 
 template<typename RangeIt>
-std::enable_if_t<is_pair_iterator_v<RangeIt>, std::vector<cv::Mat>> 
+std::vector<cv::Mat>
 flatScenesBags(RangeIt start, RangeIt end, const cv::Mat& frameVocab) {
-    static_assert(is_pair_iterator_v<RangeIt>, 
-        "flatScenesBags requires an iterator to a pair");
-
     std::cout << "In flatScenesBags" << std::endl;
     
     std::vector<cv::Mat> retval2;
 
     for(auto i = start; i < end; i++){
-        retval2.push_back(baggify(i->first, i->second, frameVocab));
-    }
-    return retval2;
-}
-
-template<typename RangeIt>
-std::enable_if_t<!is_pair_iterator_v<RangeIt>, std::vector<cv::Mat>> 
-flatScenesBags(RangeIt start, RangeIt end, const cv::Mat& frameVocab) {
-    static_assert(is_pair_iterator_v<RangeIt>, 
-        "flatScenesBags requires an iterator to a pair");
-
-    std::cout << "In flatScenesBags" << std::endl;
-    
-    std::vector<cv::Mat> retval2;
-
-    for(auto i = start; i < end; i++){
-        retval2.push_back(baggify(i, frameVocab));
+        retval2.push_back(baggify(*i, frameVocab));
     }
     return retval2;
 }

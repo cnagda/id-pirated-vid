@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 #include <optional>
 #include <iterator>
+#include <type_traits>
 
 struct MatchInfo {
     double matchConfidence;
@@ -41,7 +42,11 @@ template<typename Matrix, typename Vocab>
 cv::Mat baggify(Matrix&& f, Vocab&& vocab) {
     cv::BOWImgDescriptorExtractor extractor(cv::FlannBasedMatcher::create());
 
-    extractor.setVocabulary(vocab);
+    if constexpr(std::is_invocable_v<Vocab>) {
+        extractor.setVocabulary(vocab());
+    } else {
+        extractor.setVocabulary(vocab);
+    }
 
     cv::Mat output;
 
@@ -61,6 +66,11 @@ cv::Mat baggify(It rangeBegin, It rangeEnd, Vocab&& vocab) {
     for(auto i = rangeBegin; i != rangeEnd; ++i)
         accumulator.push_back(*i);
     return baggify(accumulator, vocab);
+}
+
+template<typename It, typename Vocab>
+cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
+    return baggify(pair.first, pair.second, vocab);
 }
 
 template<typename Matrix>
