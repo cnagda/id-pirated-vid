@@ -133,6 +133,9 @@ FileDatabase::FileDatabase(const string& databasePath) {
     databaseRoot = databasePath;
 }
 
+const std::string IScene::vocab_name = "SceneVocab.mat";
+const std::string Frame::vocab_name = "FrameVocab.mat";
+
 /*
 unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::function<void(Mat, Frame)> callback)
 {

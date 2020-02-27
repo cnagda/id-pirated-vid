@@ -23,68 +23,26 @@ bool file_exists(const string& fname){
 
 int main(int argc, char** argv )
 {
-    if ( argc < 4 )
+    if ( argc < 3 )
     {
-        printf("usage: ./main <Database_Path> <BOW_matrix_path> <Frame_vocab_matrix_path>\n");
+        // TODO: better args parsing
+        printf("usage: ./query <Database_Path> <test_video>\n");
         return -1;
     }
 
-    if ( !file_exists(argv[2]) ){
-        namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
+    auto& fd = *database_factory(argv[1]).release();
+    namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
 
-        FileDatabase db(argv[1]);
-        cv::Mat descriptors;
-        for(auto &video : db.loadVideo()) {
-            auto frames = video->frames();
-            for(auto i = frames.begin(); i < frames.end(); i+=10)
-                descriptors.push_back(i->descriptors);
-        }
-            
-
-        std::cout << "About to start old kmeans" << std::endl;
-        Mat vocab = constructVocabulary(descriptors, 2000);
-        std::cout << "Done with kmeans" << std::endl;
-
-        cv::FileStorage file(argv[2], cv::FileStorage::WRITE);
-
-        file << "Vocabulary" << vocab;
-        file.release();
+    if ( argc >= 4 ){
+        fd.saveVocab(constructFrameVocabulary(fd, 2000));
     }
 
-    Mat myvocab;
-
-    cv::FileStorage fs(argv[2], FileStorage::READ);
-
-    fs["Vocabulary"] >> myvocab;
-    fs.release();
-
-    if ( !file_exists(argv[3]) ){
-        std::cout << "Calculating frame vocab" << std::endl;
-
-        FileDatabase db(argv[1]);
-        cv::Mat descriptors;
-        for(auto &video : db.loadVideo()) {
-            auto frames = video->frames();
-            for(auto &&frame : frames)
-                descriptors.push_back(baggify(frame.descriptors, myvocab));
-        }
-
-        Mat frameVocab = constructVocabulary(descriptors, 200);
-
-        cv::FileStorage file(argv[3], cv::FileStorage::WRITE);
-
-        file << "Frame_Vocabulary" << frameVocab;
-        file.release();
+    if ( argc == 5 ){
+        fd.saveVocab(constructSceneVocabulary(fd, 200));
     }
 
-    Mat myframevocab;
-
-    cv::FileStorage fs2(argv[3], FileStorage::READ);
-
-    fs2["Frame_Vocabulary"] >> myframevocab;
-    fs2.release();
-
-    FileDatabase fd(argv[1]);
+    auto myvocab = fd.loadVocab<Vocab<IScene>>().descriptors();
+    auto myframevocab = fd.loadVocab<Vocab<Frame>>().descriptors();
 
     auto videopaths = fd.loadVideo();
     bool first = 1;
@@ -112,8 +70,8 @@ int main(int argc, char** argv )
         }
     }*/
 
-    std::function intcomp = [](cv::Mat b1, cv::Mat b2) { 
-        auto a = cosineSimilarity(b1, b2);
+    auto intcomp = [](auto& b1, auto& b2) { 
+        auto a = cosineSimilarity(b1->descriptor(), b2->descriptor());
         return a > 0.8 ? 3 : -3; 
     };
 
@@ -121,7 +79,7 @@ int main(int argc, char** argv )
     for(int i = 0; i < videopaths.size() - 1; i++){
         auto& v1 = videopaths[i];
         
-        auto fb1 = flatScenesBags(*v1, mycomp, .2, myframevocab);
+        auto& fb1 = v1->getScenes();
 
         VideoMatchingInstrumenter instrumenter(*v1);
         auto reporter = getReporter(instrumenter);
@@ -131,7 +89,7 @@ int main(int argc, char** argv )
 
             std::cout << "Boneheaded Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp, reporter) << std::endl << std::endl;
 
-            auto fb2 = flatScenesBags(*v2, mycomp, .2, myframevocab);
+            auto& fb2 = v2->getScenes();
 
             std::cout << "fb1 size: " << fb1.size() << " fb2: " << fb2.size() << std::endl;        
             auto&& alignments = calculateAlignment(fb1, fb2, intcomp, 0, 2);

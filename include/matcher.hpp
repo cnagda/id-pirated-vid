@@ -8,14 +8,13 @@
 #include <optional>
 #include <iterator>
 #include <type_traits>
+#include <exception>
 
 struct MatchInfo {
     double matchConfidence;
     IVideo::size_type startFrame, endFrame;
     std::string video;
 };
-
-cv::Mat constructMyVocabulary(const std::string& path, int K, int speedinator);
 
 template<typename Matrix>
 cv::Mat constructVocabulary(Matrix&& descriptors, unsigned int K, cv::Mat labels = cv::Mat()) {
@@ -37,6 +36,10 @@ cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = c
         accumulator.push_back(*i);
     return constructVocabulary(accumulator, K, labels);
 }
+
+Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator = 1);
+
+Vocab<IScene> constructSceneVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator = 1);
 
 template<typename Matrix, typename Vocab>
 cv::Mat baggify(Matrix&& f, Vocab&& vocab) {

@@ -22,15 +22,16 @@ cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight);
 
 typedef std::string hash_default;
 
-template<typename Hash = hash_default, typename Matrix = cv::Mat>
 class IVocab {
 public:
-    virtual Hash getHash() const;
-    virtual Matrix descriptors() const;
+    virtual std::string getHash() const = 0;
+    virtual cv::Mat descriptors() const = 0;
+    virtual ~IVocab() = default;
 };
 
-template<typename T, typename Hash = hash_default, typename Matrix = cv::Mat>
-class LazyVocab : IVocab<Hash, Matrix>{
+/*
+template<typename T>
+class LazyVocab : IVocab {
 private:
     fs::path directory;
 public:
@@ -39,42 +40,49 @@ public:
     }
     Matrix descriptors() const override {
         Matrix myvocab;
-        cv::FileStorage fs(directory / T::vocab_name, FileStorage::READ);
+        cv::FileStorage fs(directory / T::vocab_name, cv::FileStorage::READ);
         fs["Vocabulary"] >> myvocab;
         return myvocab;
     }
-    static const std::string vocab_name = T::vocab_name;
+    static const std::string vocab_name;
 };
 
-template<typename T, typename Hash = hash_default, typename Matrix = cv::Mat>
-class Vocab : IVocab<Hash, Matrix>{
+template<typename T>
+const std::string LazyVocab<T>::vocab_name = T::vocab_name;
+*/
+
+template<typename T>
+class Vocab : public IVocab {
 private:
-    const Matrix descriptors;
-    Hash hash;
+    const cv::Mat desc;
+    std::string hash;
 public:
-    FileVocab(Matrix&& descriptors) : descriptors(descriptors) {};
-    Hash getHash() const override {
+    Vocab(const cv::Mat& descriptors) : desc(descriptors) {};
+    Vocab(const IVocab& vocab) : desc(vocab.descriptors()) {};
+    std::string getHash() const override {
         return hash;
     }
-    Matrix descriptors() const override {
-        return descriptors;
+    cv::Mat descriptors() const override {
+        return desc;
     }
-    static const std::string vocab_name = T::vocab_name;
+    static const std::string vocab_name;
 };
+
+template<typename T>
+const std::string Vocab<T>::vocab_name = T::vocab_name;
 
 class IScene {
 public:
-    static const std::string vocab_name = "SceneVocab.mat";
+    static const std::string vocab_name;
 
     IScene(const std::string& key) : key(key) {};
     virtual ~IScene() = default;
     const std::string key;
 
-    template<typename Extractor> auto getDescriptor(Extractor&& ext) {
-        return ext(getFrames());
-    }
-
+    virtual cv::Mat descriptor() = 0;
     virtual std::vector<Frame>& getFrames() & = 0;
+    virtual cv::Mat descriptor() const = 0;
+    virtual const std::vector<Frame>& getFrames() const & = 0;
 };
 
 class IVideo {
@@ -85,7 +93,8 @@ public:
 
     virtual size_type frameCount() = 0;
     virtual std::vector<Frame>& frames() & = 0;
-    virtual const std::vector<IScene>& getScenes() & = 0;
+    virtual std::vector<std::unique_ptr<IScene>>& getScenes() & = 0;
+    virtual const std::vector<std::unique_ptr<IScene>>& getScenes() const & = 0;
     virtual ~IVideo() = default;
 };
 
@@ -108,7 +117,7 @@ private:
     Base base;
     std::vector<IScene> scenes;
 public:
-    DatabaseVideo(Base&& base) : DatabaseVideo(base.name), base(base) {};
+    DatabaseVideo(Base&& base) : IVideo(base.name), base(base) {};
     size_type frameCount() override {
         return base.frameCount();
     };
@@ -132,13 +141,14 @@ class IDatabase {
 public:
     virtual std::unique_ptr<IVideo> saveVideo(const IVideo& video) = 0;
     virtual std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const = 0;
+    virtual bool saveVocab(const IVocab& vocab, const std::string& key) = 0;
+    virtual std::unique_ptr<IVocab> loadVocab(const std::string& key) const = 0;
+    virtual ~IDatabase() = default;
+
     template<typename V>
     bool saveVocab(const V& vocab) { return saveVocab(vocab, V::vocab_name); }
     template<typename V>
-    V loadVocab() { return V(loadVocab(V::vocab_name)); }
-    virtual bool saveVocab(const IVocab& vocab, const std::string& key) = 0;
-    virtual IVocab loadVocab(const std::string& key) = 0;
-    virtual ~IDatabase() = default;
+    V loadVocab() const { return V(*loadVocab(V::vocab_name)); }
 };
 
 /* Example strategies
@@ -160,20 +170,31 @@ public:
     SubdirSearchStrategy() : SubdirSearchStrategy(fs::current_path()) {};
     SubdirSearchStrategy(const std::string& path) : directory(path) {};
 
-    template<typename FileVideoReader, typename ...Args>
+    template<typename FileReader, typename ...Args>
     auto operator()(const std::string& findKey, FileReader &&reader, Args&&... args) const {
         return reader(directory / findKey, args...);
     }
 };
 
-class LazyStorageStrategy {
+// TODO implement this better
+/* class LazyStorageStrategy {
 public:
-    IVideo& operator()(IVideo& video, IDatabase& database) const;
-}
+    IVideo& saveVideo(IVideo& video, IDatabase& database) const;
+};
+
+class LazyLoadStrategy {
+public:
+    IVideo& loadVideo(IVideo& video, IDatabase& database) const;
+}; */
 
 class EagerStorageStrategy {
 public:
-    IVideo& operator()(IVideo& video, IDatabase& database) const;
+    IVideo& saveVideo(IVideo& video, IDatabase& database) const;
+};
+
+class EagerLoadStrategy {
+public:
+    IVideo& loadVideo(IVideo& video, IDatabase& database) const;
 };
 
 class FileDatabase : public IDatabase {
@@ -184,8 +205,8 @@ public:
     FileDatabase(const std::string& databasePath);
     virtual std::unique_ptr<IVideo> saveVideo(const IVideo& video) override;
     virtual std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const override;
-    IVocab saveVocab(const IVocab& vocab, const std::string& key) override;
-    cv::Mat loadVocab(const std::string& key) override;
+    bool saveVocab(const IVocab& vocab, const std::string& key) override;
+    std::unique_ptr<IVocab> loadVocab(const std::string& key) const override;
 };
 
 inline std::unique_ptr<IDatabase> database_factory(const std::string& dbPath) {

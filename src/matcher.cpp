@@ -7,6 +7,35 @@
 #include "sw.hpp"
 #include "keyframes.hpp"
 
+Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator) {
+    cv::Mat descriptors;
+
+    for(auto &video : database.loadVideo()) {
+        auto frames = video->frames();
+        for(auto i = frames.begin(); i != frames.end(); i += speedinator)
+                descriptors.push_back(i->descriptors);
+    }
+
+    return constructVocabulary(descriptors, K);
+}
+
+Vocab<IScene> constructSceneVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator) {
+    auto vocab = database.loadVocab<Vocab<Frame>>().descriptors();
+    if(vocab.empty()) {
+        throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");
+    }
+
+    cv::Mat descriptors;
+
+    for(auto &video : database.loadVideo()) {
+        auto frames = video->frames();
+        for(auto i = frames.begin(); i != frames.end(); i += speedinator)
+                descriptors.push_back(baggify(i->descriptors, vocab));
+    }
+
+    return constructVocabulary(descriptors, K);
+}
+
 double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter){
     auto frames1 = v1.frames();
     auto frames2 = v2.frames();

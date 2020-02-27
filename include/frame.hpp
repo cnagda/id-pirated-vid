@@ -23,6 +23,7 @@ public:
             descriptors.size == f2.descriptors.size &&
             std::equal(descriptors.begin<float>(), descriptors.end<float>(), f2.descriptors.begin<float>());
     }
+    static const std::string vocab_name;
 };
 
 #endif
