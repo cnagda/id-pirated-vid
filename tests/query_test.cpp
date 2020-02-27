@@ -12,26 +12,26 @@ protected:
     static void SetUpTestSuite() {
         fs::remove_all(fs::current_path() / "database_test_dir");
         db = FileDatabase(fs::current_path() / "database_test_dir");
-        SubdirSearchStrategy strat("../");
-        EagerStorageStrategy store;
-
         {
-            DatabaseVideo<SIFTVideo> video = strat("sample.mp4", [](auto s) { return getSIFTVideo(s); });
-            store.saveVideo(video, db);
+            auto video = make_video_adapter(
+                getSIFTVideo("../sample.mp4"), "sample.mp4");
+            db.saveVideo(video);
         }
 
         {
-            DatabaseVideo<SIFTVideo> video = strat("coffee.mp4", [](auto s) { return getSIFTVideo(s); });
-            store.saveVideo(video, db);
+            auto video = make_video_adapter(
+                getSIFTVideo("../coffee.mp4"), "coffee.mp4");
+            db.saveVideo(video);
         }
 
         {
-            DatabaseVideo<SIFTVideo> video = strat("crab.mp4", [](auto s) { return getSIFTVideo(s); });
-            store.saveVideo(video, db);
+            auto video = make_video_adapter(
+                getSIFTVideo("../crab.mp4"), "crab.mp4");
+            db.saveVideo(video);
         }
 
-        static_cast<IDatabase&>(db).saveVocab(constructFrameVocabulary(db, 2000));
-        static_cast<IDatabase&>(db).saveVocab(constructSceneVocabulary(db, 200));
+        saveVocab(constructFrameVocabulary(db, 2000), db);
+        saveVocab(constructSceneVocabulary(db, 200), db);
         
         std::cout << "Setup done" << std::endl;
     }
@@ -42,7 +42,7 @@ protected:
 FileDatabase DatabaseFixture::db;
 
 TEST_F(DatabaseFixture, NotInDatabase) {  
-    auto video = DatabaseVideo<SIFTVideo>(getSIFTVideo("../sample.mp4"));
+    auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo("../sample.mp4"), "sample.mp4");
     auto match = findMatch(video, db);
     if(match) {
         std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;

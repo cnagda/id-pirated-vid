@@ -20,7 +20,7 @@ Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K,
 }
 
 Vocab<IScene> constructSceneVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator) {
-    auto vocab = database.loadVocab<Vocab<Frame>>();
+    auto vocab = loadVocab<Vocab<Frame>>(database);
     if(!vocab) {
         throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");
     }
@@ -56,8 +56,8 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 }
 
 std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db) {
-    auto vocab = db.loadVocab<Vocab<Frame>>()->descriptors();
-    auto frameVocab = db.loadVocab<Vocab<IScene>>()->descriptors();
+    auto vocab = loadVocab<Vocab<Frame>>(db)->descriptors();
+    auto frameVocab = loadVocab<Vocab<IScene>>(db)->descriptors();
     auto videopaths = db.loadVideo();
 
     auto frameComp = BOWComparator(vocab);

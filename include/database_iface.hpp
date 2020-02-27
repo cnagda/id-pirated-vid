@@ -4,12 +4,25 @@
 #include <vector>
 #include <memory>
 #include <opencv2/opencv.hpp>
+#include "frame.hpp"
 
 class IVocab {
 public:
     virtual std::string getHash() const = 0;
     virtual cv::Mat descriptors() const = 0;
     virtual ~IVocab() = default;
+};
+
+class IScene {
+public:
+    static const std::string vocab_name;
+
+    IScene(const std::string& key) : key(key) {};
+    virtual ~IScene() = default;
+    const std::string key;
+
+    virtual cv::Mat descriptor() = 0;
+    virtual std::vector<Frame>& getFrames() & = 0;
 };
 
 class IVideo {
@@ -42,17 +55,20 @@ public:
     virtual bool saveVocab(const IVocab& vocab, const std::string& key) = 0;
     virtual std::unique_ptr<IVocab> loadVocab(const std::string& key) const = 0;
     virtual ~IDatabase() = default;
-
-    template<typename V>
-    bool saveVocab(V&& vocab) { return saveVocab(std::forward<V>(vocab), V::vocab_name); }
-    template<typename V>
-    std::optional<V> loadVocab() const { 
-        auto v = loadVocab(V::vocab_name);
-        if(v) {
-            return V(*v);
-        }
-        return std::nullopt;
-    }
 };
+
+template<typename V, typename Db>
+bool saveVocab(V&& vocab, Db&& db) { 
+    return db.saveVocab(std::forward<V>(vocab), V::vocab_name); 
+}
+
+template<typename V, typename Db>
+std::optional<V> loadVocab(Db&& db) { 
+    auto v = db.loadVocab(V::vocab_name);
+    if(v) {
+        return V(*v);
+    }
+    return std::nullopt;
+}
 
 #endif

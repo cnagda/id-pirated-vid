@@ -126,25 +126,28 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
         if(callback) callback(image, frame);
     }
 
-    return SIFTVideo(getAlphas(filepath), frames);
+    return SIFTVideo(frames);
 }
 
 const std::string IScene::vocab_name = "SceneVocab.mat";
 const std::string Frame::vocab_name = "FrameVocab.mat";
 
-std::unique_ptr<IVideo> FileDatabase::saveVideo(const IVideo& video) {
-    for(auto& frame : video.frames()) {
-        fs::path video_dir(databaseRoot / video.name / "frames");
-        fs::create_directories(video_dir);
-        SIFTwrite(video_dir, frame);
+std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
+    fs::path video_dir(databaseRoot / video.name / "frames");
+    fs::create_directories(video_dir);
+    auto frames = video.frames();
+    decltype(frames)::size_type index = 0;
+    for(auto& frame : frames) {
+        SIFTwrite(video_dir / std::to_string(index++), frame);
     }
+    return std::make_unique<InputVideoAdapter<SIFTVideo>>(video);
 }
 
 std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideos() const {
     std::vector<std::unique_ptr<IVideo>> videos;
     for(auto i : fs::directory_iterator(databaseRoot)) {
         auto v = loadVideo(i.path().filename());
-        std::copy(std::make_move_iterator(v.begin()), std::make_move_iterator(v.end()), std::back_inserter(videos));
+        std::move(v.begin(), v.end(), std::back_inserter(videos));
     }
     return videos;
 }
@@ -169,12 +172,15 @@ std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideo(const std::string& 
     }    
 
     std::vector<std::unique_ptr<IVideo>> vid;
-    vid.push_back(std::move(make_unique<DatabaseVideo<SIFTVideo>>(SIFTVideo(key, frames))));
+    vid.push_back(std::move(make_unique<InputVideoAdapter<SIFTVideo>>(SIFTVideo(frames), key)));
     return vid;
 }
 
 bool FileDatabase::saveVocab(const IVocab& vocab, const std::string& key) {
-
+    cv::Mat myvocab;
+    cv::FileStorage fs(databaseRoot / key, cv::FileStorage::WRITE);
+    fs << "Vocabulary" << vocab.descriptors();
+    return true;
 }
 std::unique_ptr<IVocab> FileDatabase::loadVocab(const std::string& key) const {
     if(!fs::exists(databaseRoot / key)) {
@@ -185,50 +191,3 @@ std::unique_ptr<IVocab> FileDatabase::loadVocab(const std::string& key) const {
     fs["Vocabulary"] >> myvocab;
     return std::make_unique<ContainerVocab>(myvocab);
 }
-
-IVideo& EagerStorageStrategy::saveVideo(IVideo& video, IDatabase& database) const {
-    database.saveVideo(video);
-    return video;
-}
-
-/*
-unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::function<void(Mat, Frame)> callback)
-{
-    std::cout << "Adding video: " << filepath << std::endl;
-    fs::path video_dir = databaseRoot / fs::path(filepath).filename();
-    fs::create_directories(video_dir);
-    auto video = make_unique<SIFTVideo>(getSIFTVideo(filepath, callback));
-    auto& frames = video->frames();
-    for(size_t i = 0; i < frames.size(); i++) {
-        SIFTwrite(video_dir / std::to_string(i), frames[i]);
-    }
-
-    std::cout << "Done adding video: " << filepath << std::endl;
-    return video;
-}
-unique_ptr<IVideo> FileDatabase::loadVideo(const std::string &filepath) const
-{
-    fs::path video_dir = databaseRoot / getAlphas(filepath);
-    vector<Frame> frames;
-
-    auto it = fs::directory_iterator{video_dir};
-    vector<fs::directory_entry> files(it, fs::end(it));
-    sort(files.begin(), files.end(), [](auto a, auto b) {
-        return stoi(a.path().filename()) < stoi(b.path().filename());
-    });
-
-    for (auto frame_path : files)
-    {
-        auto frame = SIFTread(frame_path.path());
-        frames.push_back(frame);
-    }
-    return make_unique<SIFTVideo>(video_dir.filename(), frames);
-}
-
-vector<string> FileDatabase::listVideos() const {
-    auto it = fs::directory_iterator{databaseRoot};
-    vector<string> out;
-    transform(it, fs::end(it), back_inserter(out), [](auto d){ return d.path().filename(); });
-    return out;
-}
-*/

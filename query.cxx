@@ -34,15 +34,15 @@ int main(int argc, char** argv )
     namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
 
     if ( argc >= 4 ){
-        fd.saveVocab(constructFrameVocabulary(fd, 2000));
+        saveVocab(constructFrameVocabulary(fd, 2000), fd);
     }
 
     if ( argc == 5 ){
-        fd.saveVocab(constructSceneVocabulary(fd, 200));
+        saveVocab(constructSceneVocabulary(fd, 200), fd);
     }
 
-    auto myvocab = fd.loadVocab<Vocab<IScene>>()->descriptors();
-    auto myframevocab = fd.loadVocab<Vocab<Frame>>()->descriptors();
+    auto myvocab = loadVocab<Vocab<IScene>>(fd)->descriptors();
+    auto myframevocab = loadVocab<Vocab<Frame>>(fd)->descriptors();
 
     auto videopaths = fd.loadVideo();
     bool first = 1;

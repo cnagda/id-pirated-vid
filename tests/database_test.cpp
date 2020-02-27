@@ -36,12 +36,10 @@ TEST(DatabaseSuite, SIFTrwTest) {
 }
 
 TEST(DatabaseSuite, FileDatabase) {
-    SubdirSearchStrategy strat("../");
-    EagerStorageStrategy store;
     FileDatabase db;
-    DatabaseVideo<SIFTVideo> video = strat("sample.mp4", [](auto s) { return getSIFTVideo(s); });
+    auto video = make_video_adapter(getSIFTVideo("sample.mp4"), "sample.mp4");
     
-    auto vid = store.saveVideo(video, db).frames();
+    auto vid = db.saveVideo(video)->frames();
     auto loaded_vid = db.loadVideo("sample.mp4");
 
     ASSERT_FALSE(loaded_vid.empty());

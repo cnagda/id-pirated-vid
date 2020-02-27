@@ -52,6 +52,7 @@ private:
     std::string hash;
 public:
     ContainerVocab(const cv::Mat& descriptors) : desc(descriptors) {};
+    ContainerVocab(const IVocab& vocab) : desc(vocab.descriptors()) {};
     std::string getHash() const {
         return hash;
     }
@@ -71,18 +72,6 @@ public:
 template<typename T>
 const std::string Vocab<T>::vocab_name = T::vocab_name;
 
-class IScene {
-public:
-    static const std::string vocab_name;
-
-    IScene(const std::string& key) : key(key) {};
-    virtual ~IScene() = default;
-    const std::string key;
-
-    virtual cv::Mat descriptor() = 0;
-    virtual std::vector<Frame>& getFrames() & = 0;
-};
-
 class SIFTVideo {
 private:
     std::vector<Frame> SIFTFrames;
@@ -97,22 +86,24 @@ public:
 };
 
 template<typename Base>
-class DatabaseVideo : public IVideo{
+class InputVideoAdapter : public IVideo{
 private:
     Base base;
-    std::vector<std::unique_ptr<IScene>> scenes;
+    std::vector<std::unique_ptr<IScene>> emptyScenes;
 public:
-    DatabaseVideo(Base&& b, std::string name) : IVideo(name), base(b) {};
-    DatabaseVideo(const Base& b, std::string name) : IVideo(name), base(b) {};
-    DatabaseVideo(IVideo&& vid) : IVideo(vid), base(vid.frames()), scenes(vid.getScenes()) {};
-    DatabaseVideo(IVideo& vid) : IVideo(vid), base(vid.frames()) {
-        auto& s = vid.getScenes();
-        std::move(s.begin(), s.end(), std::back_inserter(scenes));
-    };
+    InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(b) {};
+    InputVideoAdapter(const Base& b, const std::string& name) : IVideo(name), base(b) {};
+    InputVideoAdapter(IVideo&& vid) : IVideo(vid), base(vid.frames()) {};
+    InputVideoAdapter(IVideo& vid) : IVideo(vid), base(vid.frames()) {};
     size_type frameCount() override { return base.frameCount(); };
     std::vector<Frame>& frames() & override { return base.frames(); };
-    std::vector<std::unique_ptr<IScene>>& getScenes() & override { return scenes; }
+    std::vector<std::unique_ptr<IScene>>& getScenes() & override { return emptyScenes; }
 };
+
+template<typename Base>
+InputVideoAdapter<Base> make_video_adapter(Base&& b, const std::string& name) {
+    return InputVideoAdapter<Base>(std::forward<Base>(b), name);
+}
 
 // TODO think of how to use these, templated
 /* Example strategies
