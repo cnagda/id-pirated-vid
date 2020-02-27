@@ -26,7 +26,7 @@ public:
     using size_type = std::vector<Frame>::size_type;
 
     virtual size_type frameCount() = 0;
-    virtual std::vector<Frame>& frames() = 0;
+    virtual std::vector<Frame>& frames() & = 0;
     virtual ~IVideo() = default;
 };
 
@@ -37,7 +37,7 @@ public:
     SIFTVideo(const std::string& name, const std::vector<Frame>& frames) : IVideo(name), SIFTFrames(frames) {};
     SIFTVideo(const std::string& name, std::vector<Frame>&& frames) : IVideo(name), SIFTFrames(frames) {};
     SIFTVideo(SIFTVideo&& vid) : IVideo(vid.name), SIFTFrames(vid.SIFTFrames) {};
-    std::vector<Frame>& frames() override { return SIFTFrames; };
+    std::vector<Frame>& frames() & override { return SIFTFrames; };
     size_type frameCount() override { return SIFTFrames.size(); };
 };
 

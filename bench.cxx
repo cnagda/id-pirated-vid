@@ -64,9 +64,18 @@ int main(int argc, char** argv )
     }
 
     if ( argc >= 2 ){
+        FileDatabase db;
+        cv::Mat descriptors;
+        for(auto &video : db.listVideos()) {
+            auto &frames = db.loadVideo(video)->frames();
+            for(auto &frame: frames) {
+                descriptors.push_back(frame.descriptors);
+            }
+        }
+
         std::cout << "About to start old kmeans" << std::endl;
         auto start = high_resolution_clock::now();
-        Mat vocab = constructVocabulary(argv[1], 200, 10);
+        Mat vocab = constructVocabulary(descriptors, 200);
         auto stop = high_resolution_clock::now();
         auto duration = duration_cast<seconds>(stop - start);
         std::cout << "Old constructVocabulary took " << duration.count() << " seconds (3 attempts)" << std::endl;
