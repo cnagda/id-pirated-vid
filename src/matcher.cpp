@@ -7,97 +7,6 @@
 #include "sw.hpp"
 #include "keyframes.hpp"
 
-// bag of frames
-cv::Mat constructFrameVocabulary(const std::string& path, cv::Mat vocab, int K, int speedinator, cv::Mat centers, bool online){
-    FileDatabase fd(path);
-
-	auto videopaths = fd.listVideos();
-	std::vector<cv::Mat> allFeatures;
-
-	// collect all features
-	for(auto videopath : videopaths){
-
-        int count = 0;
-
-		auto video = fd.loadVideo(videopath);
-		auto frames = video->frames();
-		for(auto& frame : frames){
-            count++;
-            // construct vocab based on only one out of every speedinator frames
-            if(count % speedinator) continue;
-
-            // won't be able to vconcat if cols are different sizes
-            if (frame.descriptors.cols == 0) continue;
-
-            if(frame.descriptors.rows == 0) continue;
-
-			//allFeatures.push_back(frame.descriptors.clone());
-            allFeatures.push_back(baggify(frame.descriptors, vocab));
-		}
-	}
-
-    std::cout << "Collected: " << allFeatures.size() << std::endl;
-
-    // matrix containing all collected bags of words
-	cv::Mat descriptors;
-	cv::vconcat(allFeatures, descriptors);
-
-    std::cout << "Concatenated: " << descriptors.rows << std::endl;
-
-	K = (K == -1)? (descriptors.rows / 20) : K;
-	//cv::BOWKMeansTrainer trainer(K);
-    
-    cv::Mat retval;
-
-    kmeans(descriptors, K, centers, cv::TermCriteria(), 1, online? cv::KMEANS_USE_INITIAL_LABELS : cv::KMEANS_PP_CENTERS, retval);
-
-    std::cout << "About to return" << std::endl;
-
-    return retval;
-}
-
-cv::Mat constructMyVocabulary(const std::string& path, int K, int speedinator){
-	FileDatabase fd(path);
-
-	auto videopaths = fd.listVideos();
-	std::vector<cv::Mat> allFeatures;
-
-	// collect all features
-	for(auto videopath : videopaths){
-
-        int count = 0;
-
-		auto video = fd.loadVideo(videopath);
-		auto frames = video->frames();
-		for(auto& frame : frames){
-            count++;
-            // construct vocab based on only one out of every speedinator frames
-            if(count % speedinator) continue;
-
-            // won't be able to vconcat if cols are different sizes
-            if (frame.descriptors.cols == 0) continue;
-
-			allFeatures.push_back(frame.descriptors.clone());
-		}
-	}
-
-    std::cout << "Collected: " << allFeatures.size() << std::endl;
-
-    // for(int i = 0; i < 30; i++){
-    //     auto& af = allFeatures;
-    //     std::cout << af[i].rows << " X " << af[i].cols << std::endl;
-    // }
-
-
-	cv::Mat descriptors;
-	cv::vconcat(allFeatures, descriptors);
-
-    std::cout << "Concatenated" << std::endl;
-
-	K = (K == -1)? (descriptors.rows / 20) : K;
-    return kmeans2(descriptors, K, 1);
-}
-
 double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter){
     auto frames1 = v1.frames();
     auto frames2 = v2.frames();
@@ -117,7 +26,7 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 }
 
 std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, const cv::Mat& vocab, const cv::Mat& frameVocab) {
-    auto videopaths = db.listVideos();
+    auto videopaths = db.loadVideo();
 
     auto frameComp = BOWComparator(vocab);
     
@@ -127,8 +36,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, const cv::Mat&
     auto targetFrames = target.frames();
     auto targetScenes = flatScenesBags(target, frameComp, 0.2f, frameVocab);
 
-    for(auto s2 : videopaths) {
-        auto v2 = db.loadVideo(s2);
+    for(auto& v2 : videopaths) {
         std::cout << "Calculating match for " << v2->name << std::endl;
         auto knownScenes = flatScenesBags(*v2, frameComp, 0.2f, frameVocab);
 

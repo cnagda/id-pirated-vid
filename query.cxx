@@ -34,8 +34,8 @@ int main(int argc, char** argv )
 
         FileDatabase db(argv[1]);
         cv::Mat descriptors;
-        for(auto &video : db.listVideos()) {
-            auto frames = db.loadVideo(video)->frames();
+        for(auto &video : db.loadVideo()) {
+            auto frames = video->frames();
             for(auto i = frames.begin(); i < frames.end(); i+=10)
                 descriptors.push_back(i->descriptors);
         }
@@ -63,8 +63,8 @@ int main(int argc, char** argv )
 
         FileDatabase db(argv[1]);
         cv::Mat descriptors;
-        for(auto &video : db.listVideos()) {
-            auto frames = db.loadVideo(video)->frames();
+        for(auto &video : db.loadVideo()) {
+            auto frames = video->frames();
             for(auto &&frame : frames)
                 descriptors.push_back(baggify(frame.descriptors, myvocab));
         }
@@ -86,7 +86,7 @@ int main(int argc, char** argv )
 
     FileDatabase fd(argv[1]);
 
-    auto videopaths = fd.listVideos();
+    auto videopaths = fd.loadVideo();
     bool first = 1;
     Frame firstFrame;
 
@@ -119,17 +119,16 @@ int main(int argc, char** argv )
 
     // similarity between each two videos
     for(int i = 0; i < videopaths.size() - 1; i++){
-        auto s1 = videopaths[i];
-        auto v1 = fd.loadVideo(s1);
+        auto& v1 = videopaths[i];
         
         auto fb1 = flatScenesBags(*v1, mycomp, .2, myframevocab);
 
         VideoMatchingInstrumenter instrumenter(*v1);
         auto reporter = getReporter(instrumenter);
         for(int j = i + 1; j < videopaths.size(); j++){
-            auto s2 = videopaths[j];
-            std::cout << "Comparing " << s1 << " to " << s2 << std::endl;
-            auto v2 = fd.loadVideo(s2);
+            auto& v2 = videopaths[j];
+            std::cout << "Comparing " << v1->name << " to " << v2->name << std::endl;
+
             std::cout << "Boneheaded Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp, reporter) << std::endl << std::endl;
 
             auto fb2 = flatScenesBags(*v2, mycomp, .2, myframevocab);
@@ -145,7 +144,7 @@ int main(int argc, char** argv )
 
         }
 
-        EmmaExporter().exportTimeseries(s1, "frame no.", "cosine distance", instrumenter.getTimeSeries());
+        EmmaExporter().exportTimeseries(v1->name, "frame no.", "cosine distance", instrumenter.getTimeSeries());
     }   
 
     return 0;

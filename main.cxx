@@ -24,24 +24,31 @@ int main(int argc, char** argv )
 
     namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
 
+    SubdirSearchStrategy strat;
+    EagerStorageStrategy store;
     FileDatabase db;
-    db.addVideo(argv[1], [&](Mat image, Frame frame){
-        Mat output;
-        auto descriptors = frame.descriptors;
-        auto keyPoints = frame.keyPoints;
+    SIFTVideo v = strat(argv[1], [](auto s){
+        return getSIFTVideo(s, [](Mat image, Frame frame){
+            Mat output;
+            auto descriptors = frame.descriptors;
+            auto keyPoints = frame.keyPoints;
 
-        if(DEBUG) {
-            drawKeypoints(image, keyPoints, output);
-            cout << "size: " << output.total() << endl;
-            imshow("Display window", output);
+            if(DEBUG) {
+                drawKeypoints(image, keyPoints, output);
+                cout << "size: " << output.total() << endl;
+                imshow("Display window", output);
 
-            waitKey(0);
+                waitKey(0);
 
-            auto im2 = scaleToTarget(image, 500, 700);
-            imshow("Display window", im2);
-    
-            waitKey(0);
-        }
+                auto im2 = scaleToTarget(image, 500, 700);
+                imshow("Display window", im2);
+        
+                waitKey(0);
+            }
+        });
     });
+    DatabaseVideo<decltype(v)> video(v);
+
+    store(video, db);
     return 0;
 }

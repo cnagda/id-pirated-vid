@@ -133,6 +133,7 @@ FileDatabase::FileDatabase(const string& databasePath) {
     databaseRoot = databasePath;
 }
 
+/*
 unique_ptr<IVideo> FileDatabase::addVideo(const std::string &filepath, std::function<void(Mat, Frame)> callback)
 {
     std::cout << "Adding video: " << filepath << std::endl;
@@ -172,3 +173,4 @@ vector<string> FileDatabase::listVideos() const {
     transform(it, fs::end(it), back_inserter(out), [](auto d){ return d.path().filename(); });
     return out;
 }
+*/
