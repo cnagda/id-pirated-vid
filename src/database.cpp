@@ -2,7 +2,7 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <cctype>
 #include <experimental/filesystem>
-#include "keyframes.hpp"
+#include "vocabulary.hpp"
 #include "matcher.hpp"
 
 using namespace std;
@@ -191,7 +191,7 @@ std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideo(const std::string& 
     if(!fs::exists(databaseRoot / key / "frames")) {
         return vid;
     }
-    
+
     auto it = fs::directory_iterator{databaseRoot / key / "frames"};
     vector<fs::directory_entry> files(it, fs::end(it));
     sort(files.begin(), files.end(), [](auto a, auto b) {

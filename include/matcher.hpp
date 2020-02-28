@@ -2,8 +2,10 @@
 #define BOW_HPP
 
 #include "instrumentation.hpp"
-#include "database.hpp"
+#include "database_iface.hpp"
+#include "vocabulary.hpp"
 #include "matrix.hpp"
+#include "sw.hpp"
 #include <opencv2/opencv.hpp>
 #include <optional>
 #include <iterator>
@@ -15,66 +17,6 @@ struct MatchInfo {
     IVideo::size_type startFrame, endFrame;
     std::string video;
 };
-
-template<typename Matrix>
-cv::Mat constructVocabulary(Matrix&& descriptors, unsigned int K, cv::Mat labels = cv::Mat()) {
-	//cv::BOWKMeansTrainer trainer(K);    
-    cv::Mat retval;
-
-    kmeans(descriptors, K, labels, cv::TermCriteria(), 1, cv::KMEANS_PP_CENTERS, retval);
-
-    std::cout << "About to return" << std::endl;
-
-    return retval;
-	//return trainer.cluster(descriptors);
-}
-
-template<typename It>
-cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = cv::Mat()) {
-	cv::Mat accumulator;
-    for(auto i = start; i != end; ++i)
-        accumulator.push_back(*i);
-    return constructVocabulary(accumulator, K, labels);
-}
-
-Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator = 1);
-
-Vocab<IScene> constructSceneVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator = 1);
-
-template<typename Matrix, typename Vocab>
-cv::Mat baggify(Matrix&& f, Vocab&& vocab) {
-    cv::BOWImgDescriptorExtractor extractor(cv::FlannBasedMatcher::create());
-
-    if constexpr(std::is_invocable_v<Vocab>) {
-        extractor.setVocabulary(vocab());
-    } else {
-        extractor.setVocabulary(vocab);
-    }
-
-    cv::Mat output;
-
-    if(!f.empty()){
-        extractor.compute(f, output);
-    }
-    else{
-        // std::cerr << "In baggify: Frame dimension does not match vocab" << std::endl;
-    }
-
-    return output;
-}
-
-template<typename It, typename Vocab>
-cv::Mat baggify(It rangeBegin, It rangeEnd, Vocab&& vocab) {
-    cv::Mat accumulator;
-    for(auto i = rangeBegin; i != rangeEnd; ++i)
-        accumulator.push_back(*i);
-    return baggify(accumulator, vocab);
-}
-
-template<typename It, typename Vocab>
-inline cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
-    return baggify(pair.first, pair.second, vocab);
-}
 
 template<typename Matrix>
 double cosineSimilarity(Matrix&& b1, Matrix&& b2) {
@@ -104,7 +46,58 @@ public:
     }
 };
 
-double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter = nullptr);
-std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db);
+template<class Video>
+double boneheadedSimilarity(Video& v1, Video& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter){
+    auto frames1 = v1.frames();
+    auto frames2 = v2.frames();
+
+    double total = 0;
+
+    int len = std::min(frames1.size(), frames2.size());
+
+    for(int i = 0; i < len; i++){
+        auto t = comparator(frames1[i], frames2[i]);
+        if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i, &v1, &v2});
+
+        total += (t != -1)? t : 0;
+    }
+
+    return total/len;
+}
+
+template<class Video>
+std::optional<MatchInfo> findMatch(Video& target, IDatabase& db) {
+    auto vocab = loadVocabulary<Vocab<Frame>>(db)->descriptors();
+    auto frameVocab = loadVocabulary<Vocab<IScene>>(db)->descriptors();
+    auto videopaths = db.loadVideo();
+
+    auto frameComp = BOWComparator(vocab);
+    
+    auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
+
+    MatchInfo match;
+    auto targetFrames = target.frames();
+    auto targetScenes = flatScenesBags(target, frameComp, 0.2f, frameVocab);
+
+    for(auto& v2 : videopaths) {
+        std::cout << "Calculating match for " << v2->name << std::endl;
+        auto knownScenes = flatScenesBags(*v2, frameComp, 0.2f, frameVocab);
+
+        auto&& alignments = calculateAlignment(targetScenes, knownScenes, intcomp, 0, 2);
+        if(alignments.size() > 0) {
+            auto& a = alignments[0];
+            if(a.score > match.matchConfidence) {
+                match = MatchInfo{a.score, a.startKnown, a.endKnown, v2->name};
+            }
+        }
+        
+    }
+    
+    if(match.matchConfidence > 0.5) {
+        return match;
+    }
+
+    return std::nullopt;
+}
 
 #endif

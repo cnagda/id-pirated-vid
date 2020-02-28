@@ -79,8 +79,6 @@ private:
 public:
     SIFTVideo(const std::vector<Frame>& frames) : SIFTFrames(frames) {};
     SIFTVideo(std::vector<Frame>&& frames) : SIFTFrames(frames) {};
-    SIFTVideo(SIFTVideo&& vid) : SIFTFrames(vid.SIFTFrames) {};
-    SIFTVideo(const SIFTVideo& vid) : SIFTFrames(vid.SIFTFrames) {};
     std::vector<Frame>& frames() & { return SIFTFrames; };
     size_type frameCount() { return SIFTFrames.size(); };
 };

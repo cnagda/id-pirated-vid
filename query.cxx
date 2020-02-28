@@ -6,7 +6,7 @@
 #include "instrumentation.hpp"
 #include <experimental/filesystem>
 #include "sw.hpp"
-#include "keyframes.hpp"
+#include "vocabulary.hpp"
 #include "kmeans2.hpp"
 
 

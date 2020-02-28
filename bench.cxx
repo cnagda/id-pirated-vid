@@ -3,7 +3,7 @@
 #include "database.hpp"
 #include "matcher.hpp"
 #include "sw.hpp"
-#include "keyframes.hpp"
+#include "vocabulary.hpp"
 #include "kmeans2.hpp"
 #include <chrono>
 
