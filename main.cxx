@@ -6,6 +6,13 @@
 #include "database.hpp"
 #include "matcher.hpp"
 
+#define DBPATH      1
+#define VIDPATH     2
+#define KSCENE      3
+#define KFRAME      4
+#define THRESHOLD   5       // TODO: do something with this??????
+#define UNSPECIFIED "-1"
+
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
@@ -13,52 +20,57 @@ using namespace std;
 int main(int argc, char** argv )
 {
     bool DEBUG = false;
-    if ( argc < 2 )
+    if ( argc < 6 )
     {
-        printf("usage: ./main <Image_Path>\n");
+        printf("usage: ./add dbPath vidPath kScene kFrame threshScene (DEBUG)\n");
         return -1;
     }
-    if ( argc == 3 ) {
+    if ( argc == 7 ) {
         DEBUG = true;
     }
 
-    int KFrame = -1, KScene = -1;
-    if(argc >= 3) {
-        KFrame = 200;
+    int kFrame = stoi(argv[KFRAME]);
+    int kScene = stoi(argv[KSCENE]);
+    if(argv[KFRAME] == UNSPECIFIED) {
+        kFrame = 200;
     }
-    if(argc >= 4) {
-        KScene = 20;
+    if(argv[KSCENE] == UNSPECIFIED) {
+        kScene = 20;
     }
 
     namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
 
-    auto db = database_factory("database/", KFrame, KScene);
-    auto video = make_video_adapter(getSIFTVideo(argv[1], [DEBUG](Mat image, Frame frame){
-        Mat output;
-        auto descriptors = frame.descriptors;
-        auto keyPoints = frame.keyPoints;
+    auto db = database_factory(argv[DBPATH], kFrame, kScene);
 
-        if(DEBUG) {
-            drawKeypoints(image, keyPoints, output);
-            cout << "size: " << output.total() << endl;
-            imshow("Display window", output);
+    if (argv[VIDPATH] != UNSPECIFIED) {
+        auto video = make_video_adapter(getSIFTVideo(argv[VIDPATH], [DEBUG](Mat image, Frame frame){
+            Mat output;
+            auto descriptors = frame.descriptors;
+            auto keyPoints = frame.keyPoints;
 
-            waitKey(0);
+            if(DEBUG) {
+                drawKeypoints(image, keyPoints, output);
+                cout << "size: " << output.total() << endl;
+                imshow("Display window", output);
 
-            auto im2 = scaleToTarget(image, 500, 700);
-            imshow("Display window", im2);
-    
-            waitKey(0);
-        }
-    }), argv[1]);
+                waitKey(0);
 
-    db->saveVideo(video);
-    if(KFrame > 0) {
-        auto v = constructFrameVocabulary(*db, KFrame);
+                auto im2 = scaleToTarget(image, 500, 700);
+                imshow("Display window", im2);
+
+                waitKey(0);
+            }
+        }), argv[VIDPATH]);
+
+        db->saveVideo(video);
+    }
+
+    if(argv[KFRAME] != UNSPECIFIED) {
+        auto v = constructFrameVocabulary(*db, kFrame);
         saveVocabulary(v, *db);
     }
-    if(KScene > 0) {
-        auto v = constructSceneVocabulary(*db, KScene);
+    if(argv[KSCENE] != UNSPECIFIED) {
+        auto v = constructSceneVocabulary(*db, kScene);
         saveVocabulary(v, *db);
     }
 
