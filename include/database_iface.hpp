@@ -77,7 +77,7 @@ public:
 
 template<typename V, typename Db>
 bool saveVocabulary(V&& vocab, Db&& db) { 
-    return db.saveVocab(std::forward<V>(vocab), V::vocab_name); 
+    return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name); 
 }
 
 template<typename V, typename Db>
@@ -87,26 +87,6 @@ std::optional<V> loadVocabulary(Db&& db) {
         return V(*v);
     }
     return std::nullopt;
-}
-
-template<typename V, typename Db>
-V loadOrComputeVocab(Db&& db, int K) {
-    auto vocab = loadVocabulary<V>(std::forward<Db>(db));
-    if(!vocab) {
-        if(K == -1) {
-            throw std::runtime_error("need to compute " + V::vocab_name + " vocabulary but not K provided");
-        }
-
-        V v;
-        if constexpr(std::is_same_v<V, Frame>) {
-            v = constructFrameVocabulary(db, K);
-        } else if constexpr(std::is_base_of_v<IScene, V>) {
-            v = constructSceneVocabulary(db, K);
-        }
-        saveVocabulary(std::forward<V>(v), std::forward<Db>(db));
-        return v;
-    }
-    return vocab.value();
 }
 
 #endif

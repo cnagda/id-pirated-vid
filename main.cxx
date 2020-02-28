@@ -22,9 +22,17 @@ int main(int argc, char** argv )
         DEBUG = true;
     }
 
+    int KFrame = -1, KScene = -1;
+    if(argc >= 3) {
+        KFrame = 200;
+    }
+    if(argc >= 4) {
+        KScene = 20;
+    }
+
     namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
 
-    auto db = database_factory("database/", 200, 20);
+    auto db = database_factory("database/", KFrame, KScene);
     auto video = make_video_adapter(getSIFTVideo(argv[1], [DEBUG](Mat image, Frame frame){
         Mat output;
         auto descriptors = frame.descriptors;
@@ -45,5 +53,14 @@ int main(int argc, char** argv )
     }), argv[1]);
 
     db->saveVideo(video);
+    if(KFrame > 0) {
+        auto v = constructFrameVocabulary(*db, KFrame);
+        saveVocabulary(v, *db);
+    }
+    if(KScene > 0) {
+        auto v = constructSceneVocabulary(*db, KScene);
+        saveVocabulary(v, *db);
+    }
+
     return 0;
 }

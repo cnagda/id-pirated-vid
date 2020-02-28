@@ -48,14 +48,13 @@ const std::string LazyVocab<T>::vocab_name = T::vocab_name;
 
 class ContainerVocab : public IVocab {
 private:
-    const cv::Mat desc;
+    cv::Mat desc;
     std::string hash;
 public:
     ContainerVocab() = default;
-    ContainerVocab(const ContainerVocab& vocab) : desc(vocab.desc) {};
-    ContainerVocab(ContainerVocab&& vocab) : desc(vocab.desc) {};
-    ContainerVocab(const cv::Mat& descriptors) : desc(descriptors) {};
-    ContainerVocab(const IVocab& vocab) : desc(vocab.descriptors()) {};
+    ContainerVocab(const cv::Mat& descriptors) : desc(descriptors), hash() {};
+    ContainerVocab(const IVocab& vocab) : desc(vocab.descriptors()), hash() {};
+    ContainerVocab(IVocab&& vocab) : desc(vocab.descriptors()), hash() {};
     std::string getHash() const {
         return hash;
     }
@@ -70,6 +69,7 @@ class Vocab : public ContainerVocab {
 public:
     using ContainerVocab::ContainerVocab;
     static const std::string vocab_name;
+    typedef T vocab_type;
 };
 
 class SIFTVideo {
@@ -133,7 +133,7 @@ class FileDatabase : public IDatabase {
 private:
     fs::path databaseRoot;
     std::vector<std::unique_ptr<IVideo>> loadVideos() const;
-    
+
 public:
     FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) : 
     FileDatabase(fs::current_path() / "database", std::move(strat), args) {};
@@ -151,6 +151,26 @@ inline std::unique_ptr<IDatabase> database_factory(const std::string& dbPath, in
     return std::make_unique<FileDatabase>(dbPath, 
         std::make_unique<AggressiveStorageStrategy>(), 
         RuntimeArguments{KScene, KFrame});
+}
+
+template<typename V, typename Db>
+V loadOrComputeVocab(Db&& db, int K) {
+    auto vocab = loadVocabulary<V>(std::forward<Db>(db));
+    if(!vocab) {
+        if(K == -1) {
+            throw std::runtime_error("need to compute " + V::vocab_name + " vocabulary but not K provided");
+        }
+
+        V v;
+        if constexpr(std::is_same_v<typename V::vocab_type, Frame>) {
+            v = constructFrameVocabulary(db, K);
+        } else if constexpr(std::is_base_of_v<typename V::vocab_type, IScene>) {
+            v = constructSceneVocabulary(db, K);
+        }
+        saveVocabulary(std::forward<V>(v), std::forward<Db>(db));
+        return v;
+    }
+    return vocab.value();
 }
 
 #endif

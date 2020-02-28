@@ -121,7 +121,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
 
         detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
 
-        Frame frame{keyPoints, descriptors.clone()};
+        Frame frame{keyPoints, descriptors};
 
         frames.push_back(frame);
 

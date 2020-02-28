@@ -53,11 +53,11 @@ cv::Mat baggify(Matrix&& f, Vocab&& vocab) {
 
     cv::Mat output;
 
-    if(!std::empty(f)){
+    if(!f.empty()){
         extractor.compute(f, output);
     }
     else{
-        //std::cerr << "In baggify: Frame has no key points" << std::endl;
+        // std::cerr << "In baggify: Frame dimension does not match vocab" << std::endl;
     }
 
     return output;
@@ -78,7 +78,7 @@ inline cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
 
 template<typename Matrix>
 double cosineSimilarity(Matrix&& b1, Matrix&& b2) {
-    if(b1.size() != b2.size()) return -1;
+    if(b1.empty() || b1.size() != b2.size()) return -1;
 
     auto b1n = b1.dot(b1);
     auto b2n = b2.dot(b2);
