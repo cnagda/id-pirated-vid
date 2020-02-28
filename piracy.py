@@ -8,6 +8,8 @@ def validate_args(args):
 
     # Validate database path exists
     # TODO: make sure database folder is properly formatted?
+    if args.databasePath == "ADD":
+        return True # creates db if DNE
     if os.path.isdir(os.path.join(os.getcwd(), args.databasePath)):
         return True
     print("Database path is invalid, exiting")
@@ -106,7 +108,7 @@ def main():
     )
 
     args = parser.parse_args()
-    print(args)
+    # print(args)
     is_valid = validate_args(args)
     if is_valid:
         args.paths = expand_paths(args.paths)

@@ -11,11 +11,16 @@
 #define KSCENE      3
 #define KFRAME      4
 #define THRESHOLD   5       // TODO: do something with this??????
-#define UNSPECIFIED "-1"
 
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
+
+namespace fs = std::experimental::filesystem;
+
+int isUnspecified(std::string arg) {
+    return (arg == "-1");
+}
 
 int main(int argc, char** argv )
 {
@@ -31,10 +36,10 @@ int main(int argc, char** argv )
 
     int kFrame = stoi(argv[KFRAME]);
     int kScene = stoi(argv[KSCENE]);
-    if(argv[KFRAME] == UNSPECIFIED) {
+    if(isUnspecified(argv[KFRAME])) {
         kFrame = 200;
     }
-    if(argv[KSCENE] == UNSPECIFIED) {
+    if(isUnspecified(argv[KSCENE])) {
         kScene = 20;
     }
 
@@ -42,7 +47,7 @@ int main(int argc, char** argv )
 
     auto db = database_factory(argv[DBPATH], kFrame, kScene);
 
-    if (argv[VIDPATH] != UNSPECIFIED) {
+    if (!isUnspecified(argv[VIDPATH])) {
         auto video = make_video_adapter(getSIFTVideo(argv[VIDPATH], [DEBUG](Mat image, Frame frame){
             Mat output;
             auto descriptors = frame.descriptors;
@@ -60,16 +65,16 @@ int main(int argc, char** argv )
 
                 waitKey(0);
             }
-        }), argv[VIDPATH]);
+        }), fs::path(argv[VIDPATH]).filename());
 
         db->saveVideo(video);
     }
 
-    if(argv[KFRAME] != UNSPECIFIED) {
+    if(!isUnspecified(argv[KFRAME])) {
         auto v = constructFrameVocabulary(*db, kFrame);
         saveVocabulary(v, *db);
     }
-    if(argv[KSCENE] != UNSPECIFIED) {
+    if(!isUnspecified(argv[KSCENE])) {
         auto v = constructSceneVocabulary(*db, kScene);
         saveVocabulary(v, *db);
     }

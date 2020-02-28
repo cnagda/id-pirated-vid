@@ -61,7 +61,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db) {
     auto videopaths = db.loadVideo();
 
     auto frameComp = BOWComparator(vocab);
-    
+
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
 
     MatchInfo match;
@@ -79,9 +79,9 @@ std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db) {
                 match = MatchInfo{a.score, a.startKnown, a.endKnown, v2->name};
             }
         }
-        
+
     }
-    
+
     if(match.matchConfidence > 0.5) {
         return match;
     }
