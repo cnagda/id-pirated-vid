@@ -39,9 +39,9 @@ cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = c
     return constructVocabulary(accumulator, K, labels);
 }
 
-Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator = 1);
+Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
 
-Vocab<IScene> constructSceneVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator = 1);
+Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
 
 template<typename Matrix, typename Vocab>
 cv::Mat baggify(Matrix&& f, Vocab&& vocab) {

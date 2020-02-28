@@ -7,7 +7,7 @@
 #include "sw.hpp"
 #include "vocabulary.hpp"
 
-Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator) {
+Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator) {
     cv::Mat descriptors;
 
     for(auto &video : database.loadVideo()) {
@@ -19,7 +19,7 @@ Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K,
     return Vocab<Frame>(constructVocabulary(descriptors, K));
 }
 
-Vocab<IScene> constructSceneVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator) {
+Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator) {
     auto vocab = loadVocabulary<Vocab<Frame>>(database);
     if(!vocab) {
         throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");

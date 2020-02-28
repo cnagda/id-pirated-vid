@@ -66,7 +66,7 @@ double boneheadedSimilarity(Video& v1, Video& v2, std::function<double(Frame, Fr
 }
 
 template<class Video>
-std::optional<MatchInfo> findMatch(Video& target, IDatabase& db) {
+std::optional<MatchInfo> findMatch(Video& target, FileDatabase& db) {
     auto vocab = loadVocabulary<Vocab<Frame>>(db)->descriptors();
     auto frameVocab = loadVocabulary<Vocab<IScene>>(db)->descriptors();
     auto videopaths = db.loadVideo();

@@ -208,18 +208,19 @@ std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideo(const std::string& 
     return vid;
 }
 
-bool FileDatabase::saveVocab(const IVocab& vocab, const std::string& key) {
+bool FileDatabase::saveVocab(const ContainerVocab& vocab, const std::string& key) {
     cv::Mat myvocab;
     cv::FileStorage fs(databaseRoot / key, cv::FileStorage::WRITE);
     fs << "Vocabulary" << vocab.descriptors();
     return true;
 }
-std::unique_ptr<IVocab> FileDatabase::loadVocab(const std::string& key) const {
+
+std::optional<ContainerVocab> FileDatabase::loadVocab(const std::string& key) const {
     if(!fs::exists(databaseRoot / key)) {
-        return nullptr;
+        return std::nullopt;
     }
     cv::Mat myvocab;
     cv::FileStorage fs(databaseRoot / key, cv::FileStorage::READ);
     fs["Vocabulary"] >> myvocab;
-    return std::make_unique<ContainerVocab>(myvocab);
+    return std::make_optional<ContainerVocab>(myvocab);
 }

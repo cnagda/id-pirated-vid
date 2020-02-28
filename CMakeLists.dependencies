@@ -18,6 +18,7 @@ if(NOT Boost_FOUND)
 endif()
 
 find_package( Boost 1.72.0 )
+include_directories(${Boost_INCLUDE_DIR})
 
 #[[
 

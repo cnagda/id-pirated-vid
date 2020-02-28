@@ -22,39 +22,18 @@ void createFolder(const std::string& folder_name);
 SIFTVideo getSIFTVideo(const std::string& filename, std::function<void(cv::Mat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
 cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight);
 
-typedef std::string hash_default;
-
-/*
-template<typename T>
-class LazyVocab : IVocab {
-private:
-    fs::path directory;
-public:
-    LazyVocab(fs::path directory) : directory(directory) {};
-    Hash getHash() const override {
-    }
-    Matrix descriptors() const override {
-        Matrix myvocab;
-        cv::FileStorage fs(directory / T::vocab_name, cv::FileStorage::READ);
-        fs["Vocabulary"] >> myvocab;
-        return myvocab;
-    }
-    static const std::string vocab_name;
+struct RuntimeArguments {
+    int KScenes;
+    int KFrame;
 };
 
-template<typename T>
-const std::string LazyVocab<T>::vocab_name = T::vocab_name;
-*/
-
-class ContainerVocab : public IVocab {
+class ContainerVocab {
 private:
     cv::Mat desc;
     std::string hash;
 public:
     ContainerVocab() = default;
     ContainerVocab(const cv::Mat& descriptors) : desc(descriptors), hash() {};
-    ContainerVocab(const IVocab& vocab) : desc(vocab.descriptors()), hash() {};
-    ContainerVocab(IVocab&& vocab) : desc(vocab.descriptors()), hash() {};
     std::string getHash() const {
         return hash;
     }
@@ -68,6 +47,7 @@ template<typename T>
 class Vocab : public ContainerVocab {
 public:
     using ContainerVocab::ContainerVocab;
+    Vocab(const ContainerVocab& v) : ContainerVocab(v) {};
     static const std::string vocab_name;
     typedef T vocab_type;
 };
@@ -84,7 +64,7 @@ public:
 };
 
 template<typename Base>
-class InputVideoAdapter : public IVideo{
+class InputVideoAdapter : public IVideo {
 private:
     Base base;
     std::vector<std::unique_ptr<IScene>> emptyScenes;
@@ -127,28 +107,44 @@ public:
     inline bool shouldBaggifyScenes(IVideo& video) override { return false; };
 };
 
-class FileDatabase : public IDatabase {
+class FileDatabase {
 private:
     fs::path databaseRoot;
     std::vector<std::unique_ptr<IVideo>> loadVideos() const;
-
+    std::unique_ptr<IVideoStorageStrategy> strategy;
+    RuntimeArguments args;
 public:
     FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) : 
     FileDatabase(fs::current_path() / "database", std::move(strat), args) {};
+
     FileDatabase(const std::string& databasePath,
         std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) 
-        : IDatabase(std::move(strat), args), databaseRoot(databasePath) {};
+        : strategy(std::move(strat)), args(args), databaseRoot(databasePath) {};
 
-    std::unique_ptr<IVideo> saveVideo(IVideo& video) override;
-    std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const override;
-    bool saveVocab(const IVocab& vocab, const std::string& key) override;
-    std::unique_ptr<IVocab> loadVocab(const std::string& key) const override;
+    std::unique_ptr<IVideo> saveVideo(IVideo& video);
+    std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const;
+    bool saveVocab(const ContainerVocab& vocab, const std::string& key);
+    std::optional<ContainerVocab> loadVocab(const std::string& key) const;
 };
 
-inline std::unique_ptr<IDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene) {
+inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene) {
     return std::make_unique<FileDatabase>(dbPath, 
         std::make_unique<AggressiveStorageStrategy>(), 
         RuntimeArguments{KScene, KFrame});
+}
+
+template<typename V, typename Db>
+bool saveVocabulary(V&& vocab, Db&& db) { 
+    return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name); 
+}
+
+template<typename V, typename Db>
+std::optional<V> loadVocabulary(Db&& db) { 
+    auto v = db.loadVocab(V::vocab_name);
+    if(v) {
+        return V(v.value());
+    }
+    return std::nullopt;
 }
 
 template<typename V, typename Db>
