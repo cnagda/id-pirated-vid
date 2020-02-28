@@ -33,14 +33,6 @@ int main(int argc, char** argv )
     auto& fd = *database_factory(argv[1], -1, -1).release();
     namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
 
-    if ( argc >= 4 ){
-        saveVocabulary(constructFrameVocabulary(fd, 2000), fd);
-    }
-
-    if ( argc == 5 ){
-        saveVocabulary(constructSceneVocabulary(fd, 200), fd);
-    }
-
     auto myvocab = loadVocabulary<Vocab<IScene>>(fd)->descriptors();
     auto myframevocab = loadVocabulary<Vocab<Frame>>(fd)->descriptors();
 

@@ -172,8 +172,10 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
 std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideos() const {
     std::vector<std::unique_ptr<IVideo>> videos;
     for(auto i : fs::directory_iterator(databaseRoot)) {
-        auto v = loadVideo(i.path().filename());
-        std::move(v.begin(), v.end(), std::back_inserter(videos));
+        if(fs::is_directory(i.path())) {
+            auto v = loadVideo(i.path().filename());
+            std::move(v.begin(), v.end(), std::back_inserter(videos));
+        }
     }
     return videos;
 }

@@ -51,6 +51,9 @@ private:
     const cv::Mat desc;
     std::string hash;
 public:
+    ContainerVocab() = default;
+    ContainerVocab(const ContainerVocab& vocab) : desc(vocab.desc) {};
+    ContainerVocab(ContainerVocab&& vocab) : desc(vocab.desc) {};
     ContainerVocab(const cv::Mat& descriptors) : desc(descriptors) {};
     ContainerVocab(const IVocab& vocab) : desc(vocab.descriptors()) {};
     std::string getHash() const {
@@ -130,7 +133,7 @@ class FileDatabase : public IDatabase {
 private:
     fs::path databaseRoot;
     std::vector<std::unique_ptr<IVideo>> loadVideos() const;
-
+    
 public:
     FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) : 
     FileDatabase(fs::current_path() / "database", std::move(strat), args) {};
