@@ -185,8 +185,13 @@ std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideo(const std::string& 
         return loadVideos();
     }
 
+    std::vector<std::unique_ptr<IVideo>> vid;
     std::vector<Frame> frames;
 
+    if(!fs::exists(databaseRoot / key / "frames")) {
+        return vid;
+    }
+    
     auto it = fs::directory_iterator{databaseRoot / key / "frames"};
     vector<fs::directory_entry> files(it, fs::end(it));
     sort(files.begin(), files.end(), [](auto a, auto b) {
@@ -199,7 +204,6 @@ std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideo(const std::string& 
         frames.push_back(frame);
     }    
 
-    std::vector<std::unique_ptr<IVideo>> vid;
     vid.push_back(std::move(make_unique<InputVideoAdapter<SIFTVideo>>(SIFTVideo(frames), key)));
     return vid;
 }
