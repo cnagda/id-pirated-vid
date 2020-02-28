@@ -5,6 +5,7 @@
 #include <memory>
 #include <opencv2/opencv.hpp>
 #include "frame.hpp"
+#include <exception>
 
 class IVocab {
 public:
@@ -86,6 +87,21 @@ std::optional<V> loadVocabulary(Db&& db) {
         return V(*v);
     }
     return std::nullopt;
+}
+
+template<typename V, typename Db>
+V loadOrComputeVocab(Db&& db, int KFrame) {
+    auto vocab = loadVocabulary<V>(std::forward<Db>(db));
+    if(!vocab) {
+        if(KFrame == -1) {
+            throw std::runtime_error("need to compute frame vocabulary but not K provided");
+        }
+
+        auto v = constructFrameVocabulary(db, KFrame);
+        saveVocabulary(std::forward<decltype(v)>(v), std::forward<Db>(db));
+        return v;
+    }
+    return vocab.value();
 }
 
 #endif

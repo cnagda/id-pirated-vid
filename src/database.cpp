@@ -149,26 +149,18 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     }
     
     if(strategy->shouldBaggifyFrames(video)) {
-
+        auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, args.KFrame);
     }
 
     if(strategy->shouldComputeScenes(video)) {
-        auto vocab = loadVocabulary<Vocab<Frame>>(*this);
-        if(!vocab) {
-            if(args.KFrame == -1) {
-                throw new runtime_error("need to compute frame vocabulary but not K provided");
-            }
+        auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, args.KFrame);
 
-            saveVocabulary(constructFrameVocabulary(*this, args.KFrame), *this);
-            vocab.emplace(loadVocabulary<Vocab<Frame>>(*this).value());
-        }
-
-        auto comp = BOWComparator(vocab->descriptors());
+        auto comp = BOWComparator(vocab.descriptors());
         auto scenes = flatScenes(video, comp, 0.2);
     }
 
     if(strategy->shouldBaggifyScenes(video)) {
-
+        auto vocab = loadOrComputeVocab<Vocab<IScene>>(*this, args.KScenes);
     }
 
     return std::make_unique<InputVideoAdapter<SIFTVideo>>(video);
