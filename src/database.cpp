@@ -134,6 +134,9 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
 const std::string IScene::vocab_name = "SceneVocab.mat";
 const std::string Frame::vocab_name = "FrameVocab.mat";
 
+template<typename T>
+const std::string Vocab<T>::vocab_name = T::vocab_name;
+
 std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     fs::path video_dir(databaseRoot / video.name);
     fs::create_directories(video_dir);

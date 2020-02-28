@@ -69,9 +69,6 @@ public:
     static const std::string vocab_name;
 };
 
-template<typename T>
-const std::string Vocab<T>::vocab_name = T::vocab_name;
-
 class SIFTVideo {
 private:
     std::vector<Frame> SIFTFrames;
