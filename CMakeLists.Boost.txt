@@ -4,10 +4,15 @@ project(Boost NONE)
 
 include(ExternalProject)
 ExternalProject_Add(Boost
-  URL    https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
+  URL               https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
   SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/Boost-src"
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/Boost-src/bootstrap.sh --prefix=${CMAKE_CURRENT_BINARY_DIR}/Boost
-  BUILD_COMMAND     ""
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/Boost-src/bootstrap.sh
+                    --with-libraries=type_erasure
+                    --prefix=${CMAKE_CURRENT_BINARY_DIR}/Boost-build
+  BUILD_COMMAND     ${CMAKE_CURRENT_BINARY_DIR}/Boost-src/b2 
+                    install --prefix=${CMAKE_CURRENT_BINARY_DIR}/Boost-build
+                    variant=release
+  BUILD_IN_SOURCE   true
   INSTALL_COMMAND   ""
   TEST_COMMAND      ""
 )
