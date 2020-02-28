@@ -16,8 +16,8 @@ public:
     double similarity;
     Frame f1, f2;
     IVideo::size_type f1Idx, f2Idx;
-    const IVideo* v1;
-    const IVideo* v2;
+    const optional_ref<IVideo> v1;
+    const optional_ref<IVideo> v2;
 };
 
 typedef const std::string& Label;
@@ -47,8 +47,8 @@ public:
     void clear();
     void addFrameSimilarity(FrameSimilarityInfo info){
         if(info.v1 && info.v2) {
-            auto& v1_ = *info.v1;
-            auto& v2_ = *info.v2;
+            auto& v1_ = info.v1->get();
+            auto& v2_ = info.v2->get();
             auto& known = (v1_.name == target.name) ? v2_ : v1_ ;
 
             videoTracker[known.name].push_back({info.f1Idx, info.similarity}); 

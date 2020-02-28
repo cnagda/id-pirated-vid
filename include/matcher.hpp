@@ -57,7 +57,8 @@ double boneheadedSimilarity(Video& v1, Video& v2, std::function<double(Frame, Fr
 
     for(int i = 0; i < len; i++){
         auto t = comparator(frames1[i], frames2[i]);
-        if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i, &v1, &v2});
+        if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i, 
+            std::make_optional(std::ref(v1)), std::make_optional(std::ref(v2))});
 
         total += (t != -1)? t : 0;
     }
