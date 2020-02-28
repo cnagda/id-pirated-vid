@@ -3,6 +3,16 @@ import argparse
 import subprocess
 import os
 
+def validate_args(args):
+    # TODO: add more validation
+
+    # Validate database path exists
+    # TODO: make sure database folder is properly formatted?
+    if os.path.isdir(os.path.join(os.getcwd(), args.databasePath)):
+        return True
+    print("Database path is invalid, exiting")
+    return False
+
 def expand_paths(paths):
     expanded = []
     for path in paths:
@@ -23,14 +33,14 @@ def call_execs(args):
     for path in args.paths:
         call_args = []
         if args.type == 'ADD':
-            call_args.append('./add.py')
+            call_args.append('./build/add')
             call_args.append(args.databasePath)
             call_args.append(path)
-            call_args.append(args.kScene)
-            call_args.append(args.kFrame)
-            call_args.append(args.thresholdScene)
+            call_args.append(str(args.kScene))
+            call_args.append(str(args.kFrame))
+            call_args.append(str(args.thresholdScene))
         else:
-            call_args.append('./query.py')
+            call_args.append('./build/query')
             call_args.append(args.databasePath)
             call_args.append(path)
         subprocess.call(call_args)
@@ -53,9 +63,7 @@ def main():
     parser_add.add_argument(
         'databasePath',
         metavar='dbPath',
-        help='path to database of known videos',
-        default='-1',
-        nargs='?'
+        help='path to database of known videos'
     )
     parser_add.add_argument(
         'paths',
@@ -67,19 +75,22 @@ def main():
         '-kFrame',
         metavar='KF',
         help='k value for frame kmeans',
-        default='-1'
+        default=-1,
+        type=int
     )
     parser_add.add_argument(
         '-kScene',
         metavar='KS',
         help='k value for scene kmeans',
-        default='-1'
+        default=-1,
+        type=int
     )
     parser_add.add_argument(
         '-thresholdScene',
         metavar='TS',
         help='threshold for inter-scene similarity',
-        default='-1'
+        default=-1,
+        type=int
     )
 
     parser_query = subparsers.add_parser('QUERY')
@@ -90,15 +101,16 @@ def main():
     )
     parser_query.add_argument(
         'paths',
-        metavar='paths',
         help='path(s) to directories/files to add',
         nargs='+'
     )
 
     args = parser.parse_args()
     print(args)
-    args.paths = expand_paths(args.paths)
-    call_execs(args)
+    is_valid = validate_args(args)
+    if is_valid:
+        args.paths = expand_paths(args.paths)
+        call_execs(args)
 
 if __name__ == "__main__":
     main()
