@@ -7,6 +7,7 @@
 #include "sw.hpp"
 #include "vocabulary.hpp"
 #include <boost/range/adaptors.hpp>
+#include <boost/range/algorithm_ext/push_back.hpp>
 
 Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator) {
     cv::Mat descriptors;
@@ -60,15 +61,17 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
     auto videopaths = db.loadVideo();
         
-    auto intcomp = [](IScene& f1, IScene& f2) { return cosineSimilarity(f1.descriptor(), f2.descriptor()) > 0.8 ? 3 : -3; };
-    auto deref = [](auto i) -> auto& { return *i; };
+    auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
+    auto deref = [](auto i) { return i->descriptor(); };
 
     MatchInfo match;
-    auto targetScenes = target.getScenes() | boost::adaptors::transformed(deref);
+    std::vector<cv::Mat> targetScenes;
+    boost::push_back(targetScenes, target.getScenes() | boost::adaptors::transformed(deref));
 
     for(auto& v2 : videopaths) {
         std::cout << "Calculating match for " << v2->name << std::endl;
-        auto knownScenes = v2->getScenes() | boost::adaptors::transformed(deref);
+        std::vector<cv::Mat> knownScenes;
+        boost::push_back(knownScenes, v2->getScenes() | boost::adaptors::transformed(deref));
 
         auto&& alignments = calculateAlignment(targetScenes, knownScenes, intcomp, 0, 2);
         if(alignments.size() > 0) {
