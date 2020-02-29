@@ -32,7 +32,7 @@ public:
 
     virtual size_type frameCount() = 0;
     virtual std::vector<Frame>& frames() & = 0;
-    virtual std::vector<std::shared_ptr<IScene>>& getScenes() & = 0;
+    virtual std::vector<std::unique_ptr<IScene>>& getScenes() & = 0;
     virtual ~IVideo() = default;
 };
 

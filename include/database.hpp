@@ -94,7 +94,7 @@ template<typename Base>
 class InputVideoAdapter : public IVideo {
 private:
     Base base;
-    std::vector<std::shared_ptr<IScene>> emptyScenes;
+    std::vector<std::unique_ptr<IScene>> emptyScenes;
 public:
     using size_type = typename Base::size_type;
 
@@ -104,7 +104,7 @@ public:
     InputVideoAdapter(IVideo& vid) : IVideo(vid), base(vid.frames()) {};
     size_type frameCount() override { return base.frameCount(); };
     std::vector<Frame>& frames() & override { return base.frames(); };
-    std::vector<std::shared_ptr<IScene>>& getScenes() & override { return emptyScenes; }
+    std::vector<std::unique_ptr<IScene>>& getScenes() & override { return emptyScenes; }
 };
 
 struct SerializableScene {
@@ -196,7 +196,7 @@ public:
 
 
 class DatabaseScene : public IScene {
-    static_assert(std::is_convertible_v<std::shared_ptr<DatabaseScene>, std::shared_ptr<IScene>>, "not convertible");
+    static_assert(std::is_convertible_v<std::unique_ptr<DatabaseScene>, std::unique_ptr<IScene>>, "not convertible");
     std::vector<Frame> frames;
     cv::Mat descriptorCache;
     const IVideo& video;
@@ -266,7 +266,7 @@ public:
 
 class DatabaseVideo : public IVideo {
     const FileDatabase& db;
-    std::vector<std::shared_ptr<IScene>> sceneCache;
+    std::vector<std::unique_ptr<IScene>> sceneCache;
     std::vector<Frame> frameCache;
 public:
     DatabaseVideo() = delete;
@@ -275,7 +275,7 @@ public:
     explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key), 
     db(database), frameCache(frames) {
         boost::push_back(sceneCache, scenes | boost::adaptors::transformed(
-            [this](auto scene){ return std::make_shared<DatabaseScene>(*this, db, scene); }
+            [this](auto scene){ return std::make_unique<DatabaseScene>(*this, db, scene); }
         ));
     };
 
@@ -283,7 +283,7 @@ public:
     size_type frameCount() override { return frames().size(); };
     std::vector<Frame>& frames() & override { return frameCache; };
 
-    std::vector<std::shared_ptr<IScene>>& getScenes() & override;
+    std::vector<std::unique_ptr<IScene>>& getScenes() & override;
 };
 
 inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene) {
