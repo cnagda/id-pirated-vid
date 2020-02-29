@@ -254,3 +254,19 @@ std::vector<std::shared_ptr<IScene>>& DatabaseVideo::getScenes() & {
 
     return sceneCache; 
 }
+
+std::optional<Frame> FileLoader::readFrame(const std::string& videoName, SIFTVideo::size_type index) const {
+    if(!fs::exists(rootDir / videoName / to_string(index))) {
+        return std::nullopt;
+    }
+
+    return SIFTread(rootDir / videoName / to_string(index));
+}
+std::optional<SerializableScene> FileLoader::readScene(const std::string& videoName, SIFTVideo::size_type index) const {
+    if(!fs::exists(rootDir / videoName / to_string(index))) {
+        return std::nullopt;
+    }
+
+    // unimplemented
+    return std::nullopt;
+}

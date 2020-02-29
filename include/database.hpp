@@ -125,8 +125,8 @@ private:
 public:
     FileLoader(fs::path dir) : rootDir(dir) {};
 
-    std::optional<Frame> readFrame(const std::string& videoName, SIFTVideo::size_type index) const ;
-    std::optional<SerializableScene> readScene(const std::string& videoName, SIFTVideo::size_type index) const ;
+    std::optional<Frame> readFrame(const std::string& videoName, SIFTVideo::size_type index) const;
+    std::optional<SerializableScene> readScene(const std::string& videoName, SIFTVideo::size_type index) const;
 };
 
 template<typename Base>
