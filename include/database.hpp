@@ -21,6 +21,10 @@ class SIFTVideo;
 
 void SIFTwrite(const std::string& filename, const Frame& frame);
 Frame SIFTread(const std::string& filename);
+
+void SceneWrite(const std::string& filename, const SerializableScene& frame);
+SerializableScene SceneRead(const std::string& filename);
+
 std::string getAlphas(const std::string& input);
 void createFolder(const std::string& folder_name);
 SIFTVideo getSIFTVideo(const std::string& filename, std::function<void(cv::Mat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
@@ -106,6 +110,10 @@ public:
 struct SerializableScene {
     cv::Mat frameBag;
     SIFTVideo::size_type startIdx, endIdx;
+    explicit SerializableScene(SIFTVideo::size_type startIdx, SIFTVideo::size_type endIdx) :
+        startIdx(startIdx), endIdx(endIdx), frameBag() {};
+    explicit SerializableScene(const cv::Mat& matrix, SIFTVideo::size_type startIdx, SIFTVideo::size_type endIdx) :
+        startIdx(startIdx), endIdx(endIdx), frameBag(matrix) {};
 
     template<typename Video>
     auto getFrameRange(Video& video) const {
@@ -193,6 +201,7 @@ class DatabaseScene : public IScene {
     cv::Mat descriptorCache;
     const IVideo& video;
     const FileDatabase& database;
+    SIFTVideo::size_type startIdx, endIdx;
 
 public:
     DatabaseScene() = delete;
@@ -203,20 +212,30 @@ public:
     };
     
     explicit DatabaseScene(IVideo& video, const FileDatabase& database, const SerializableScene& scene) :
-    video(video), database(database), frames(frames) {
+    video(video), database(database), frames() {
         auto frames = video.frames();
-        auto vocab = loadVocabulary<Vocab<DatabaseScene>>(database);
-        
-        if(!vocab) {
-            throw std::runtime_error("Scene couldn't get a frame vocabulary");
-        }
+        startIdx = scene.startIdx;
+        endIdx = scene.endIdx;
+        boost::push_back(this->frames, scene.getFrameRange(video));
 
-        auto range = scene.getFrameRange(video) | 
-            boost::adaptors::transformed([](auto f) { 
-            return f.descriptors; });
+        if(!scene.frameBag.empty()) {
+            descriptorCache = scene.frameBag;
+        }
+        else {
+            auto vocab = loadVocabulary<Vocab<DatabaseScene>>(database);
             
-        descriptorCache = baggify(range.begin(), range.end(), 
-            vocab->descriptors());
+            if(!vocab) {
+                throw std::runtime_error("Scene couldn't get a frame vocabulary");
+            }
+
+            auto range = scene.getFrameRange(video) | 
+                boost::adaptors::transformed([](auto f) { 
+                return f.descriptors; });
+                
+            descriptorCache = baggify(range.begin(), range.end(), 
+                vocab->descriptors());
+        }
+        
     };
 
     const cv::Mat& descriptor() override {
@@ -238,6 +257,10 @@ public:
 
     const std::vector<Frame>& getFrames() override {
         return frames;
+    }
+
+    operator SerializableScene() override {
+        return SerializableScene{descriptor(), startIdx, endIdx};
     }
 };
 

@@ -8,6 +8,7 @@
 #include <exception>
 
 class FileDatabase;
+class SerializableScene;
 
 class IScene {
 public:
@@ -17,6 +18,7 @@ public:
 
     virtual const cv::Mat& descriptor() = 0;
     virtual const std::vector<Frame>& getFrames() = 0;
+    virtual operator SerializableScene() = 0;
 };
 
 
