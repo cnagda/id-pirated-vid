@@ -5,10 +5,9 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <string>
-#include "database.hpp"
-#include "vocabulary.hpp"
+#include "database_iface.hpp"
 #include "instrumentation.hpp"
-#include "boost/iterator/transform_iterator.hpp"
+#include <boost/iterator/transform_iterator.hpp>
 
 template <class T, class RankType>
 struct sortable{
@@ -40,7 +39,6 @@ cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = c
 }
 
 Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
-
 Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
 
 template<typename Matrix, typename Vocab>
@@ -110,7 +108,8 @@ auto flatScenes(Video& video, Cmp&& comp, double threshold){
 }
 
 template<typename RangeIt, typename Vocab>
-std::vector<cv::Mat>
+std::enable_if_t<is_pair_iterator_v<RangeIt> &&
+    !std::is_integral_v<decltype(std::declval<RangeIt>()->first)>, std::vector<cv::Mat>> 
 flatScenesBags(RangeIt start, RangeIt end, Vocab&& frameVocab) {
     std::cout << "In flatScenesBags" << std::endl;
     

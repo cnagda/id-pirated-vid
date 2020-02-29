@@ -14,4 +14,15 @@ struct is_pair_iterator<T,
 template <typename T> 
 inline constexpr bool is_pair_iterator_v = is_pair_iterator<T>::value;
 
+template <typename, typename = void>
+struct is_frame_iterator : std::false_type { };
+
+template <typename It>
+struct is_frame_iterator<It,
+    std::void_t<decltype(std::declval<It>()->descriptors)>>
+    : std::true_type { };
+
+template <typename T>
+inline constexpr bool is_frame_iterator_v = is_frame_iterator<T>::value;
+
 #endif

@@ -2,6 +2,7 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <cctype>
 #include <experimental/filesystem>
+#include <memory>
 #include "vocabulary.hpp"
 #include "matcher.hpp"
 
@@ -152,18 +153,18 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     }
     
     if(strategy->shouldBaggifyFrames(video)) {
-        auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, args.KFrame);
+        auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, config.KFrames);
     }
 
     if(strategy->shouldComputeScenes(video)) {
-        auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, args.KFrame);
+        auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, config.KFrames);
 
         auto comp = BOWComparator(vocab.descriptors());
         auto scenes = flatScenes(video, comp, 0.2);
     }
 
     if(strategy->shouldBaggifyScenes(video)) {
-        auto vocab = loadOrComputeVocab<Vocab<IScene>>(*this, args.KScenes);
+        auto vocab = loadOrComputeVocab<Vocab<IScene>>(*this, config.KScenes);
     }
 
     return std::make_unique<InputVideoAdapter<SIFTVideo>>(video);
@@ -186,25 +187,26 @@ std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideo(const std::string& 
     }
 
     std::vector<std::unique_ptr<IVideo>> vid;
-    std::vector<Frame> frames;
 
     if(!fs::exists(databaseRoot / key / "frames")) {
         return vid;
     }
 
-    auto it = fs::directory_iterator{databaseRoot / key / "frames"};
-    vector<fs::directory_entry> files(it, fs::end(it));
-    sort(files.begin(), files.end(), [](auto a, auto b) {
-        return stoi(a.path().filename()) < stoi(b.path().filename());
-    });
+    std::vector<Frame> frames;
+    SIFTVideo::size_type index = 0;
 
-    for (auto frame_path : files)
-    {
-        auto frame = SIFTread(frame_path.path());
-        frames.push_back(frame);
-    }    
+    while(auto f = loader.readFrame(key, index++)) frames.push_back(f.value());
 
-    vid.push_back(std::move(make_unique<InputVideoAdapter<SIFTVideo>>(SIFTVideo(frames), key)));
+    if(!fs::exists(databaseRoot / key / "scenes")) {
+        vid.push_back(std::make_unique<DatabaseVideo>(*this, key, frames));
+        return vid;
+    }
+
+    std::vector<SerializableScene> scenes;
+    index = 0;
+    while(auto f = loader.readScene(key, index++)) scenes.push_back(f.value());
+
+    vid.push_back(std::make_unique<DatabaseVideo>(*this, key, frames, scenes));
     return vid;
 }
 
@@ -223,4 +225,32 @@ std::optional<ContainerVocab> FileDatabase::loadVocab(const std::string& key) co
     cv::FileStorage fs(databaseRoot / key, cv::FileStorage::READ);
     fs["Vocabulary"] >> myvocab;
     return std::make_optional<ContainerVocab>(myvocab);
+}
+
+std::vector<std::shared_ptr<IScene>>& DatabaseVideo::getScenes() & {
+    if(sceneCache.empty()) {
+        auto loader = db.getFileLoader();
+        SIFTVideo::size_type index = 0;
+        while(auto scene = loader.readScene(name, index++)) 
+            sceneCache.push_back(std::make_unique<DatabaseScene>(
+                *this, db, scene.value()));
+
+        if(sceneCache.empty()) {
+            auto config = db.getConfig();
+            auto vocab = loadVocabulary<Vocab<Frame>>(db);
+            if(!vocab) {
+                throw std::runtime_error("video could not load vocab");
+            }
+            auto comp = BOWComparator(vocab->descriptors());
+            auto ss = flatScenes(*this, comp, config.threshold);
+            boost::push_back(sceneCache, ss 
+            | boost::adaptors::transformed([this](auto scene) {
+                auto f = frames();
+                return std::make_unique<DatabaseScene>(*this, db, 
+                std::make_pair(f.begin() + scene.first, f.begin() + scene.second));
+            }));
+        }
+    }
+
+    return sceneCache; 
 }
