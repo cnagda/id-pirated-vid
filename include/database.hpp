@@ -94,8 +94,8 @@ private:
 public:
     using size_type = typename Base::size_type;
 
-    InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
-    InputVideoAdapter(const Base& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
+    explicit InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
+    explicit InputVideoAdapter(const Base& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
     InputVideoAdapter(IVideo&& vid) : IVideo(vid), base(vid.frames()) {};
     InputVideoAdapter(IVideo& vid) : IVideo(vid), base(vid.frames()) {};
     size_type frameCount() override { return base.frameCount(); };
@@ -123,7 +123,7 @@ class FileLoader {
 private:
     fs::path rootDir;
 public:
-    FileLoader(fs::path dir) : rootDir(dir) {};
+    explicit FileLoader(fs::path dir) : rootDir(dir) {};
 
     std::optional<Frame> readFrame(const std::string& videoName, SIFTVideo::size_type index) const;
     std::optional<SerializableScene> readScene(const std::string& videoName, SIFTVideo::size_type index) const;
@@ -168,12 +168,12 @@ private:
     Configuration config;
     FileLoader loader;
 public:
-    FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) : 
+    explicit FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) : 
     FileDatabase(fs::current_path() / "database", std::move(strat), args) {};
 
-    FileDatabase(const std::string& databasePath,
+    explicit FileDatabase(const std::string& databasePath,
         std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) 
-        : strategy(std::move(strat)), config(args, strat->getType()), databaseRoot(databasePath), 
+        : strategy(std::move(strat)), config(args, strategy->getType()), databaseRoot(databasePath), 
         loader(databasePath) {};
 
     std::unique_ptr<IVideo> saveVideo(IVideo& video);
@@ -197,12 +197,12 @@ class DatabaseScene : public IScene {
 public:
     DatabaseScene() = delete;
     template<typename Range>
-    DatabaseScene(IVideo& video, const FileDatabase& database, Range frames) :
+    explicit DatabaseScene(IVideo& video, const FileDatabase& database, Range frames) :
     video(video), database(database), frames(), descriptorCache() {
         boost::push_back(this->frames, frames);
     };
     
-    DatabaseScene(IVideo& video, const FileDatabase& database, const SerializableScene& scene) :
+    explicit DatabaseScene(IVideo& video, const FileDatabase& database, const SerializableScene& scene) :
     video(video), database(database), frames(frames) {
         auto frames = video.frames();
         auto vocab = loadVocabulary<Vocab<DatabaseScene>>(database);
@@ -247,9 +247,9 @@ class DatabaseVideo : public IVideo {
     std::vector<Frame> frameCache;
 public:
     DatabaseVideo() = delete;
-    DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) : IVideo(key), 
+    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) : IVideo(key), 
     db(database), frameCache(frames), sceneCache() {};
-    DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key), 
+    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key), 
     db(database), frameCache(frames) {
         boost::push_back(sceneCache, scenes | boost::adaptors::transformed(
             [this](auto scene){ return std::make_shared<DatabaseScene>(*this, db, scene); }
