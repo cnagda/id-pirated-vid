@@ -227,7 +227,7 @@ std::optional<ContainerVocab> FileDatabase::loadVocab(const std::string& key) co
     return std::make_optional<ContainerVocab>(myvocab);
 }
 
-std::vector<std::shared_ptr<IScene>>& DatabaseVideo::getScenes() & {
+std::vector<std::unique_ptr<IScene>>& DatabaseVideo::getScenes() & {
     if(sceneCache.empty()) {
         auto loader = db.getFileLoader();
         SIFTVideo::size_type index = 0;
