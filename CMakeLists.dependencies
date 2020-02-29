@@ -1,4 +1,4 @@
-find_package( Boost 1.72.0 )
+find_package( Boost 1.32.0 )
 if(NOT Boost_FOUND)
     configure_file(CMakeLists.Boost.txt Boost/CMakeLists.txt)
     execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -17,7 +17,7 @@ if(NOT Boost_FOUND)
     set(BOOST_ROOT ${CMAKE_CURRENT_BINARY_DIR}/Boost-build)
 endif()
 
-find_package( Boost 1.72.0 )
+find_package( Boost 1.32.0 )
 include_directories(${Boost_INCLUDE_DIR})
 
 #[[
