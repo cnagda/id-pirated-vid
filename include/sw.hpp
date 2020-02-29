@@ -110,7 +110,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
 }
 
 template <typename Range, typename Cmp>
-std::vector<Alignment> calculateAlignment(Range known, Range unknown, Cmp&& comp, int threshold, unsigned int gapScore){
+std::vector<Alignment> calculateAlignment(Range&& known, Range&& unknown, Cmp&& comp, int threshold, unsigned int gapScore){
     auto alignments = calculateAlignment(known.begin(), known.end(), unknown.begin(), unknown.end(), comp, threshold, gapScore);
     std::vector<Alignment> ret;
     ret.reserve(alignments.size());

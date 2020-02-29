@@ -196,7 +196,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
 
     auto frames = video.frames();
     SIFTVideo::size_type index = 0;
-    auto scenes = video.getScenes();
+    auto& scenes = video.getScenes();
     
     if(!frames.empty()) {
         fs::create_directories(video_dir / "frames");

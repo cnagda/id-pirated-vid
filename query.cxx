@@ -63,9 +63,7 @@ int main(int argc, char** argv )
         }
     }*/
 
-    auto deref = [](auto i) { return i->descriptor(); };
-
-    auto intcomp = [](auto b1, auto b2) { 
+    auto intcomp = [](auto& b1, auto& b2) { 
         auto a = cosineSimilarity(b1->descriptor(), b2->descriptor());
         return a > 0.8 ? 3 : -3; 
     };
@@ -74,7 +72,7 @@ int main(int argc, char** argv )
     for(int i = 0; i < videopaths.size() - 1; i++){
         auto& v1 = videopaths[i];
         
-        auto fb1 = v1->getScenes();
+        auto& fb1 = v1->getScenes();
 
         VideoMatchingInstrumenter instrumenter(*v1);
         auto reporter = getReporter(instrumenter);
@@ -84,7 +82,7 @@ int main(int argc, char** argv )
 
             std::cout << "Boneheaded Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp, reporter) << std::endl << std::endl;
 
-            auto fb2 = v2->getScenes();
+            auto& fb2 = v2->getScenes();
 
             std::cout << "fb1 size: " << fb1.size() << " fb2: " << fb2.size() << std::endl;        
             auto&& alignments = calculateAlignment(fb1, fb2, intcomp, 0, 2);
