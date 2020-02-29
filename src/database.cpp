@@ -256,14 +256,16 @@ std::vector<std::shared_ptr<IScene>>& DatabaseVideo::getScenes() & {
 }
 
 std::optional<Frame> FileLoader::readFrame(const std::string& videoName, SIFTVideo::size_type index) const {
-    if(!fs::exists(rootDir / videoName / to_string(index))) {
+    auto path = rootDir / videoName / "frames" / to_string(index);
+    if(!fs::exists(path)) {
         return std::nullopt;
     }
 
-    return SIFTread(rootDir / videoName / to_string(index));
+    return SIFTread(path);
 }
 std::optional<SerializableScene> FileLoader::readScene(const std::string& videoName, SIFTVideo::size_type index) const {
-    if(!fs::exists(rootDir / videoName / to_string(index))) {
+    auto path = rootDir / videoName / "scenes" / to_string(index);
+    if(!fs::exists(path)) {
         return std::nullopt;
     }
 
