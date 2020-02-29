@@ -4,7 +4,7 @@ project(Boost NONE)
 
 include(ExternalProject)
 ExternalProject_Add(Boost
-  URL               https://github.com/boostorg/boost/archive/boost-1.72.0.tar.gz
+  URL               https://phoenixnap.dl.sourceforge.net/project/boost/boost/1.72.0/boost_1_72_0.tar.gz
   SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/Boost-src"
   CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/Boost-src/bootstrap.sh
                     --with-libraries=type_erasure
