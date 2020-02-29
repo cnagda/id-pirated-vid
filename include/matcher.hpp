@@ -2,12 +2,15 @@
 #define BOW_HPP
 
 #include "instrumentation.hpp"
-#include "database.hpp"
+#include "database_iface.hpp"
+#include "vocabulary.hpp"
 #include "matrix.hpp"
+#include "sw.hpp"
 #include <opencv2/opencv.hpp>
 #include <optional>
 #include <iterator>
 #include <type_traits>
+#include <exception>
 
 struct MatchInfo {
     double matchConfidence;
@@ -15,67 +18,9 @@ struct MatchInfo {
     std::string video;
 };
 
-cv::Mat constructMyVocabulary(const std::string& path, int K, int speedinator);
-
-template<typename Matrix>
-cv::Mat constructVocabulary(Matrix&& descriptors, unsigned int K, cv::Mat labels = cv::Mat()) {
-	//cv::BOWKMeansTrainer trainer(K);    
-    cv::Mat retval;
-
-    kmeans(descriptors, K, labels, cv::TermCriteria(), 1, cv::KMEANS_PP_CENTERS, retval);
-
-    std::cout << "About to return" << std::endl;
-
-    return retval;
-	//return trainer.cluster(descriptors);
-}
-
-template<typename It>
-cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = cv::Mat()) {
-	cv::Mat accumulator;
-    for(auto i = start; i != end; ++i)
-        accumulator.push_back(*i);
-    return constructVocabulary(accumulator, K, labels);
-}
-
-template<typename Matrix, typename Vocab>
-cv::Mat baggify(Matrix&& f, Vocab&& vocab) {
-    cv::BOWImgDescriptorExtractor extractor(cv::FlannBasedMatcher::create());
-
-    if constexpr(std::is_invocable_v<Vocab>) {
-        extractor.setVocabulary(vocab());
-    } else {
-        extractor.setVocabulary(vocab);
-    }
-
-    cv::Mat output;
-
-    if(!std::empty(f)){
-        extractor.compute(f, output);
-    }
-    else{
-        //std::cerr << "In baggify: Frame has no key points" << std::endl;
-    }
-
-    return output;
-}
-
-template<typename It, typename Vocab>
-cv::Mat baggify(It rangeBegin, It rangeEnd, Vocab&& vocab) {
-    cv::Mat accumulator;
-    for(auto i = rangeBegin; i != rangeEnd; ++i)
-        accumulator.push_back(*i);
-    return baggify(accumulator, vocab);
-}
-
-template<typename It, typename Vocab>
-inline cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
-    return baggify(pair.first, pair.second, vocab);
-}
-
 template<typename Matrix>
 double cosineSimilarity(Matrix&& b1, Matrix&& b2) {
-    if(b1.size() != b2.size()) return -1;
+    if(b1.empty() || b1.size() != b2.size()) return -1;
 
     auto b1n = b1.dot(b1);
     auto b2n = b2.dot(b2);
@@ -101,7 +46,8 @@ public:
     }
 };
 
-double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter = nullptr);
-std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db, const cv::Mat& vocab, const cv::Mat& frameVocab);
+double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter);
+
+std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db);
 
 #endif

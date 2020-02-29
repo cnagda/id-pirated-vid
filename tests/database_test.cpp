@@ -36,10 +36,17 @@ TEST(DatabaseSuite, SIFTrwTest) {
 }
 
 TEST(DatabaseSuite, FileDatabase) {
-    FileDatabase db;
-    auto vid = db.addVideo("../sample.mp4")->frames();
-    auto loaded = db.loadVideo("sample.mp4")->frames();
+    FileDatabase db(std::make_unique<LazyStorageStrategy>(), RuntimeArguments{200, 20});
+    auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
+    
+    auto vid = db.saveVideo(video)->frames();
+    auto loaded_vid = db.loadVideo("sample.mp4");
 
+    ASSERT_FALSE(loaded_vid.empty());
+    auto& loaded_ptr = loaded_vid.front();
+    ASSERT_TRUE(loaded_ptr);
+
+    auto& loaded = loaded_ptr->frames();
     cout << "size: " << vid.size() << endl;
 
     EXPECT_TRUE(vid.size() > 0);

@@ -3,7 +3,7 @@
 #include "database.hpp"
 #include "matcher.hpp"
 #include "sw.hpp"
-#include "keyframes.hpp"
+#include "vocabulary.hpp"
 #include "kmeans2.hpp"
 #include <chrono>
 
@@ -61,31 +61,6 @@ int main(int argc, char** argv )
     std::cout << s1 << std::endl << s2 << std::endl;
     for(auto& a : as){
         std::cout << (std::string)a << std::endl;
-    }
-
-    if ( argc >= 2 ){
-        FileDatabase db;
-        cv::Mat descriptors;
-        for(auto &video : db.listVideos()) {
-            auto &frames = db.loadVideo(video)->frames();
-            for(auto &frame: frames) {
-                descriptors.push_back(frame.descriptors);
-            }
-        }
-
-        std::cout << "About to start old kmeans" << std::endl;
-        auto start = high_resolution_clock::now();
-        Mat vocab = constructVocabulary(descriptors, 200);
-        auto stop = high_resolution_clock::now();
-        auto duration = duration_cast<seconds>(stop - start);
-        std::cout << "Old constructVocabulary took " << duration.count() << " seconds (3 attempts)" << std::endl;
-
-        std::cout << "About to start new kmeans" << std::endl;
-        start = high_resolution_clock::now();
-        Mat vocab2 = constructMyVocabulary(argv[1], 200, 10);
-        stop = high_resolution_clock::now();
-        duration = duration_cast<seconds>(stop - start);
-        std::cout << "constructMyVocabulary took " << duration.count() << " seconds (1 attempt)" << std::endl;
     }
 
     return 0;

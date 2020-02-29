@@ -5,9 +5,9 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <string>
-#include "database.hpp"
-#include "matcher.hpp"
+#include "database_iface.hpp"
 #include "instrumentation.hpp"
+#include <boost/iterator/transform_iterator.hpp>
 
 template <class T, class RankType>
 struct sortable{
@@ -16,8 +16,68 @@ struct sortable{
     bool operator<(const sortable& a) const {  return rank < a.rank; }; 
 };
 
-template<typename Cmp>
-auto flatScenes(IVideo& video, Cmp&& comp, double threshold){
+
+template<typename Matrix>
+cv::Mat constructVocabulary(Matrix&& descriptors, unsigned int K, cv::Mat labels = cv::Mat()) {
+	//cv::BOWKMeansTrainer trainer(K);    
+    cv::Mat retval;
+
+    kmeans(descriptors, K, labels, cv::TermCriteria(), 1, cv::KMEANS_PP_CENTERS, retval);
+
+    std::cout << "About to return" << std::endl;
+
+    return retval;
+	//return trainer.cluster(descriptors);
+}
+
+template<typename It>
+cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = cv::Mat()) {
+	cv::Mat accumulator;
+    for(auto i = start; i != end; ++i)
+        accumulator.push_back(*i);
+    return constructVocabulary(accumulator, K, labels);
+}
+
+Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
+Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
+
+template<typename Matrix, typename Vocab>
+cv::Mat baggify(Matrix&& f, Vocab&& vocab) {
+    cv::BOWImgDescriptorExtractor extractor(cv::FlannBasedMatcher::create());
+
+    if constexpr(std::is_invocable_v<Vocab>) {
+        extractor.setVocabulary(vocab());
+    } else {
+        extractor.setVocabulary(vocab);
+    }
+
+    cv::Mat output;
+
+    if(!f.empty()){
+        extractor.compute(f, output);
+    }
+    else{
+        // std::cerr << "In baggify: Frame dimension does not match vocab" << std::endl;
+    }
+
+    return output;
+}
+
+template<typename It, typename Vocab>
+cv::Mat baggify(It rangeBegin, It rangeEnd, Vocab&& vocab) {
+    cv::Mat accumulator;
+    for(auto i = rangeBegin; i != rangeEnd; ++i)
+        accumulator.push_back(*i);
+    return baggify(accumulator, vocab);
+}
+
+template<typename It, typename Vocab>
+inline cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
+    return baggify(pair.first, pair.second, vocab);
+}
+
+template<class Video, typename Cmp>
+auto flatScenes(Video& video, Cmp&& comp, double threshold){
     typedef IVideo::size_type index_t;
     std::cout << "In flatScenes" << std::endl;
 
@@ -48,7 +108,8 @@ auto flatScenes(IVideo& video, Cmp&& comp, double threshold){
 }
 
 template<typename RangeIt, typename Vocab>
-std::vector<cv::Mat>
+std::enable_if_t<is_pair_iterator_v<RangeIt> &&
+    !std::is_integral_v<decltype(std::declval<RangeIt>()->first)>, std::vector<cv::Mat>> 
 flatScenesBags(RangeIt start, RangeIt end, Vocab&& frameVocab) {
     std::cout << "In flatScenesBags" << std::endl;
     
@@ -60,33 +121,29 @@ flatScenesBags(RangeIt start, RangeIt end, Vocab&& frameVocab) {
     return retval2;
 }
 
-template<typename IndexIt, typename Vocab>
+template<class Video, typename IndexIt, typename Vocab>
 std::enable_if_t<is_pair_iterator_v<IndexIt> &&
     std::is_integral_v<decltype(std::declval<IndexIt>()->first)>, std::vector<cv::Mat>> 
-flatScenesBags(IVideo& video, IndexIt start, IndexIt end, Vocab&& frameVocab){
+flatScenesBags(Video& video, IndexIt start, IndexIt end, Vocab&& frameVocab){
     static_assert(is_pair_iterator_v<IndexIt>, 
         "flatScenesBags requires an iterator to a pair");
     
     auto accessor = [](const Frame& frame) { return frame.descriptors; };
     auto& frames = video.frames();
-    std::vector<cv::Mat> matrices;
+    auto begin = frames.begin();
 
-    std::transform(frames.begin(), frames.end(), std::back_inserter(matrices), accessor);
-    auto s = matrices.begin();
+    auto func = [begin, accessor](auto i) {
+        return std::make_pair(
+            boost::make_transform_iterator(begin + i.first, accessor), 
+            boost::make_transform_iterator(begin + i.second, accessor));
+    };
 
-    std::vector<std::pair<
-        decltype(s), 
-        decltype(s)>> tran;
-
-    std::transform(start, end, std::back_inserter(tran),
-    [s](auto i){ return std::make_pair(s + i.first,
-        s + i.second); });
-
-    return flatScenesBags(tran.begin(), tran.end(), frameVocab);
+    return flatScenesBags(boost::make_transform_iterator(start, func), 
+        boost::make_transform_iterator(end, func), frameVocab);
 }
 
-template<typename Cmp, typename Vocab>
-inline std::vector<cv::Mat> flatScenesBags(IVideo &video, Cmp&& comp, double threshold, Vocab&& frameVocab) {
+template<class Video, typename Cmp, typename Vocab>
+inline std::vector<cv::Mat> flatScenesBags(Video &video, Cmp&& comp, double threshold, Vocab&& frameVocab) {
     auto ss = flatScenes(video, comp, threshold);
     return flatScenesBags(video, ss.begin(), ss.end(), frameVocab);
 }

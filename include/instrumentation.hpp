@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "database.hpp"
+#include "database_iface.hpp"
 #include "frame.hpp"
 #include <experimental/filesystem>
 
@@ -16,8 +16,8 @@ public:
     double similarity;
     Frame f1, f2;
     IVideo::size_type f1Idx, f2Idx;
-    const IVideo* v1;
-    const IVideo* v2;
+    const optional_ref<IVideo> v1;
+    const optional_ref<IVideo> v2;
 };
 
 typedef const std::string& Label;
@@ -37,18 +37,40 @@ public:
     virtual void exportTimeseries(Label title, Label xaxis, Label yaxis, const std::vector<TimeSeries>& data) {};
 };
 
+template<class Video>
 class VideoMatchingInstrumenter {
 private:
-    const IVideo& target;
+    const Video& target;
     std::unordered_map<std::string, std::vector<Point2f>> videoTracker;
 public:
-    VideoMatchingInstrumenter(const IVideo &targetVideo) : target(targetVideo) {}
+    VideoMatchingInstrumenter(const Video &targetVideo) : target(targetVideo) {}
     void clear();
-    void addFrameSimilarity(FrameSimilarityInfo info);
-    std::vector<TimeSeries> getTimeSeries() const;
+    void addFrameSimilarity(FrameSimilarityInfo info){
+        if(info.v1 && info.v2) {
+            auto& v1_ = info.v1->get();
+            auto& v2_ = info.v2->get();
+            auto& known = (v1_.name == target.name) ? v2_ : v1_ ;
+
+            videoTracker[known.name].push_back({info.f1Idx, info.similarity}); 
+        }
+    }
+    std::vector<TimeSeries> getTimeSeries() const {
+        std::vector<TimeSeries> out;
+        for(auto& [name, points] : videoTracker) {
+            std::vector<Point2f> dataCopy(points);
+            std::sort(dataCopy.begin(), dataCopy.end(), [](Point2f p1, Point2f p2){ return p1.x < p2.x; });
+            out.push_back({name, dataCopy});
+        }
+    
+        return out;
+    }
 };
 
-SimilarityReporter getReporter(VideoMatchingInstrumenter& instrumenter);
+
+template<class Video>
+SimilarityReporter getReporter(VideoMatchingInstrumenter<Video>& instrumenter) {
+    return [&instrumenter](auto f) { instrumenter.addFrameSimilarity(f); };
+}
 
 class FSExporter : public IExporter {
 protected:

@@ -11,43 +11,41 @@ class DatabaseFixture : public ::testing::Test {
 protected:
     static void SetUpTestSuite() {
         fs::remove_all(fs::current_path() / "database_test_dir");
-        db = FileDatabase(fs::current_path() / "database_test_dir");
-
-        db.addVideo("../coffee.mp4");
-        db.addVideo("../crab.mp4");
-
-        cv::Mat descriptors;
-        for(auto &video : db.listVideos()) {
-            auto frames = db.loadVideo(video)->frames();
-            for(auto &&frame : frames)
-                descriptors.push_back(frame.descriptors);
+        db = std::make_unique<FileDatabase>(fs::current_path() / "database_test_dir", 
+            std::make_unique<LazyStorageStrategy>(),
+            RuntimeArguments{200, 20});
+        {
+            auto video = make_video_adapter(
+                getSIFTVideo("../sample.mp4"), "sample.mp4");
+            db->saveVideo(video);
         }
 
-        vocab = constructVocabulary(descriptors, 200);
+        {
+            auto video = make_video_adapter(
+                getSIFTVideo("../coffee.mp4"), "coffee.mp4");
+            db->saveVideo(video);
+        }
+
+        {
+            auto video = make_video_adapter(
+                getSIFTVideo("../crab.mp4"), "crab.mp4");
+            db->saveVideo(video);
+        }
+
+        saveVocabulary(constructFrameVocabulary(*db, 200), *db);
+        saveVocabulary(constructSceneVocabulary(*db, 20), *db);
         
-        descriptors = cv::Mat();
-        for(auto &video : db.listVideos()) {
-            auto frames = db.loadVideo(video)->frames();
-            for(auto &&frame : frames)
-                descriptors.push_back(baggify(frame.descriptors, vocab));
-        }
-
-        frameVocab = constructVocabulary(descriptors, 20);
-
         std::cout << "Setup done" << std::endl;
     }
 
-    static FileDatabase db;
-    static cv::Mat vocab, frameVocab;
+    static std::unique_ptr<FileDatabase> db;
 };
 
-FileDatabase DatabaseFixture::db;
-cv::Mat DatabaseFixture::vocab;
-cv::Mat DatabaseFixture::frameVocab;
+std::unique_ptr<FileDatabase> DatabaseFixture::db;
 
 TEST_F(DatabaseFixture, NotInDatabase) {  
-    auto video = getSIFTVideo("../sample.mp4");
-    auto match = findMatch(video, db, vocab, frameVocab);
+    auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo("../sample.mp4"), "sample.mp4");
+    auto match = findMatch(video, *db);
     if(match) {
         std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;
     }
@@ -55,6 +53,6 @@ TEST_F(DatabaseFixture, NotInDatabase) {
 }
 
 TEST_F(DatabaseFixture, InDatabase) {
-    auto video = db.loadVideo(db.listVideos()[0]);
-    EXPECT_TRUE(findMatch(*video, db, vocab, frameVocab).has_value());
+    auto video = db->loadVideo()[0].release();
+    EXPECT_TRUE(findMatch(*video, *db).has_value());
 }
