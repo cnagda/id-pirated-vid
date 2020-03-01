@@ -117,7 +117,7 @@ struct SerializableScene {
 
     template<typename Video>
     auto getFrameRange(Video& video) const {
-        auto frames = video.frames();
+        auto& frames = video.frames();
         return std::make_pair(frames.begin() + startIdx, frames.begin() + endIdx);
     };
 
@@ -212,30 +212,10 @@ public:
     };
     
     explicit DatabaseScene(IVideo& video, const FileDatabase& database, const SerializableScene& scene) :
-    video(video), database(database), frames() {
-        auto frames = video.frames();
+    video(video), database(database), frames(), descriptorCache(scene.frameBag) {
         startIdx = scene.startIdx;
         endIdx = scene.endIdx;
         boost::push_back(this->frames, scene.getFrameRange(video));
-
-        if(!scene.frameBag.empty()) {
-            descriptorCache = scene.frameBag;
-        }
-        else {
-            auto vocab = loadVocabulary<Vocab<DatabaseScene>>(database);
-            
-            if(!vocab) {
-                throw std::runtime_error("Scene couldn't get a frame vocabulary");
-            }
-
-            auto range = scene.getFrameRange(video) | 
-                boost::adaptors::transformed([](auto f) { 
-                return f.descriptors; });
-                
-            descriptorCache = baggify(range.begin(), range.end(), 
-                vocab->descriptors());
-        }
-        
     };
 
     const cv::Mat& descriptor() override {
@@ -273,7 +253,7 @@ public:
     explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) : IVideo(key), 
     db(database), frameCache(frames), sceneCache() {};
     explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key), 
-    db(database), frameCache(frames) {
+    db(database), frameCache(frames), sceneCache() {
         boost::push_back(sceneCache, scenes | boost::adaptors::transformed(
             [this](auto scene){ return std::make_unique<DatabaseScene>(*this, db, scene); }
         ));

@@ -53,3 +53,26 @@ TEST(DatabaseSuite, FileDatabase) {
     EXPECT_TRUE(vid.size() == loaded.size());
     EXPECT_TRUE(equal(vid.begin(), vid.end(), loaded.begin()));
 }
+
+TEST(DatabaseSuite, EagerDatabase) {
+    FileDatabase db(std::make_unique<AggressiveStorageStrategy>(), RuntimeArguments{200, 20});
+    auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
+    
+    auto vid = db.saveVideo(video);
+    auto loaded_vid = db.loadVideo("sample.mp4");
+
+    ASSERT_FALSE(loaded_vid.empty());
+    auto& loaded_ptr = loaded_vid.front();
+    ASSERT_TRUE(loaded_ptr);
+
+    auto& loaded = loaded_ptr->frames();
+    cout << "size: " << vid->frames().size() << endl;
+
+    EXPECT_TRUE(vid->frames().size() > 0);
+    EXPECT_TRUE(vid->frames().size() == loaded.size());
+    EXPECT_TRUE(equal(vid->frames().begin(), vid->frames().end(), loaded.begin()));
+
+    EXPECT_TRUE(vid->getScenes().size() > 0);
+    EXPECT_TRUE(vid->getScenes().size() == loaded_ptr->getScenes().size());
+    // EXPECT_TRUE(equal(vid->getScenes().begin(), vid->getScenes().end(), loaded_ptr->getScenes().begin()));
+}
