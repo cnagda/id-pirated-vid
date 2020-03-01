@@ -26,6 +26,8 @@ bool file_exists(const string& fname){
 
 int main(int argc, char** argv )
 {
+
+    bool DEBUG = false;
     if ( argc < 3 )
     {
         // TODO: better args parsing
@@ -35,7 +37,29 @@ int main(int argc, char** argv )
 
     auto& fd = *database_factory(argv[DBPATH], -1, -1).release();
 
-    auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo(argv[VIDPATH]), "testing");
+    // auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo(argv[VIDPATH]), fs::path(argv[VIDPATH]).filename());
+    // auto video = make_video_adapter(getSIFTVideo(argv[VIDPATH]), fs::path(argv[VIDPATH]).filename());
+
+    auto video = make_video_adapter(getSIFTVideo(argv[VIDPATH], [DEBUG](Mat image, Frame frame){
+        Mat output;
+        auto descriptors = frame.descriptors;
+        auto keyPoints = frame.keyPoints;
+
+        if(DEBUG) {
+            drawKeypoints(image, keyPoints, output);
+            cout << "size: " << output.total() << endl;
+            imshow("Display window", output);
+
+            waitKey(0);
+
+            auto im2 = scaleToTarget(image, 500, 700);
+            imshow("Display window", im2);
+
+            waitKey(0);
+        }
+    }), fs::path(argv[VIDPATH]).filename());
+
+
     auto match = findMatch(video, fd);
     if(match) {
         std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;
