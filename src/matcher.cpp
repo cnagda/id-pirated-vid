@@ -62,7 +62,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
     auto videopaths = db.loadVideo();
 
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
-    auto deref = [](auto i) { return i->descriptor(); };
+    auto deref = [](auto& i) { return i->descriptor(); };
 
     MatchInfo match;
     std::vector<cv::Mat> targetScenes;

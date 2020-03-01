@@ -27,6 +27,58 @@ string getAlphas(const string& input)
 #endif
 }
 
+SerializableScene SceneRead(const std::string& filename) {
+    SIFTVideo::size_type startIdx = 0, endIdx = 0;
+
+    ifstream fs(filename, fstream::binary);
+    fs.read((char*)&startIdx, sizeof(startIdx));
+    fs.read((char*)&endIdx, sizeof(endIdx));
+
+    // Header
+    int rows, cols, type, channels;
+    fs.read((char *)&rows, sizeof(int));     // rows
+    fs.read((char *)&cols, sizeof(int));     // cols
+    fs.read((char *)&type, sizeof(int));     // type
+    fs.read((char *)&channels, sizeof(int)); // channels
+
+    Mat mat(rows, cols, type);
+    for (int r = 0; r < rows; r++)
+    {
+        fs.read((char *)(mat.data + r * cols * CV_ELEM_SIZE(type)), CV_ELEM_SIZE(type) * cols);
+    }
+
+    return SerializableScene{mat, startIdx, endIdx};
+}
+
+void SceneWrite(const std::string& filename, const SerializableScene& scene) {
+    ofstream fs(filename, fstream::binary);
+    fs.write((char*)&scene.startIdx, sizeof(scene.startIdx));
+    fs.write((char*)&scene.endIdx, sizeof(scene.endIdx));
+
+    const auto& mat = scene.frameBag;
+    // Header
+    int type = mat.type();
+    int channels = mat.channels();
+    fs.write((char *)&mat.rows, sizeof(int)); // rows
+    fs.write((char *)&mat.cols, sizeof(int)); // cols
+    fs.write((char *)&type, sizeof(int));     // type
+    fs.write((char *)&channels, sizeof(int)); // channels
+
+    // Data
+    if (mat.isContinuous())
+    {
+        fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
+    }
+    else
+    {
+        int rowsz = CV_ELEM_SIZE(type) * mat.cols;
+        for (int r = 0; r < mat.rows; ++r)
+        {
+            fs.write(mat.ptr<char>(r), rowsz);
+        }
+    }
+}
+
 void SIFTwrite(const string &filename, const Frame& frame)
 {
     const auto& mat = frame.descriptors;
@@ -143,7 +195,8 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     fs::create_directories(video_dir);
 
     auto frames = video.frames();
-    decltype(frames)::size_type index = 0;
+    SIFTVideo::size_type index = 0;
+    auto& scenes = video.getScenes();
     
     if(!frames.empty()) {
         fs::create_directories(video_dir / "frames");
@@ -156,18 +209,44 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, config.KFrames);
     }
 
-    if(strategy->shouldComputeScenes(video)) {
+    if(!scenes.empty()) {
+        for(auto& scene : scenes) {
+            SceneWrite(video_dir / "scenes" / std::to_string(index++), *scene);
+        }
+    }
+    else if(strategy->shouldComputeScenes(video)) {
         auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, config.KFrames);
 
         auto comp = BOWComparator(vocab.descriptors());
         auto scenes = flatScenes(video, comp, 0.2);
+
+        if(!scenes.empty()) {
+            fs::create_directories(video_dir / "scenes");
+            SIFTVideo::size_type index = 0;
+            for(auto& scene : scenes) {
+                SceneWrite(video_dir / "scenes" / std::to_string(index++), 
+                    SerializableScene(scene.first, scene.second));
+            }
+
+            if(strategy->shouldBaggifyScenes(video)) {
+                auto vocab = loadOrComputeVocab<Vocab<IScene>>(*this, config.KScenes);
+                SIFTVideo::size_type index = 0;
+                for(auto& scene : scenes) {
+                    auto frames = video.frames();
+                    auto access = [](auto frame){ return frame.descriptors; };
+                    auto desc = baggify(
+                        std::make_pair(
+                            boost::make_transform_iterator(frames.begin() + scene.first, access), 
+                            boost::make_transform_iterator(frames.begin() + scene.second, access))
+                        , vocab.descriptors());
+                    SceneWrite(video_dir / "scenes" / std::to_string(index++), 
+                        SerializableScene(desc, scene.first, scene.second));
+                }
+            }
+        }
     }
 
-    if(strategy->shouldBaggifyScenes(video)) {
-        auto vocab = loadOrComputeVocab<Vocab<IScene>>(*this, config.KScenes);
-    }
-
-    return std::make_unique<InputVideoAdapter<SIFTVideo>>(video);
+    return std::make_unique<DatabaseVideo>(*this, video.name, frames);
 }
 
 std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideos() const {
@@ -227,7 +306,7 @@ std::optional<ContainerVocab> FileDatabase::loadVocab(const std::string& key) co
     return std::make_optional<ContainerVocab>(myvocab);
 }
 
-std::vector<std::shared_ptr<IScene>>& DatabaseVideo::getScenes() & {
+std::vector<std::unique_ptr<IScene>>& DatabaseVideo::getScenes() & {
     if(sceneCache.empty()) {
         auto loader = db.getFileLoader();
         SIFTVideo::size_type index = 0;
@@ -270,5 +349,5 @@ std::optional<SerializableScene> FileLoader::readScene(const std::string& videoN
     }
 
     // unimplemented
-    return std::nullopt;
+    return SceneRead(path);
 }

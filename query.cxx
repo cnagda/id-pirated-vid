@@ -8,6 +8,7 @@
 #include "sw.hpp"
 #include "vocabulary.hpp"
 #include "kmeans2.hpp"
+#include <boost/range/adaptor/transformed.hpp>
 
 #define DBPATH      1
 #define VIDPATH     2

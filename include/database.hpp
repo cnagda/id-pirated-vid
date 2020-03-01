@@ -21,6 +21,10 @@ class SIFTVideo;
 
 void SIFTwrite(const std::string& filename, const Frame& frame);
 Frame SIFTread(const std::string& filename);
+
+void SceneWrite(const std::string& filename, const SerializableScene& frame);
+SerializableScene SceneRead(const std::string& filename);
+
 std::string getAlphas(const std::string& input);
 void createFolder(const std::string& folder_name);
 SIFTVideo getSIFTVideo(const std::string& filename, std::function<void(cv::Mat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
@@ -90,7 +94,7 @@ template<typename Base>
 class InputVideoAdapter : public IVideo {
 private:
     Base base;
-    std::vector<std::shared_ptr<IScene>> emptyScenes;
+    std::vector<std::unique_ptr<IScene>> emptyScenes;
 public:
     using size_type = typename Base::size_type;
 
@@ -100,12 +104,16 @@ public:
     InputVideoAdapter(IVideo& vid) : IVideo(vid), base(vid.frames()) {};
     size_type frameCount() override { return base.frameCount(); };
     std::vector<Frame>& frames() & override { return base.frames(); };
-    std::vector<std::shared_ptr<IScene>>& getScenes() & override { return emptyScenes; }
+    std::vector<std::unique_ptr<IScene>>& getScenes() & override { return emptyScenes; }
 };
 
 struct SerializableScene {
     cv::Mat frameBag;
     SIFTVideo::size_type startIdx, endIdx;
+    explicit SerializableScene(SIFTVideo::size_type startIdx, SIFTVideo::size_type endIdx) :
+        startIdx(startIdx), endIdx(endIdx), frameBag() {};
+    explicit SerializableScene(const cv::Mat& matrix, SIFTVideo::size_type startIdx, SIFTVideo::size_type endIdx) :
+        startIdx(startIdx), endIdx(endIdx), frameBag(matrix) {};
 
     template<typename Video>
     auto getFrameRange(Video& video) const {
@@ -188,11 +196,12 @@ public:
 
 
 class DatabaseScene : public IScene {
-    static_assert(std::is_convertible_v<std::shared_ptr<DatabaseScene>, std::shared_ptr<IScene>>, "not convertible");
+    static_assert(std::is_convertible_v<std::unique_ptr<DatabaseScene>, std::unique_ptr<IScene>>, "not convertible");
     std::vector<Frame> frames;
     cv::Mat descriptorCache;
     const IVideo& video;
     const FileDatabase& database;
+    SIFTVideo::size_type startIdx, endIdx;
 
 public:
     DatabaseScene() = delete;
@@ -203,20 +212,30 @@ public:
     };
     
     explicit DatabaseScene(IVideo& video, const FileDatabase& database, const SerializableScene& scene) :
-    video(video), database(database), frames(frames) {
+    video(video), database(database), frames() {
         auto frames = video.frames();
-        auto vocab = loadVocabulary<Vocab<DatabaseScene>>(database);
-        
-        if(!vocab) {
-            throw std::runtime_error("Scene couldn't get a frame vocabulary");
-        }
+        startIdx = scene.startIdx;
+        endIdx = scene.endIdx;
+        boost::push_back(this->frames, scene.getFrameRange(video));
 
-        auto range = scene.getFrameRange(video) | 
-            boost::adaptors::transformed([](auto f) { 
-            return f.descriptors; });
+        if(!scene.frameBag.empty()) {
+            descriptorCache = scene.frameBag;
+        }
+        else {
+            auto vocab = loadVocabulary<Vocab<DatabaseScene>>(database);
             
-        descriptorCache = baggify(range.begin(), range.end(), 
-            vocab->descriptors());
+            if(!vocab) {
+                throw std::runtime_error("Scene couldn't get a frame vocabulary");
+            }
+
+            auto range = scene.getFrameRange(video) | 
+                boost::adaptors::transformed([](auto f) { 
+                return f.descriptors; });
+                
+            descriptorCache = baggify(range.begin(), range.end(), 
+                vocab->descriptors());
+        }
+        
     };
 
     const cv::Mat& descriptor() override {
@@ -239,11 +258,15 @@ public:
     const std::vector<Frame>& getFrames() override {
         return frames;
     }
+
+    operator SerializableScene() override {
+        return SerializableScene{descriptor(), startIdx, endIdx};
+    }
 };
 
 class DatabaseVideo : public IVideo {
     const FileDatabase& db;
-    std::vector<std::shared_ptr<IScene>> sceneCache;
+    std::vector<std::unique_ptr<IScene>> sceneCache;
     std::vector<Frame> frameCache;
 public:
     DatabaseVideo() = delete;
@@ -252,7 +275,7 @@ public:
     explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key), 
     db(database), frameCache(frames) {
         boost::push_back(sceneCache, scenes | boost::adaptors::transformed(
-            [this](auto scene){ return std::make_shared<DatabaseScene>(*this, db, scene); }
+            [this](auto scene){ return std::make_unique<DatabaseScene>(*this, db, scene); }
         ));
     };
 
@@ -260,7 +283,7 @@ public:
     size_type frameCount() override { return frames().size(); };
     std::vector<Frame>& frames() & override { return frameCache; };
 
-    std::vector<std::shared_ptr<IScene>>& getScenes() & override;
+    std::vector<std::unique_ptr<IScene>>& getScenes() & override;
 };
 
 inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene) {
