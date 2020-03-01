@@ -197,6 +197,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     auto frames = video.frames();
     SIFTVideo::size_type index = 0;
     auto& scenes = video.getScenes();
+    std::vector<SerializableScene> loadedScenes;
     
     if(!frames.empty()) {
         fs::create_directories(video_dir / "frames");
@@ -212,6 +213,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     if(!scenes.empty()) {
         for(auto& scene : scenes) {
             SceneWrite(video_dir / "scenes" / std::to_string(index++), *scene);
+            loadedScenes.push_back(*scene);
         }
     }
     else if(strategy->shouldComputeScenes(video)) {
@@ -224,29 +226,26 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
             fs::create_directories(video_dir / "scenes");
             SIFTVideo::size_type index = 0;
             for(auto& scene : scenes) {
+                auto s = SerializableScene(scene.first, scene.second);
                 SceneWrite(video_dir / "scenes" / std::to_string(index++), 
-                    SerializableScene(scene.first, scene.second));
+                    s);
+                loadedScenes.push_back(s);
             }
 
             if(strategy->shouldBaggifyScenes(video)) {
                 auto vocab = loadOrComputeVocab<Vocab<IScene>>(*this, config.KScenes);
                 SIFTVideo::size_type index = 0;
-                for(auto& scene : scenes) {
-                    auto frames = video.frames();
+                for(auto& scene : loadedScenes) {
                     auto access = [](auto frame){ return frame.descriptors; };
-                    auto desc = baggify(
-                        std::make_pair(
-                            boost::make_transform_iterator(frames.begin() + scene.first, access), 
-                            boost::make_transform_iterator(frames.begin() + scene.second, access))
-                        , vocab.descriptors());
-                    SceneWrite(video_dir / "scenes" / std::to_string(index++), 
-                        SerializableScene(desc, scene.first, scene.second));
+                    auto rng = scene.getFrameRange(video) | boost::adaptors::transformed(access);
+                    scene.frameBag = baggify(rng.begin(), rng.end(), vocab.descriptors());
+                    SceneWrite(video_dir / "scenes" / std::to_string(index++), scene);
                 }
             }
         }
     }
 
-    return std::make_unique<DatabaseVideo>(*this, video.name, frames);
+    return std::make_unique<DatabaseVideo>(*this, video.name, frames, loadedScenes);
 }
 
 std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideos() const {
