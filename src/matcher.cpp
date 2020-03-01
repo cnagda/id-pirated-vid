@@ -60,7 +60,7 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 
 std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
     auto videopaths = db.loadVideo();
-        
+
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
     auto deref = [](auto i) { return i->descriptor(); };
 
@@ -74,8 +74,10 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
         boost::push_back(knownScenes, v2->getScenes() | boost::adaptors::transformed(deref));
 
         auto&& alignments = calculateAlignment(targetScenes, knownScenes, intcomp, 0, 2);
+        std::cout << targetScenes.size() << " "<< knownScenes.size() << std::endl;
         if(alignments.size() > 0) {
             auto& a = alignments[0];
+            std::cout << "Highest score: " << a.score << std::endl;
             if(a.score > match.matchConfidence) {
                 match = MatchInfo{a.score, a.startKnown, a.endKnown, v2->name};
             }

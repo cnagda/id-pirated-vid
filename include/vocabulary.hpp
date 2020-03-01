@@ -13,13 +13,13 @@ template <class T, class RankType>
 struct sortable{
     RankType rank;
     T data;
-    bool operator<(const sortable& a) const {  return rank < a.rank; }; 
+    bool operator<(const sortable& a) const {  return rank < a.rank; };
 };
 
 
 template<typename Matrix>
 cv::Mat constructVocabulary(Matrix&& descriptors, unsigned int K, cv::Mat labels = cv::Mat()) {
-	//cv::BOWKMeansTrainer trainer(K);    
+	//cv::BOWKMeansTrainer trainer(K);
     cv::Mat retval;
 
     kmeans(descriptors, K, labels, cv::TermCriteria(), 1, cv::KMEANS_PP_CENTERS, retval);
@@ -81,7 +81,7 @@ auto flatScenes(Video& video, Cmp&& comp, double threshold){
     typedef IVideo::size_type index_t;
     std::cout << "In flatScenes" << std::endl;
 
-    std::vector<std::pair<index_t, index_t>> retval;    
+    std::vector<std::pair<index_t, index_t>> retval;
 
     auto& frames = video.frames();
     if(!frames.size()){
@@ -97,22 +97,22 @@ auto flatScenes(Video& video, Cmp&& comp, double threshold){
                 last = i;
             }
         } else {
-            std::cout << "i: " << i << "sim: " << fs << std::endl;
+            // std::cout << "i: " << i << "sim: " << fs << std::endl;
         }
     }
     if(!frames.back().descriptors.empty()){ // do not include black frames
         retval.push_back({last, frames.size()});
     }
-    
+
     return retval;
 }
 
 template<typename RangeIt, typename Vocab>
 std::enable_if_t<is_pair_iterator_v<RangeIt> &&
-    !std::is_integral_v<decltype(std::declval<RangeIt>()->first)>, std::vector<cv::Mat>> 
+    !std::is_integral_v<decltype(std::declval<RangeIt>()->first)>, std::vector<cv::Mat>>
 flatScenesBags(RangeIt start, RangeIt end, Vocab&& frameVocab) {
     std::cout << "In flatScenesBags" << std::endl;
-    
+
     std::vector<cv::Mat> retval2;
 
     for(auto i = start; i < end; i++){
@@ -123,22 +123,22 @@ flatScenesBags(RangeIt start, RangeIt end, Vocab&& frameVocab) {
 
 template<class Video, typename IndexIt, typename Vocab>
 std::enable_if_t<is_pair_iterator_v<IndexIt> &&
-    std::is_integral_v<decltype(std::declval<IndexIt>()->first)>, std::vector<cv::Mat>> 
+    std::is_integral_v<decltype(std::declval<IndexIt>()->first)>, std::vector<cv::Mat>>
 flatScenesBags(Video& video, IndexIt start, IndexIt end, Vocab&& frameVocab){
-    static_assert(is_pair_iterator_v<IndexIt>, 
+    static_assert(is_pair_iterator_v<IndexIt>,
         "flatScenesBags requires an iterator to a pair");
-    
+
     auto accessor = [](const Frame& frame) { return frame.descriptors; };
     auto& frames = video.frames();
     auto begin = frames.begin();
 
     auto func = [begin, accessor](auto i) {
         return std::make_pair(
-            boost::make_transform_iterator(begin + i.first, accessor), 
+            boost::make_transform_iterator(begin + i.first, accessor),
             boost::make_transform_iterator(begin + i.second, accessor));
     };
 
-    return flatScenesBags(boost::make_transform_iterator(start, func), 
+    return flatScenesBags(boost::make_transform_iterator(start, func),
         boost::make_transform_iterator(end, func), frameVocab);
 }
 
@@ -151,18 +151,18 @@ inline std::vector<cv::Mat> flatScenesBags(Video &video, Cmp&& comp, double thre
 void visualizeSubset(std::string fname, const std::vector<int>& subset = {});
 
 template<typename RangeIt>
-std::enable_if_t<is_pair_iterator_v<RangeIt>, void> 
+std::enable_if_t<is_pair_iterator_v<RangeIt>, void>
 visualizeSubset(std::string fname, RangeIt begin, RangeIt end) {
     std::vector<int> subset;
-    for(auto i = begin; i < end; i++) 
-        for(auto j = begin->first; j < begin->second; j++) 
+    for(auto i = begin; i < end; i++)
+        for(auto j = begin->first; j < begin->second; j++)
         subset.push_back(j);
 
     visualizeSubset(fname, subset);
 }
 
 template<typename It>
-std::enable_if_t<!is_pair_iterator_v<It>, void> 
+std::enable_if_t<!is_pair_iterator_v<It>, void>
 visualizeSubset(std::string fname, It begin, It end) {
     auto size = std::distance(begin, end);
     std::cout << "In visualise subset" << std::endl;
