@@ -5,9 +5,11 @@
 #include "matcher.hpp"
 #include "kmeans2.hpp"
 #include "sw.hpp"
-#include "keyframes.hpp"
+#include "vocabulary.hpp"
+#include <boost/range/adaptors.hpp>
+#include <boost/range/algorithm_ext/push_back.hpp>
 
-Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator) {
+Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator) {
     cv::Mat descriptors;
 
     for(auto &video : database.loadVideo()) {
@@ -19,7 +21,7 @@ Vocab<Frame> constructFrameVocabulary(const IDatabase& database, unsigned int K,
     return Vocab<Frame>(constructVocabulary(descriptors, K));
 }
 
-Vocab<IScene> constructSceneVocabulary(const IDatabase& database, unsigned int K, unsigned int speedinator) {
+Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator) {
     auto vocab = loadVocabulary<Vocab<Frame>>(database);
     if(!vocab) {
         throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");
@@ -47,7 +49,8 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 
     for(int i = 0; i < len; i++){
         auto t = comparator(frames1[i], frames2[i]);
-        if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i, &v1, &v2});
+        if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i,
+            std::make_optional(std::ref(v1)), std::make_optional(std::ref(v2))});
 
         total += (t != -1)? t : 0;
     }
@@ -55,22 +58,20 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
     return total/len;
 }
 
-std::optional<MatchInfo> findMatch(IVideo& target, IDatabase& db) {
-    auto vocab = loadVocabulary<Vocab<Frame>>(db)->descriptors();
-    auto frameVocab = loadVocabulary<Vocab<IScene>>(db)->descriptors();
+std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
     auto videopaths = db.loadVideo();
-
-    auto frameComp = BOWComparator(vocab);
-
+        
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
+    auto deref = [](auto i) { return i->descriptor(); };
 
     MatchInfo match;
-    auto targetFrames = target.frames();
-    auto targetScenes = flatScenesBags(target, frameComp, 0.2f, frameVocab);
+    std::vector<cv::Mat> targetScenes;
+    boost::push_back(targetScenes, target.getScenes() | boost::adaptors::transformed(deref));
 
     for(auto& v2 : videopaths) {
         std::cout << "Calculating match for " << v2->name << std::endl;
-        auto knownScenes = flatScenesBags(*v2, frameComp, 0.2f, frameVocab);
+        std::vector<cv::Mat> knownScenes;
+        boost::push_back(knownScenes, v2->getScenes() | boost::adaptors::transformed(deref));
 
         auto&& alignments = calculateAlignment(targetScenes, knownScenes, intcomp, 0, 2);
         if(alignments.size() > 0) {

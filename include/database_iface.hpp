@@ -7,24 +7,18 @@
 #include "frame.hpp"
 #include <exception>
 
-class IVocab {
-public:
-    virtual std::string getHash() const = 0;
-    virtual cv::Mat descriptors() const = 0;
-    virtual ~IVocab() = default;
-};
+class FileDatabase;
 
 class IScene {
 public:
     static const std::string vocab_name;
 
-    IScene(const std::string& key) : key(key) {};
     virtual ~IScene() = default;
-    const std::string key;
 
-    virtual cv::Mat descriptor() = 0;
-    virtual std::vector<Frame>& getFrames() & = 0;
+    virtual const cv::Mat& descriptor() = 0;
+    virtual const std::vector<Frame>& getFrames() = 0;
 };
+
 
 class IVideo {
 public:
@@ -36,7 +30,7 @@ public:
 
     virtual size_type frameCount() = 0;
     virtual std::vector<Frame>& frames() & = 0;
-    virtual std::vector<std::unique_ptr<IScene>>& getScenes() & = 0;
+    virtual std::vector<std::shared_ptr<IScene>>& getScenes() & = 0;
     virtual ~IVideo() = default;
 };
 
@@ -49,44 +43,44 @@ public:
     virtual const T& getValue() const & = 0;
 };
 
+enum SaveStrategyType {
+    Lazy,
+    Eager
+};
+
 class IVideoStorageStrategy {
 public:
+    virtual SaveStrategyType getType() const = 0;
     virtual bool shouldBaggifyFrames(IVideo& video) = 0;
     virtual bool shouldComputeScenes(IVideo& video) = 0;
     virtual bool shouldBaggifyScenes(IVideo& video) = 0;
     virtual ~IVideoStorageStrategy() = default;
 };
 
-struct RuntimeArguments {
-    int KScenes;
-    int KFrame;
-};
 
-class IDatabase {
-protected:
-    std::unique_ptr<IVideoStorageStrategy> strategy;
-    RuntimeArguments args;
-    IDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) : strategy(std::move(strat)), args(args) {};
+class ContainerVocab {
+private:
+    cv::Mat desc;
+    std::string hash;
 public:
-    virtual std::unique_ptr<IVideo> saveVideo(IVideo& video) = 0;
-    virtual std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const = 0;
-    virtual bool saveVocab(const IVocab& vocab, const std::string& key) = 0;
-    virtual std::unique_ptr<IVocab> loadVocab(const std::string& key) const = 0;
-    virtual ~IDatabase() = default;
+    ContainerVocab() = default;
+    ContainerVocab(const cv::Mat& descriptors) : desc(descriptors), hash() {};
+    std::string getHash() const {
+        return hash;
+    }
+    cv::Mat descriptors() const {
+        return desc;
+    }
+    static const std::string vocab_name;
 };
 
-template<typename V, typename Db>
-bool saveVocabulary(V&& vocab, Db&& db) { 
-    return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name); 
-}
-
-template<typename V, typename Db>
-std::optional<V> loadVocabulary(Db&& db) { 
-    auto v = db.loadVocab(V::vocab_name);
-    if(v) {
-        return V(*v);
-    }
-    return std::nullopt;
-}
+template<typename T>
+class Vocab : public ContainerVocab {
+public:
+    using ContainerVocab::ContainerVocab;
+    Vocab(const ContainerVocab& v) : ContainerVocab(v) {};
+    static const std::string vocab_name;
+    typedef T vocab_type;
+};
 
 #endif

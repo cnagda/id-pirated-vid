@@ -13,7 +13,7 @@ protected:
         fs::remove_all(fs::current_path() / "database_test_dir");
         db = std::make_unique<FileDatabase>(fs::current_path() / "database_test_dir", 
             std::make_unique<LazyStorageStrategy>(),
-            RuntimeArguments{2000, 200});
+            RuntimeArguments{200, 20});
         {
             auto video = make_video_adapter(
                 getSIFTVideo("../sample.mp4"), "sample.mp4");
@@ -32,8 +32,8 @@ protected:
             db->saveVideo(video);
         }
 
-        saveVocabulary(constructFrameVocabulary(*db, 2000), *db);
-        saveVocabulary(constructSceneVocabulary(*db, 200), *db);
+        saveVocabulary(constructFrameVocabulary(*db, 200), *db);
+        saveVocabulary(constructSceneVocabulary(*db, 20), *db);
         
         std::cout << "Setup done" << std::endl;
     }
