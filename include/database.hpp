@@ -14,6 +14,7 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
+#include "matcher.hpp"
 
 namespace fs = std::experimental::filesystem;
 
@@ -32,12 +33,12 @@ cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight);
 
 
 template<typename V, typename Db>
-bool saveVocabulary(V&& vocab, Db&& db) { 
-    return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name); 
+bool saveVocabulary(V&& vocab, Db&& db) {
+    return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name);
 }
 
 template<typename V, typename Db>
-std::optional<V> loadVocabulary(Db&& db) { 
+std::optional<V> loadVocabulary(Db&& db) {
     auto v = db.loadVocab(V::vocab_name);
     if(v) {
         return V(v.value());
@@ -142,6 +143,7 @@ InputVideoAdapter<Base> make_video_adapter(Base&& b, const std::string& name) {
     return InputVideoAdapter<Base>(std::forward<Base>(b), name);
 }
 
+
 // TODO think of how to use these, templated
 /* Example strategies
 class IVideoLoadStrategy {
@@ -176,12 +178,12 @@ private:
     Configuration config;
     FileLoader loader;
 public:
-    explicit FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) : 
+    explicit FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) :
     FileDatabase(fs::current_path() / "database", std::move(strat), args) {};
 
     explicit FileDatabase(const std::string& databasePath,
-        std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) 
-        : strategy(std::move(strat)), config(args, strategy->getType()), databaseRoot(databasePath), 
+        std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args)
+        : strategy(std::move(strat)), config(args, strategy->getType()), databaseRoot(databasePath),
         loader(databasePath) {};
 
     std::unique_ptr<IVideo> saveVideo(IVideo& video);
@@ -210,7 +212,7 @@ public:
     video(video), database(database), frames(), descriptorCache() {
         boost::push_back(this->frames, frames);
     };
-    
+
     explicit DatabaseScene(IVideo& video, const FileDatabase& database, const SerializableScene& scene) :
     video(video), database(database), frames(), descriptorCache(scene.frameBag) {
         startIdx = scene.startIdx;
@@ -227,8 +229,8 @@ public:
             }
             auto access = [](auto frame){ return frame.descriptors; };
             descriptorCache = baggify(
-                boost::make_transform_iterator(frames.begin(), access), 
-                boost::make_transform_iterator(frames.end(), access), 
+                boost::make_transform_iterator(frames.begin(), access),
+                boost::make_transform_iterator(frames.end(), access),
                 vocab->descriptors());
         }
 
@@ -250,9 +252,9 @@ class DatabaseVideo : public IVideo {
     std::vector<Frame> frameCache;
 public:
     DatabaseVideo() = delete;
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) : IVideo(key), 
+    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) : IVideo(key),
     db(database), frameCache(frames), sceneCache() {};
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key), 
+    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key),
     db(database), frameCache(frames), sceneCache() {
         boost::push_back(sceneCache, scenes | boost::adaptors::transformed(
             [this](auto scene){ return std::make_unique<DatabaseScene>(*this, db, scene); }
@@ -267,9 +269,12 @@ public:
 };
 
 inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene) {
-    return std::make_unique<FileDatabase>(dbPath, 
-        std::make_unique<AggressiveStorageStrategy>(), 
+    return std::make_unique<FileDatabase>(dbPath,
+        std::make_unique<AggressiveStorageStrategy>(),
         RuntimeArguments{KScene, KFrame});
 }
+
+
+DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::string& key);
 
 #endif
