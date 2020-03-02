@@ -44,7 +44,7 @@ protected:
 std::unique_ptr<FileDatabase> DatabaseFixture::db;
 
 TEST_F(DatabaseFixture, NotInDatabase) {  
-    auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo("../sample.mp4"), "sample.mp4");
+    auto video = make_input_adapter(*db, getSIFTVideo("../sample.mp4"), "sample.mp4");
     auto match = findMatch(video, *db);
     if(match) {
         std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;

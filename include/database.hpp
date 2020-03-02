@@ -56,7 +56,7 @@ V loadOrComputeVocab(Db&& db, int K) {
 
         V v;
         if constexpr(std::is_same_v<typename V::vocab_type, Frame>) {
-            v = constructFrameVocabulary(db, K);
+            v = constructFrameVocabulary(db, K, 10);
         } else if constexpr(std::is_base_of_v<typename V::vocab_type, IScene>) {
             v = constructSceneVocabulary(db, K);
         }
@@ -276,5 +276,11 @@ inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath,
 
 
 DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::string& key);
+
+template<typename Video>
+DatabaseVideo make_input_adapter(FileDatabase& db, Video&& video, const std::string& key) {
+    auto frames = video.frames();
+    return DatabaseVideo(db, key, frames);
+}
 
 #endif

@@ -71,7 +71,7 @@ int main(int argc, char** argv )
     }
 
     if(!isUnspecified(argv[KFRAME])) {
-        auto v = constructFrameVocabulary(*db, kFrame);
+        auto v = constructFrameVocabulary(*db, kFrame, 10);
         saveVocabulary(v, *db);
     }
     if(!isUnspecified(argv[KSCENE])) {
