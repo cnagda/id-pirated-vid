@@ -36,12 +36,6 @@ int main(int argc, char** argv )
 
     int kFrame = stoi(argv[KFRAME]);
     int kScene = stoi(argv[KSCENE]);
-    if(isUnspecified(argv[KFRAME])) {
-        kFrame = 200;
-    }
-    if(isUnspecified(argv[KSCENE])) {
-        kScene = 20;
-    }
 
     namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
 

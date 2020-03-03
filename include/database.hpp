@@ -224,7 +224,7 @@ public:
         if(descriptorCache.empty()) {
             auto frames = getFrames();
             auto vocab = loadVocabulary<Vocab<Frame>>(database);
-            auto frameVocab = loadVocabulary<Vocab<DatabaseScene>>(database);
+            auto frameVocab = loadVocabulary<Vocab<IScene>>(database);
             if(!vocab) {
                 throw std::runtime_error("Scene couldn't get a frame vocabulary");
             }

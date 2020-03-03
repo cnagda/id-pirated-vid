@@ -14,7 +14,7 @@ Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int
 
     for(auto &video : database.loadVideo()) {
         auto frames = video->frames();
-        for(auto i = frames.begin(); i <= frames.end(); i += speedinator)
+        for(auto i = frames.begin(); i < frames.end(); i += speedinator)
                 descriptors.push_back(i->descriptors);
     }
 
@@ -32,7 +32,7 @@ Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned in
 
     for(auto &video : database.loadVideo()) {
         auto frames = video->frames();
-        for(auto i = frames.begin(); i <= frames.end(); i += speedinator)
+        for(auto i = frames.begin(); i < frames.end(); i += speedinator)
                 descriptors.push_back(baggify(i->descriptors, d));
     }
 

@@ -17,7 +17,7 @@ struct ItAlignment {
 
 struct Alignment : ItAlignment<int> {
     operator std::string(){
-        return std::to_string(startKnown) + " " + std::to_string(endKnown) + 
+        return std::to_string(startKnown) + " " + std::to_string(endKnown) +
                " " + std::to_string(startUnknown) + " " + std::to_string(endUnknown) + " " +
                std::to_string(score);
     }
@@ -25,7 +25,7 @@ struct Alignment : ItAlignment<int> {
 
 
 
-template <typename It, typename Cmp> 
+template <typename It, typename Cmp>
 std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknown, It unknownEnd, Cmp comp, int threshold, unsigned int gapScore){
     int m = std::distance(unknown, unknownEnd);
     int n = std::distance(known, knownEnd);
@@ -37,7 +37,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
     // populate matrix
     for(int i = 1; i <= m; i++){
         for(int j = 1; j <= n; j++){
-            if((i * n + j) % 20 == 0) std::cout << "Inner loop: " << i * n + j << " out of " << m * n << std::endl;
+            // if((i * n + j) % 20 == 0) std::cout << "Inner loop: " << i * n + j << " out of " << m * n << std::endl;
             int max = 0;
             int score = 0;
 
@@ -47,14 +47,14 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
                 max = score;
                 sources[i][j] = 0;
             }
-            
+
             // second comparison: north cell (insertion)
             score = matrix[i-1][j] - gapScore;
             if(score > max){
                 max = score;
                 sources[i][j] = 2;
             }
-            
+
             // last comparison: north-west cell (alignment)
             if(max < (score = comp(known[j - 1], unknown[i - 1]) + matrix[i - 1][j - 1])){
                 max = score;
@@ -91,7 +91,7 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
         a.endUnknown = unknown + i;
         a.endKnown = known + j;
         a.score = matrix[i][j];
-        
+
         do{
             if(matrix[i][j] == 0){
                 a.startUnknown = unknown + i;
@@ -125,7 +125,7 @@ std::vector<Alignment> calculateAlignment(Range&& known, Range&& unknown, Cmp&& 
         };
     });
 
-    return ret;    
+    return ret;
 }
 
 #endif
