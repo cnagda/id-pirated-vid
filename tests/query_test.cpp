@@ -13,12 +13,7 @@ protected:
         fs::remove_all(fs::current_path() / "database_test_dir");
         db = std::make_unique<FileDatabase>(fs::current_path() / "database_test_dir", 
             std::make_unique<LazyStorageStrategy>(),
-            RuntimeArguments{200, 20});
-        {
-            auto video = make_video_adapter(
-                getSIFTVideo("../sample.mp4"), "sample.mp4");
-            db->saveVideo(video);
-        }
+            RuntimeArguments{200, 20, 0.15});
 
         {
             auto video = make_video_adapter(
@@ -44,7 +39,7 @@ protected:
 std::unique_ptr<FileDatabase> DatabaseFixture::db;
 
 TEST_F(DatabaseFixture, NotInDatabase) {  
-    auto video = make_input_adapter(*db, getSIFTVideo("../sample.mp4"), "sample.mp4");
+    auto video = make_query_adapter(*db, getSIFTVideo("../sample.mp4"), "sample.mp4");
     auto match = findMatch(video, *db);
     if(match) {
         std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;
