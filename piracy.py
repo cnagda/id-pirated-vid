@@ -32,14 +32,18 @@ def expand_paths(paths):
     return expanded
 
 def call_execs(args):
-    for path in args.paths:
+    for i, path in enumerate(args.paths):
         call_args = []
         if args.type == 'ADD':
             call_args.append('./build/add')
             call_args.append(args.databasePath)
             call_args.append(path)
-            call_args.append(str(args.kScene))
-            call_args.append(str(args.kFrame))
+            if i == len(args.paths) - 1:
+                call_args.append(str(args.kScene))
+                call_args.append(str(args.kFrame))
+            else:
+                call_args.append("-1")
+                call_args.append("-1")
             call_args.append(str(args.thresholdScene))
         else:
             call_args.append('./build/query')
