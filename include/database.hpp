@@ -205,6 +205,16 @@ public:
                 }
             }
 
+            if(args.threshold != -1
+                || args.KFrame != -1
+                || args.KScenes != -1) {
+                    for(auto entry : fs::directory_iterator(databaseRoot)) {
+                        if(fs::is_directory(entry)) {
+                            fs::remove_all(entry.path() / "scenes");
+                        }
+                    }
+            }
+
             std::ofstream writer(databaseRoot / "config.bin", std::ofstream::binary);
             writer.write((char*)&config, sizeof(config));
         };

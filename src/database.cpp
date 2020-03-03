@@ -341,7 +341,6 @@ std::vector<std::unique_ptr<IScene>>& DatabaseVideo::getScenes() & {
                 return SerializableScene{scene.first, scene.second};
             })
             | boost::adaptors::transformed([this](auto scene) {
-                auto f = frames();
                 return std::make_unique<DatabaseScene>(*this, db, scene);
             }));
         }

@@ -77,6 +77,9 @@ int main(int argc, char** argv )
         saveVocabulary(v, *db);
         shouldRecalculateFrames = true;
     }
+    if(!isUnspecified(argv[THRESHOLD])) {
+        shouldRecalculateFrames = true;
+    }
 
     if(shouldRecalculateFrames) {
         for(auto& video : db->loadVideo()) {
