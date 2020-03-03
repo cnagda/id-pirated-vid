@@ -15,6 +15,9 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include "matcher.hpp"
+#include <fstream>
+
+#define CONFIG_FILE
 
 namespace fs = std::experimental::filesystem;
 
@@ -78,6 +81,7 @@ struct Configuration {
     double threshold;
     SaveStrategyType strategy;
 
+    Configuration() : KScenes(-1), KFrames(-1), threshold(-1) {};
     Configuration(const RuntimeArguments& args, SaveStrategyType type)
         : KScenes(args.KScenes), KFrames(args.KFrame), threshold(args.threshold), strategy(type) {};
 };
@@ -185,7 +189,25 @@ public:
     explicit FileDatabase(const std::string& databasePath,
         std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args)
         : strategy(std::move(strat)), config(args, strategy->getType()), databaseRoot(databasePath),
-        loader(databasePath) {};
+        loader(databasePath) {
+            Configuration configFromFile;
+            std::ifstream reader(databaseRoot / "config.bin", std::ifstream::binary);
+            if(reader.is_open()) {
+                reader.read((char*)&configFromFile, sizeof(configFromFile));
+                if(config.threshold == -1) {
+                    config.threshold = configFromFile.threshold;
+                }
+                if(config.KScenes == -1) {
+                    config.KScenes = configFromFile.KScenes;
+                }
+                if(config.KFrames == -1) {
+                    config.KFrames = configFromFile.KFrames;
+                }
+            }
+
+            std::ofstream writer(databaseRoot / "config.bin", std::ofstream::binary);
+            writer.write((char*)&config, sizeof(config));
+        };
 
     std::unique_ptr<IVideo> saveVideo(IVideo& video);
     std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const;
@@ -275,7 +297,7 @@ inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath,
 DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::string& key);
 
 template<typename Video>
-DatabaseVideo make_input_adapter(FileDatabase& db, Video&& video, const std::string& key) {
+inline DatabaseVideo make_query_adapter(FileDatabase& db, Video&& video, const std::string& key) {
     auto frames = video.frames();
     return DatabaseVideo(db, key, frames);
 }

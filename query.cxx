@@ -38,7 +38,7 @@ int main(int argc, char** argv )
     auto& fd = *database_factory(argv[DBPATH], -1, -1, -1).release();
 
     auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo(argv[VIDPATH]), fs::path(argv[VIDPATH]).filename());
-    auto video2 = make_scene_adapter(fd, video, "totallydifferenttestvid.mp4");
+    auto video2 = make_query_adapter(fd, video, "totallydifferenttestvid.mp4");
     auto match = findMatch(video2, fd);
     if(match) {
         std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;

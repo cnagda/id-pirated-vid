@@ -200,6 +200,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     std::vector<SerializableScene> loadedScenes;
 
     if(!frames.empty()) {
+        fs::remove_all(video_dir / "frames");
         fs::create_directories(video_dir / "frames");
     }
     for(auto& frame : frames) {
@@ -213,6 +214,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     }
 
     if(!scenes.empty()) {
+        fs::remove_all(video_dir / "scenes");
         fs::create_directories(video_dir / "scenes");
         for(auto& scene : scenes) {
             SceneWrite(video_dir / "scenes" / std::to_string(index++), *scene);
@@ -229,6 +231,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         auto flat = flatScenes(video, comp, config.threshold);
 
         if(!flat.empty()) {
+            fs::remove_all(video_dir / "scenes");
             fs::create_directories(video_dir / "scenes");
             SIFTVideo::size_type index = 0;
             for(auto& scene : flat) {
