@@ -80,7 +80,15 @@ int main(int argc, char** argv )
 
     if(shouldRecalculateFrames) {
         for(auto& video : db->loadVideo()) {
-            video->getScenes();
+            auto& scenes = video->getScenes();
+            for(auto& scene : scenes) {
+                try{
+                    scene->descriptor();
+                } catch(...) {
+                    std::cerr << "Not enough info to compute descriptors" << std::endl;
+                }
+            }
+
             db->saveVideo(*video);
         }
     }

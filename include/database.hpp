@@ -208,14 +208,9 @@ class DatabaseScene : public IScene {
 
 public:
     DatabaseScene() = delete;
-    template<typename Range>
-    explicit DatabaseScene(IVideo& video, const FileDatabase& database, Range frames) :
-    video(video), database(database), frames(), descriptorCache() {
-        boost::push_back(this->frames, frames);
-    };
 
     explicit DatabaseScene(IVideo& video, const FileDatabase& database, const SerializableScene& scene) :
-    video(video), database(database), frames(), descriptorCache(scene.frameBag) {
+    video(video), database(database), startIdx(scene.startIdx), endIdx(scene.endIdx), frames(), descriptorCache(scene.frameBag) {
         startIdx = scene.startIdx;
         endIdx = scene.endIdx;
         boost::push_back(this->frames, scene.getFrameRange(video));
@@ -226,7 +221,7 @@ public:
             auto frames = getFrames();
             auto vocab = loadVocabulary<Vocab<Frame>>(database);
             auto frameVocab = loadVocabulary<Vocab<IScene>>(database);
-            if(!vocab) {
+            if(!vocab | !frameVocab) {
                 throw std::runtime_error("Scene couldn't get a frame vocabulary");
             }
             auto access = [vocab = vocab->descriptors()](auto frame){ return baggify(frame.descriptors, vocab); };
@@ -244,11 +239,7 @@ public:
     }
 
     operator SerializableScene() override {
-        try {
-            return SerializableScene{descriptor(), startIdx, endIdx};
-        } catch(...) {
-            return SerializableScene{startIdx, endIdx};
-        }
+        return SerializableScene{descriptorCache, startIdx, endIdx};
     }
 };
 

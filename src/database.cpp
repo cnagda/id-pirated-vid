@@ -206,11 +206,14 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         SIFTwrite(video_dir / "frames" / std::to_string(index++), frame);
     }
 
+    index = 0;
+
     if(strategy->shouldBaggifyFrames(video)) {
         // auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, config.KFrames);
     }
 
     if(!scenes.empty()) {
+        fs::create_directories(video_dir / "scenes");
         for(auto& scene : scenes) {
             SceneWrite(video_dir / "scenes" / std::to_string(index++), *scene);
             loadedScenes.push_back(*scene);
@@ -218,17 +221,17 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     }
     else if(strategy->shouldComputeScenes(video)) {
         auto vocab = loadVocabulary<Vocab<Frame>>(*this);
-        if(!vocab) {
+        if(!vocab || config.threshold == -1) {
             return std::make_unique<DatabaseVideo>(*this, video.name, frames);
         }
 
         auto comp = BOWComparator(vocab->descriptors());
-        auto scenes = flatScenes(video, comp, config.threshold);
+        auto flat = flatScenes(video, comp, config.threshold);
 
-        if(!scenes.empty()) {
+        if(!flat.empty()) {
             fs::create_directories(video_dir / "scenes");
             SIFTVideo::size_type index = 0;
-            for(auto& scene : scenes) {
+            for(auto& scene : flat) {
                 auto s = SerializableScene(scene.first, scene.second);
                 SceneWrite(video_dir / "scenes" / std::to_string(index++),
                     s);
@@ -325,13 +328,18 @@ std::vector<std::unique_ptr<IScene>>& DatabaseVideo::getScenes() & {
             if(!vocab) {
                 throw std::runtime_error("video could not load vocab");
             }
+            if(config.threshold == -1) {
+                throw std::runtime_error("no threshold was provided to calculate scenes");
+            }
             auto comp = BOWComparator(vocab->descriptors());
             auto ss = flatScenes(*this, comp, config.threshold);
             boost::push_back(sceneCache, ss
+            | boost::adaptors::transformed([](auto scene){
+                return SerializableScene{scene.first, scene.second};
+            })
             | boost::adaptors::transformed([this](auto scene) {
                 auto f = frames();
-                return std::make_unique<DatabaseScene>(*this, db,
-                std::make_pair(f.begin() + scene.first, f.begin() + scene.second));
+                return std::make_unique<DatabaseScene>(*this, db, scene);
             }));
         }
     }

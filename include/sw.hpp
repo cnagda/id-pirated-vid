@@ -6,22 +6,24 @@
 #include <functional>
 #include <iostream>
 #include <iomanip>
+#include <type_traits>
 #include "matrix.hpp"
 
 
 template<typename It>
 struct ItAlignment {
     It startKnown, startUnknown, endKnown, endUnknown;
-    int score;
-};
+    unsigned int score;
 
-struct Alignment : ItAlignment<int> {
+    template<typename = std::void_t<std::is_integral<It>>>
     operator std::string(){
         return std::to_string(startKnown) + " " + std::to_string(endKnown) +
                " " + std::to_string(startUnknown) + " " + std::to_string(endUnknown) + " " +
                std::to_string(score);
     }
 };
+
+typedef ItAlignment<unsigned int> Alignment;
 
 
 

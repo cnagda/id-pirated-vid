@@ -45,9 +45,9 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 
     double total = 0;
 
-    int len = std::min(frames1.size(), frames2.size());
+    auto len = std::min(frames1.size(), frames2.size());
 
-    for(int i = 0; i < len; i++){
+    for(decltype(len) i = 0; i < len; i++){
         auto t = comparator(frames1[i], frames2[i]);
         if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i,
             std::make_optional(std::ref(v1)), std::make_optional(std::ref(v2))});
