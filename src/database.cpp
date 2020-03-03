@@ -207,7 +207,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     }
 
     if(strategy->shouldBaggifyFrames(video)) {
-        auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, config.KFrames);
+        // auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, config.KFrames);
     }
 
     if(!scenes.empty()) {
@@ -217,10 +217,13 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         }
     }
     else if(strategy->shouldComputeScenes(video)) {
-        auto vocab = loadOrComputeVocab<Vocab<Frame>>(*this, config.KFrames);
+        auto vocab = loadVocabulary<Vocab<Frame>>(*this);
+        if(!vocab) {
+            return std::make_unique<DatabaseVideo>(*this, video.name, frames);
+        }
 
-        auto comp = BOWComparator(vocab.descriptors());
-        auto scenes = flatScenes(video, comp, 0.2);
+        auto comp = BOWComparator(vocab->descriptors());
+        auto scenes = flatScenes(video, comp, config.threshold);
 
         if(!scenes.empty()) {
             fs::create_directories(video_dir / "scenes");
@@ -233,12 +236,15 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
             }
 
             if(strategy->shouldBaggifyScenes(video)) {
-                auto frameVocab = loadOrComputeVocab<Vocab<IScene>>(*this, config.KScenes);
+                auto frameVocab = loadVocabulary<Vocab<IScene>>(*this);
+                if(!frameVocab) {
+                    return std::make_unique<DatabaseVideo>(*this, video.name, frames, loadedScenes);
+                }
                 SIFTVideo::size_type index = 0;
                 for(auto& scene : loadedScenes) {
-                    auto access = [&vocab](auto frame){ return baggify(frame.descriptors, vocab.descriptors()); };
+                    auto access = [&vocab](auto frame){ return baggify(frame.descriptors, vocab->descriptors()); };
                     auto rng = scene.getFrameRange(video) | boost::adaptors::transformed(access);
-                    scene.frameBag = baggify(rng.begin(), rng.end(), frameVocab.descriptors());
+                    scene.frameBag = baggify(rng.begin(), rng.end(), frameVocab->descriptors());
                     SceneWrite(video_dir / "scenes" / std::to_string(index++), scene);
                 }
             }
@@ -360,7 +366,7 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     auto vocab = loadOrComputeVocab<Vocab<Frame>>(db, config.KFrames);
 
     auto comp = BOWComparator(vocab.descriptors());
-    auto scenes = flatScenes(video, comp, 0.2);
+    auto scenes = flatScenes(video, comp, config.threshold);
 
     if(!scenes.empty()) {
         SIFTVideo::size_type index = 0;

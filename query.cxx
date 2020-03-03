@@ -35,7 +35,7 @@ int main(int argc, char** argv )
         return -1;
     }
 
-    auto& fd = *database_factory(argv[DBPATH], -1, -1).release();
+    auto& fd = *database_factory(argv[DBPATH], -1, -1, 0.2).release();
 
     auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo(argv[VIDPATH]), fs::path(argv[VIDPATH]).filename());
     auto video2 = make_scene_adapter(fd, video, "totallydifferenttestvid.mp4");

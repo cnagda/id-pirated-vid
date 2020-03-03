@@ -69,16 +69,17 @@ V loadOrComputeVocab(Db&& db, int K) {
 struct RuntimeArguments {
     int KScenes;
     int KFrame;
+    double threshold;
 };
 
 struct Configuration {
     int KScenes;
     int KFrames;
-    int threshold;
+    double threshold;
     SaveStrategyType strategy;
 
     Configuration(const RuntimeArguments& args, SaveStrategyType type)
-        : KScenes(args.KScenes), KFrames(args.KFrame), threshold(0.2), strategy(type) {};
+        : KScenes(args.KScenes), KFrames(args.KFrame), threshold(args.threshold), strategy(type) {};
 };
 
 struct SIFTVideo {
@@ -243,7 +244,11 @@ public:
     }
 
     operator SerializableScene() override {
-        return SerializableScene{descriptor(), startIdx, endIdx};
+        try {
+            return SerializableScene{descriptor(), startIdx, endIdx};
+        } catch(...) {
+            return SerializableScene{startIdx, endIdx};
+        }
     }
 };
 
@@ -269,10 +274,10 @@ public:
     std::vector<std::unique_ptr<IScene>>& getScenes() & override;
 };
 
-inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene) {
+inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene, double threshold) {
     return std::make_unique<FileDatabase>(dbPath,
         std::make_unique<AggressiveStorageStrategy>(),
-        RuntimeArguments{KScene, KFrame});
+        RuntimeArguments{KScene, KFrame, threshold});
 }
 
 

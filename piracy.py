@@ -45,6 +45,8 @@ def call_execs(args):
             call_args.append('./build/query')
             call_args.append(args.databasePath)
             call_args.append(path)
+
+        print(call_args)
         subprocess.call(call_args)
 
 
@@ -91,8 +93,8 @@ def main():
         '-thresholdScene',
         metavar='TS',
         help='threshold for inter-scene similarity',
-        default=-1,
-        type=int
+        default=0.2,
+        type=float
     )
 
     parser_query = subparsers.add_parser('QUERY')

@@ -36,10 +36,11 @@ int main(int argc, char** argv )
 
     int kFrame = stoi(argv[KFRAME]);
     int kScene = stoi(argv[KSCENE]);
+    double threshold = stod(argv[THRESHOLD]);
 
     namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
 
-    auto db = database_factory(argv[DBPATH], kFrame, kScene);
+    auto db = database_factory(argv[DBPATH], kFrame, kScene, threshold);
 
     if (!isUnspecified(argv[VIDPATH])) {
         auto video = make_video_adapter(getSIFTVideo(argv[VIDPATH], [DEBUG](Mat image, Frame frame){
@@ -64,13 +65,24 @@ int main(int argc, char** argv )
         db->saveVideo(video);
     }
 
+    bool shouldRecalculateFrames = false;
+
     if(!isUnspecified(argv[KFRAME])) {
         auto v = constructFrameVocabulary(*db, kFrame, 10);
         saveVocabulary(v, *db);
+        shouldRecalculateFrames = true;
     }
     if(!isUnspecified(argv[KSCENE])) {
         auto v = constructSceneVocabulary(*db, kScene);
         saveVocabulary(v, *db);
+        shouldRecalculateFrames = true;
+    }
+
+    if(shouldRecalculateFrames) {
+        for(auto& video : db->loadVideo()) {
+            video->getScenes();
+            db->saveVideo(*video);
+        }
     }
 
     return 0;
