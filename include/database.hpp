@@ -223,15 +223,16 @@ public:
     const cv::Mat& descriptor() override {
         if(descriptorCache.empty()) {
             auto frames = getFrames();
-            auto vocab = loadVocabulary<Vocab<DatabaseScene>>(database);
+            auto vocab = loadVocabulary<Vocab<Frame>>(database);
+            auto frameVocab = loadVocabulary<Vocab<DatabaseScene>>(database);
             if(!vocab) {
                 throw std::runtime_error("Scene couldn't get a frame vocabulary");
             }
-            auto access = [](auto frame){ return frame.descriptors; };
+            auto access = [vocab = vocab->descriptors()](auto frame){ return baggify(frame.descriptors, vocab); };
             descriptorCache = baggify(
                 boost::make_transform_iterator(frames.begin(), access),
                 boost::make_transform_iterator(frames.end(), access),
-                vocab->descriptors());
+                frameVocab->descriptors());
         }
 
         return descriptorCache;

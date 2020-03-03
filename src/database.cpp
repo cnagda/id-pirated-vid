@@ -233,12 +233,12 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
             }
 
             if(strategy->shouldBaggifyScenes(video)) {
-                auto vocab = loadOrComputeVocab<Vocab<IScene>>(*this, config.KScenes);
+                auto frameVocab = loadOrComputeVocab<Vocab<IScene>>(*this, config.KScenes);
                 SIFTVideo::size_type index = 0;
                 for(auto& scene : loadedScenes) {
-                    auto access = [](auto frame){ return frame.descriptors; };
+                    auto access = [&vocab](auto frame){ return baggify(frame.descriptors, vocab.descriptors()); };
                     auto rng = scene.getFrameRange(video) | boost::adaptors::transformed(access);
-                    scene.frameBag = baggify(rng.begin(), rng.end(), vocab.descriptors());
+                    scene.frameBag = baggify(rng.begin(), rng.end(), frameVocab.descriptors());
                     SceneWrite(video_dir / "scenes" / std::to_string(index++), scene);
                 }
             }
