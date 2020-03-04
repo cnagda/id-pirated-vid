@@ -46,6 +46,12 @@ public:
     }
 };
 
+
+class ColorComparator {
+public:
+    double operator()(const Frame& f1, const Frame& f2) const;
+};
+
 double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter);
 
 std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db);

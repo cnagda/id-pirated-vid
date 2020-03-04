@@ -388,3 +388,7 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
 
     return DatabaseVideo(db, key, frames, loadedScenes);
 }
+
+double Color::Comparator::operator()(const Frame& f1, const Frame& f2) const {
+    return frameSimilarity(f1, f2, [this](const Frame& f){ return baggify(f.descriptors, vocab); });
+}
