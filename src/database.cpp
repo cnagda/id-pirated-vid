@@ -260,26 +260,19 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     return std::make_unique<DatabaseVideo>(*this, video.name, frames, loadedScenes);
 }
 
-std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideos() const {
-    std::vector<std::unique_ptr<IVideo>> videos;
+std::vector<std::string> FileDatabase::listVideos() const {
+    std::vector<std::string> videos;
     for(auto i : fs::directory_iterator(databaseRoot)) {
         if(fs::is_directory(i.path())) {
-            auto v = loadVideo(i.path().filename());
-            std::move(v.begin(), v.end(), std::back_inserter(videos));
+            videos.push_back(i.path().filename());
         }
     }
     return videos;
 }
 
-std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideo(const std::string& key) const {
-    if(key == "") {
-        return loadVideos();
-    }
-
-    std::vector<std::unique_ptr<IVideo>> vid;
-
+std::unique_ptr<IVideo> FileDatabase::loadVideo(const std::string& key) const {
     if(!fs::exists(databaseRoot / key / "frames")) {
-        return vid;
+        return nullptr;
     }
 
     std::vector<Frame> frames;
@@ -288,16 +281,14 @@ std::vector<std::unique_ptr<IVideo>> FileDatabase::loadVideo(const std::string& 
     while(auto f = loader.readFrame(key, index++)) frames.push_back(f.value());
 
     if(!fs::exists(databaseRoot / key / "scenes")) {
-        vid.push_back(std::make_unique<DatabaseVideo>(*this, key, frames));
-        return vid;
+        return std::make_unique<DatabaseVideo>(*this, key, frames);
     }
 
     std::vector<SerializableScene> scenes;
     index = 0;
     while(auto f = loader.readScene(key, index++)) scenes.push_back(f.value());
 
-    vid.push_back(std::make_unique<DatabaseVideo>(*this, key, frames, scenes));
-    return vid;
+    return std::make_unique<DatabaseVideo>(*this, key, frames, scenes);
 }
 
 bool FileDatabase::saveVocab(const ContainerVocab& vocab, const std::string& key) {
@@ -389,6 +380,7 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     return DatabaseVideo(db, key, frames, loadedScenes);
 }
 
-double Color::Comparator::operator()(const Frame& f1, const Frame& f2) const {
-    return frameSimilarity(f1, f2, [this](const Frame& f){ return baggify(f.descriptors, vocab); });
+double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
+    // TODO implement this
+    return 0;
 }

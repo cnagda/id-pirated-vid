@@ -40,10 +40,8 @@ TEST(DatabaseSuite, FileDatabase) {
     auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
     
     auto vid = db.saveVideo(video)->frames();
-    auto loaded_vid = db.loadVideo("sample.mp4");
+    auto loaded_ptr = db.loadVideo("sample.mp4");
 
-    ASSERT_FALSE(loaded_vid.empty());
-    auto& loaded_ptr = loaded_vid.front();
     ASSERT_TRUE(loaded_ptr);
 
     auto& loaded = loaded_ptr->frames();
@@ -59,10 +57,8 @@ TEST(DatabaseSuite, EagerDatabase) {
     auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
     
     auto vid = db.saveVideo(video);
-    auto loaded_vid = db.loadVideo("sample.mp4");
+    auto loaded_ptr = db.loadVideo("sample.mp4");
 
-    ASSERT_FALSE(loaded_vid.empty());
-    auto& loaded_ptr = loaded_vid.front();
     ASSERT_TRUE(loaded_ptr);
 
     auto& loaded = loaded_ptr->frames();

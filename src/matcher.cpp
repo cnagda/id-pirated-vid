@@ -12,8 +12,8 @@
 Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator) {
     cv::Mat descriptors;
 
-    for(auto &video : database.loadVideo()) {
-        auto frames = video->frames();
+    for(auto video : database.listVideos()) {
+        auto frames = database.loadVideo(video)->frames();
         for(auto i = frames.begin(); i < frames.end(); i += speedinator)
                 descriptors.push_back(i->descriptors);
     }
@@ -30,10 +30,10 @@ Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned in
 
     cv::Mat descriptors;
 
-    for(auto &video : database.loadVideo()) {
-        auto frames = video->frames();
+    for(auto video : database.listVideos()) {
+        auto frames = database.loadVideo(video)->frames();
         for(auto i = frames.begin(); i < frames.end(); i += speedinator)
-                descriptors.push_back(baggify(i->descriptors, d));
+            descriptors.push_back(baggify(i->descriptors, d));
     }
 
     return Vocab<IScene>(constructVocabulary(descriptors, K));
@@ -59,7 +59,7 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 }
 
 std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
-    auto videopaths = db.loadVideo();
+    auto videopaths = db.listVideos();
 
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
     auto deref = [](auto& i) { return i->descriptor(); };
@@ -68,10 +68,10 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
     std::vector<cv::Mat> targetScenes;
     boost::push_back(targetScenes, target.getScenes() | boost::adaptors::transformed(deref));
 
-    for(auto& v2 : videopaths) {
-        std::cout << "Calculating match for " << v2->name << std::endl;
+    for(auto v2 : videopaths) {
+        std::cout << "Calculating match for " << v2 << std::endl;
         std::vector<cv::Mat> knownScenes;
-        boost::push_back(knownScenes, v2->getScenes() | boost::adaptors::transformed(deref));
+        boost::push_back(knownScenes, db.loadVideo(v2)->getScenes() | boost::adaptors::transformed(deref));
 
         auto&& alignments = calculateAlignment(targetScenes, knownScenes, intcomp, 0, 2);
         std::cout << targetScenes.size() << " "<< knownScenes.size() << std::endl;
@@ -79,7 +79,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
             auto& a = alignments[0];
             std::cout << "Highest score: " << a.score << std::endl;
             if(a.score > match.matchConfidence) {
-                match = MatchInfo{a.score, a.startKnown, a.endKnown, v2->name};
+                match = MatchInfo{a.score, a.startKnown, a.endKnown, v2};
             }
         }
 
