@@ -50,11 +50,11 @@ std::optional<V> loadVocabulary(Db&& db) {
 }
 
 template<typename V, typename Db>
-V loadOrComputeVocab(Db&& db, int K) {
+std::optional<V> loadOrComputeVocab(Db&& db, int K) {
     auto vocab = loadVocabulary<V>(std::forward<Db>(db));
     if(!vocab) {
         if(K == -1) {
-            throw std::runtime_error("need to compute " + V::vocab_name + " vocabulary but not K provided");
+            return std::nullopt;
         }
 
         V v;
@@ -124,7 +124,8 @@ struct SerializableScene {
     template<typename Video>
     auto getFrameRange(Video& video) const {
         auto& frames = video.frames();
-        return std::make_pair(frames.begin() + startIdx, frames.begin() + endIdx);
+        return getFrameRange(frames.begin(), 
+        typename std::iterator_traits<decltype(frames.begin())>::iterator_category());
     };
 
     template<typename It>
@@ -190,6 +191,9 @@ public:
         std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args)
         : strategy(std::move(strat)), config(args, strategy->getType()), databaseRoot(databasePath),
         loader(databasePath) {
+            if(!fs::exists(databaseRoot)) {
+                fs::create_directories(databaseRoot);
+            }
             Configuration configFromFile;
             std::ifstream reader(databaseRoot / "config.bin", std::ifstream::binary);
             if(reader.is_open()) {
@@ -209,7 +213,7 @@ public:
                 || args.KFrame != -1
                 || args.KScenes != -1) {
                     for(auto entry : fs::directory_iterator(databaseRoot)) {
-                        if(fs::is_directory(entry)) {
+                        if(fs::is_directory(entry) && fs::exists(entry.path() / "scenes")) {
                             fs::remove_all(entry.path() / "scenes");
                         }
                     }
@@ -220,7 +224,8 @@ public:
         };
 
     std::unique_ptr<IVideo> saveVideo(IVideo& video);
-    std::vector<std::unique_ptr<IVideo>> loadVideo(const std::string& key = "") const;
+    std::unique_ptr<IVideo> loadVideo(const std::string& key = "") const;
+    std::vector<std::string> listVideos() const;
 
     const FileLoader& getFileLoader() const & { return loader; };
     const Configuration& getConfig() const & { return config; };
@@ -234,7 +239,7 @@ class DatabaseScene : public IScene {
     static_assert(std::is_convertible_v<std::unique_ptr<DatabaseScene>, std::unique_ptr<IScene>>, "not convertible");
     std::vector<Frame> frames;
     cv::Mat descriptorCache;
-    const IVideo& video;
+    IVideo& video;
     const FileDatabase& database;
     SIFTVideo::size_type startIdx, endIdx;
 
@@ -242,11 +247,7 @@ public:
     DatabaseScene() = delete;
 
     explicit DatabaseScene(IVideo& video, const FileDatabase& database, const SerializableScene& scene) :
-    video(video), database(database), startIdx(scene.startIdx), endIdx(scene.endIdx), frames(), descriptorCache(scene.frameBag) {
-        startIdx = scene.startIdx;
-        endIdx = scene.endIdx;
-        boost::push_back(this->frames, scene.getFrameRange(video));
-    };
+    video(video), database(database), startIdx(scene.startIdx), endIdx(scene.endIdx), frames(), descriptorCache(scene.frameBag) {};
 
     const cv::Mat& descriptor() override {
         if(descriptorCache.empty()) {
@@ -266,7 +267,15 @@ public:
         return descriptorCache;
     }
 
+    auto getFrameRange() const {
+        auto& frames = video.frames();
+        return std::make_pair(frames.begin() + startIdx, frames.begin() + endIdx);
+    }
+
     const std::vector<Frame>& getFrames() override {
+        if(frames.empty()) {
+            boost::push_back(frames, getFrameRange());
+        }
         return frames;
     }
 

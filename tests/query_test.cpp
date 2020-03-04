@@ -10,7 +10,12 @@ namespace fs = std::experimental::filesystem;
 class DatabaseFixture : public ::testing::Test {
 protected:
     static void SetUpTestSuite() {
-        fs::remove_all(fs::current_path() / "database_test_dir");
+        try { 
+            fs::remove_all(fs::current_path() / "database_test_dir");
+        } catch(std::exception e) {
+            std::cout << "could not remove test dir" << e.what() << std::endl;
+        }
+
         db = std::make_unique<FileDatabase>(fs::current_path() / "database_test_dir", 
             std::make_unique<LazyStorageStrategy>(),
             RuntimeArguments{200, 20, 0.15});
@@ -48,11 +53,11 @@ TEST_F(DatabaseFixture, NotInDatabase) {
 }
 
 TEST_F(DatabaseFixture, InDatabase) {
-    auto video = db->loadVideo()[0].release();
+    auto video = db->loadVideo(db->listVideos()[0]);
     auto match = findMatch(*video, *db);
     ASSERT_TRUE(match.has_value());
     auto topMatch = match.value();
     EXPECT_TRUE(topMatch.video == video->name);
     EXPECT_TRUE(topMatch.startFrame == 0);
-    EXPECT_TRUE(topMatch.endFrame == video->frameCount());
+    EXPECT_TRUE(topMatch.endFrame == video->getScenes().size());
 }

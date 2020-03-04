@@ -82,17 +82,25 @@ int main(int argc, char** argv )
     }
 
     if(shouldRecalculateFrames) {
-        for(auto& video : db->loadVideo()) {
-            auto& scenes = video->getScenes();
-            for(auto& scene : scenes) {
-                try{
-                    scene->descriptor();
-                } catch(...) {
-                    std::cerr << "Not enough info to compute descriptors" << std::endl;
+        for(auto v : db->listVideos()) {
+            auto video = db->loadVideo(v);
+            try {
+                auto& scenes = video->getScenes();
+                for(auto& scene : scenes) {
+                    try{
+                        scene->descriptor();
+                    } catch(...) {
+                        std::cerr << "Not enough info to compute scene descriptors" << std::endl;
+                        break;
+                    }
                 }
-            }
 
-            db->saveVideo(*video);
+                db->saveVideo(*video);
+            } catch(...) {
+                std::cerr << "not enough info to compute scenes" << std::endl;
+                break;
+            }
+            
         }
     }
 

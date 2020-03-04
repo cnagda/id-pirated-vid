@@ -27,10 +27,11 @@ int main(int argc, char** argv) {
     std::cout << "Key frame stuff" << std::endl;
     auto comp = BOWComparator(myvocab->descriptors());
 
-    auto videopaths = fd.loadVideo();
+    auto videopaths = fd.listVideos();
     std::cout << "Got video path list" << std::endl;
 
-    for(auto& vid : videopaths){
+    for(auto video : videopaths){
+        auto vid = fd.loadVideo(video);
         auto ss = flatScenes(*vid, comp, .15);
         std::cout << "Video: " << vid->name << ", scenes: " << ss.size() << std::endl;
         for(auto& a : ss){
