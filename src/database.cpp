@@ -366,7 +366,7 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     auto frames = video.frames();
     auto vocab = loadOrComputeVocab<Vocab<Frame>>(db, config.KFrames);
 
-    auto comp = BOWComparator(vocab.descriptors());
+    auto comp = BOWComparator(vocab->descriptors());
     auto scenes = flatScenes(video, comp, config.threshold);
 
     if(!scenes.empty()) {

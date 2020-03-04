@@ -50,11 +50,11 @@ std::optional<V> loadVocabulary(Db&& db) {
 }
 
 template<typename V, typename Db>
-V loadOrComputeVocab(Db&& db, int K) {
+std::optional<V> loadOrComputeVocab(Db&& db, int K) {
     auto vocab = loadVocabulary<V>(std::forward<Db>(db));
     if(!vocab) {
         if(K == -1) {
-            throw std::runtime_error("need to compute " + V::vocab_name + " vocabulary but not K provided");
+            return std::nullopt;
         }
 
         V v;

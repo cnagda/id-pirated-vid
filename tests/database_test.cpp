@@ -2,6 +2,7 @@
 #include <iostream>
 #include <experimental/filesystem>
 #include "database.hpp"
+#include "vocabulary.hpp"
 
 using namespace std;
 using namespace cv;
@@ -14,7 +15,21 @@ TEST(DatabaseSuite, getAlphas) {
 }
 #endif
 
-TEST(DatabaseSuite, SIFTrwTest) {
+
+class DatabaseSuite : public ::testing::Test {
+protected:
+    void SetUp() override {
+        try { 
+            fs::remove_all(fs::current_path() / "database_test_dir");
+        } catch(std::exception e) {
+            std::cout << "could not remove test dir" << e.what() << std::endl;
+        }
+
+        fs::create_directories(fs::current_path() / "database_test_dir");
+    }
+};
+
+TEST(FileRW, SIFTrwTest) {
     Mat mat1({2, 4}, {1, 2, 3, 4, 5, 6, 7, 8});
     Mat mat2({3, 2}, {10, 11, 12, 13, 14, 15});
 
@@ -35,8 +50,9 @@ TEST(DatabaseSuite, SIFTrwTest) {
     EXPECT_TRUE(equal(result.begin(), result.end(), loaded.begin()));
 }
 
-TEST(DatabaseSuite, FileDatabase) {
-    FileDatabase db(std::make_unique<LazyStorageStrategy>(), RuntimeArguments{200, 20});
+TEST_F(DatabaseSuite, FileDatabase) {
+    FileDatabase db(fs::current_path() / "database_test_dir",
+        std::make_unique<LazyStorageStrategy>(), RuntimeArguments{200, 20, 0.2});
     auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
     
     auto vid = db.saveVideo(video)->frames();
@@ -52,12 +68,14 @@ TEST(DatabaseSuite, FileDatabase) {
     EXPECT_TRUE(equal(vid.begin(), vid.end(), loaded.begin()));
 }
 
-TEST(DatabaseSuite, EagerDatabase) {
-    FileDatabase db(std::make_unique<AggressiveStorageStrategy>(), RuntimeArguments{200, 20});
+TEST_F(DatabaseSuite, EagerDatabase) {
+    FileDatabase db(fs::current_path() / "database_test_dir", 
+        std::make_unique<AggressiveStorageStrategy>(), RuntimeArguments{200, 20, 0.2});
     auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
     
     auto vid = db.saveVideo(video);
     auto loaded_ptr = db.loadVideo("sample.mp4");
+    saveVocabulary(constructFrameVocabulary(db, db.getConfig().KFrames, 10), db);
 
     ASSERT_TRUE(loaded_ptr);
 
