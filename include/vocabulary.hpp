@@ -9,6 +9,8 @@
 #include "instrumentation.hpp"
 #include <boost/iterator/transform_iterator.hpp>
 
+#define FRAMES_PER_SCENE  45
+
 template <class T, class RankType>
 struct sortable{
     RankType rank;
@@ -90,15 +92,22 @@ auto flatScenes(Video& video, Cmp&& comp, double threshold){
 
     index_t last = 0;
 
-    for(int i = 1; i < frames.size(); i++) {
-        if(double fs = comp(frames[i], frames[i - 1]); fs < threshold){
-            if(!frames[i].descriptors.empty()){ // do not include black frames
-                retval.push_back({last, i});
-                last = i;
-            }
-        } else {
-            // std::cout << "i: " << i << "sim: " << fs << std::endl;
-        }
+    // for(int i = 1; i < frames.size(); i++) {
+    //     if(double fs = comp(frames[i], frames[i - 1]); fs < threshold){
+    //         if(!frames[i].descriptors.empty()){ // do not include black frames
+    //             retval.push_back({last, i});
+    //             last = i;
+    //         }
+    //     } else {
+    //         // std::cout << "i: " << i << "sim: " << fs << std::endl;
+    //     }
+    // }
+
+    for(int i = FRAMES_PER_SCENE - 1; i < frames.size(); i+=FRAMES_PER_SCENE) {
+        while (frames[i].descriptors.empty() && i < frames.size()) { i++; }
+        if (i == frames.size()) { break; }
+        retval.push_back({last, i});
+        last = i;
     }
     if(!frames.back().descriptors.empty()){ // do not include black frames
         retval.push_back({last, frames.size()});
