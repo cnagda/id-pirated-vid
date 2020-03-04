@@ -166,7 +166,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
 
     while (cap.read(image))
     { // test only loading 2 frames
-        if(!(++index % 10)){
+        if(!(++index % 40)){
             std::cout << "Frame " << index << "/" << num_frames << std::endl;
         }
 
@@ -327,6 +327,7 @@ std::vector<std::unique_ptr<IScene>>& DatabaseVideo::getScenes() & {
             }
             auto comp = BOWComparator(vocab->descriptors());
             auto ss = flatScenes(*this, comp, config.threshold);
+            std::cout << "Found " << ss.size() << " scenes, serializing now" << std::endl;
             boost::push_back(sceneCache, ss
             | boost::adaptors::transformed([](auto scene){
                 return SerializableScene{scene.first, scene.second};
@@ -368,6 +369,8 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
 
     auto comp = BOWComparator(vocab->descriptors());
     auto scenes = flatScenes(video, comp, config.threshold);
+
+    std::cout << "Found " << scenes.size() << " scenes, serializing now" << std::endl;
 
     if(!scenes.empty()) {
         SIFTVideo::size_type index = 0;

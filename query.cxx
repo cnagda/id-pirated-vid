@@ -36,12 +36,21 @@ int main(int argc, char** argv )
     }
 
     auto& fd = *database_factory(argv[DBPATH], -1, -1, -1).release();
-
-    auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo(argv[VIDPATH]), fs::path(argv[VIDPATH]).filename());
+    std::string videoname = fs::path(argv[VIDPATH]).filename();
+    auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo(argv[VIDPATH]), videoname);
     auto video2 = make_query_adapter(fd, video, "totallydifferenttestvid.mp4");
     auto match = findMatch(video2, fd);
     if(match) {
-        std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;
+        std::cout << std::endl << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl<<std::endl;
+        int count = 0;
+        for (auto a : match->alignments) {
+            if (a.score >= match->matchConfidence / 4) {
+                count++;
+                std::cout << "Alignment " << count << ", Score: " << a.score << std::endl;
+                std::cout << "Scene range in " << match->video << ": [" << a.startKnown << ", " << a.endKnown << ")" << std::endl;
+                std::cout << "Scene range in " << videoname << ": [" << a.startUnknown << ", " << a.endUnknown << ")" << std::endl<<std::endl;
+            }
+        }
     }
 
     // namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.

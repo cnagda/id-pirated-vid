@@ -16,6 +16,7 @@ struct MatchInfo {
     double matchConfidence;
     IVideo::size_type startFrame, endFrame;
     std::string video;
+    std::vector<Alignment> alignments;
 };
 
 template<typename Matrix>
@@ -28,7 +29,7 @@ double cosineSimilarity(Matrix&& b1, Matrix&& b2) {
     return b1.dot(b2)/(sqrt(b1n * b2n) + 1e-10);
 }
 
-template<typename Extractor> 
+template<typename Extractor>
 double frameSimilarity(const Frame& f1, const Frame& f2, Extractor&& extractor){
     auto b1 = extractor(f1), b2 = extractor(f2);
 
