@@ -303,7 +303,14 @@ public:
 
 
     size_type frameCount() override { return frames().size(); };
-    std::vector<Frame>& frames() & override { return frameCache; };
+    std::vector<Frame>& frames() & override { 
+        if(frameCache.empty()) {
+            auto loader = db.getFileLoader();
+            IVideo::size_type index = 0;
+            while(auto frame = loader.readFrame(name, index++)) frameCache.push_back(frame.value());
+        }
+        return frameCache; 
+    };
 
     std::vector<std::unique_ptr<IScene>>& getScenes() & override;
 };
