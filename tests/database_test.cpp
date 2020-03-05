@@ -18,6 +18,9 @@ TEST(DatabaseSuite, getAlphas) {
 
 class DatabaseSuite : public ::testing::Test {
 protected:
+    static void SetUpTestSuite() {
+        input = getSIFTVideo("../sample.mp4");
+    }
     void SetUp() override {
         try { 
             fs::remove_all(fs::current_path() / "database_test_dir");
@@ -27,7 +30,11 @@ protected:
 
         fs::create_directories(fs::current_path() / "database_test_dir");
     }
+
+    static SIFTVideo input;
 };
+
+SIFTVideo DatabaseSuite::input;
 
 TEST(FileRW, SIFTrwTest) {
     Mat mat1({2, 4}, {1, 2, 3, 4, 5, 6, 7, 8});
@@ -55,7 +62,7 @@ TEST_F(DatabaseSuite, FileDatabase) {
         std::make_unique<LazyStorageStrategy>(), 
         LazyLoadStrategy{},
         RuntimeArguments{200, 20, 0.2});
-    auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
+    auto video = make_video_adapter(input, "sample.mp4");
     
     auto vid = db.saveVideo(video)->frames();
     auto loaded_ptr = db.loadVideo("sample.mp4");
@@ -75,11 +82,22 @@ TEST_F(DatabaseSuite, EagerDatabase) {
         std::make_unique<AggressiveStorageStrategy>(), 
         AggressiveLoadStrategy{},
         RuntimeArguments{200, 20, 0.2});
-    auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
-    
-    auto vid = db.saveVideo(video);
-    auto loaded_ptr = db.loadVideo("sample.mp4");
+
+    auto in = make_video_adapter(input, "sample.mp4");
+    auto in_saved = db.saveVideo(in);
     saveVocabulary(constructFrameVocabulary(db, db.getConfig().KFrames, 10), db);
+
+    auto vid = db.saveVideo(*in_saved);
+    EXPECT_GT(vid->getScenes().size(), 0);
+    EXPECT_TRUE(vid->getScenes()[0].frameBag.empty());
+
+    saveVocabulary(constructSceneVocabulary(db, db.getConfig().KScenes), db);
+
+    auto vid_3 = db.saveVideo(*vid);
+
+    EXPECT_FALSE(vid_3->getScenes()[0].frameBag.empty());
+
+    auto loaded_ptr = db.loadVideo("sample.mp4");
 
     ASSERT_TRUE(loaded_ptr);
 

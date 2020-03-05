@@ -17,7 +17,7 @@ protected:
         }
 
         db = std::make_unique<FileDatabase>(fs::current_path() / "database_test_dir", 
-            std::make_unique<LazyStorageStrategy>(),
+            std::make_unique<AggressiveStorageStrategy>(),
             LazyLoadStrategy{},
             RuntimeArguments{200, 20, 0.15});
 

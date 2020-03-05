@@ -1,6 +1,7 @@
 #include "vocabulary.hpp"
 #include "matcher.hpp"
 #include "database.hpp"
+#include "subset.hpp"
 #include <chrono>
 
 namespace fs = std::experimental::filesystem;

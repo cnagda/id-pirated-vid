@@ -3,11 +3,18 @@
 
 #include "concepts.hpp"
 #include <iostream>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/mat.hpp>
+#include <opencv2/features2d.hpp>
 #include <string>
-#include "database_iface.hpp"
-#include "instrumentation.hpp"
 #include <boost/iterator/transform_iterator.hpp>
+#include <type_traits>
+#include "frame.hpp"
+#include "vocab_type.hpp"
+#include "scene.hpp"
+
+class SerializableScene;
+class FileDatabase;
 
 template <class T, class RankType>
 struct sortable{
@@ -39,7 +46,7 @@ cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = c
 }
 
 Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
-Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
+Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
 
 template<typename Matrix, typename Vocab>
 cv::Mat baggify(Matrix&& f, Vocab&& vocab) {
@@ -68,17 +75,17 @@ cv::Mat baggify(It rangeBegin, It rangeEnd, Vocab&& vocab) {
     cv::Mat accumulator;
     for(auto i = rangeBegin; i != rangeEnd; ++i)
         accumulator.push_back(*i);
-    return baggify(accumulator, vocab);
+    return baggify(accumulator, std::forward<Vocab>(vocab));
 }
 
 template<typename It, typename Vocab>
 inline cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
-    return baggify(pair.first, pair.second, vocab);
+    return baggify(pair.first, pair.second, std::forward<Vocab>(vocab));
 }
 
 template<class Video, typename Cmp>
 auto flatScenes(Video& video, Cmp&& comp, double threshold){
-    typedef IVideo::size_type index_t;
+    typedef typename std::decay_t<Video>::size_type index_t;
     std::cout << "In flatScenes" << std::endl;
 
     std::vector<std::pair<index_t, index_t>> retval;
@@ -148,54 +155,76 @@ inline std::vector<cv::Mat> flatScenesBags(Video &video, Cmp&& comp, double thre
     return flatScenesBags(video, ss.begin(), ss.end(), frameVocab);
 }
 
-void visualizeSubset(std::string fname, const std::vector<int>& subset = {});
-
-template<typename RangeIt>
-std::enable_if_t<is_pair_iterator_v<RangeIt>, void>
-visualizeSubset(std::string fname, RangeIt begin, RangeIt end) {
-    std::vector<int> subset;
-    for(auto i = begin; i < end; i++)
-        for(auto j = begin->first; j < begin->second; j++)
-        subset.push_back(j);
-
-    visualizeSubset(fname, subset);
+template<typename V, typename Db>
+bool saveVocabulary(V&& vocab, Db&& db) {
+    return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name);
 }
 
-template<typename It>
-std::enable_if_t<!is_pair_iterator_v<It>, void>
-visualizeSubset(std::string fname, It begin, It end) {
-    auto size = std::distance(begin, end);
-    std::cout << "In visualise subset" << std::endl;
+template<typename V, typename Db>
+std::optional<V> loadVocabulary(Db&& db) {
+    auto v = db.loadVocab(V::vocab_name);
+    if(v) {
+        return V(v.value());
+    }
+    return std::nullopt;
+}
 
-    using namespace cv;
-
-    namedWindow("Display window", WINDOW_NORMAL );
-
-    VideoCapture cap(fname, CAP_ANY);
-
-    int count = -1;
-    int index = 0;
-    Mat image;
-
-    while(cap.read(image)){
-        ++count;
-        if(size && count != begin[index]){
-            continue;
+template<typename V, typename Db>
+std::optional<V> loadOrComputeVocab(Db&& db, int K) {
+    auto vocab = loadVocabulary<V>(std::forward<Db>(db));
+    if(!vocab) {
+        if(K == -1) {
+            return std::nullopt;
         }
 
-        index++;
-        if(index >= size){
-            index = 0;
+        V v;
+        if constexpr(std::is_same_v<typename V::vocab_type, Frame>) {
+            v = constructFrameVocabulary(db, K, 10);
+        } else if constexpr(std::is_base_of_v<typename V::vocab_type, SerializableScene>) {
+            v = constructSceneVocabulary(db, K);
         }
-        imshow("Display window", image);
-        waitKey(0);
-    };
-    destroyWindow("Display window");
+        saveVocabulary(std::forward<V>(v), std::forward<Db>(db));
+        return v;
+    }
+    return vocab.value();
 }
 
 
-inline void visualizeSubset(std::string fname, const std::vector<int>& subset){
-    visualizeSubset(fname, subset.begin(), subset.end());
+template<class Vocab>
+cv::Mat loadFrameDescriptor(Frame& frame, Vocab&& vocab) {
+    if(frame.frameDescriptor.empty()) {
+        frame.frameDescriptor = getFrameDescriptor(frame, std::forward<Vocab>(vocab));
+    }
+    return frame.frameDescriptor;
+}
+
+template<class Vocab>
+inline cv::Mat getFrameDescriptor(const Frame& frame, Vocab&& vocab) {   
+    return baggify(frame.descriptors, std::forward<Vocab>(vocab));
+}
+
+template<class Video, class DB>
+cv::Mat getSceneDescriptor(const SerializableScene& scene, Video&& video, DB&& database) {
+    auto frames = scene.getFrameRange(std::forward<Video>(video));
+    auto vocab = loadVocabulary<Vocab<Frame>>(std::forward<DB>(database));
+    auto frameVocab = loadVocabulary<Vocab<SerializableScene>>(std::forward<DB>(database));
+    if(!vocab | !frameVocab) {
+        return scene.frameBag;
+    }
+    auto access = [vocab = vocab->descriptors()](auto frame){ return getFrameDescriptor(frame, vocab); };
+    return baggify(
+        boost::make_transform_iterator(frames.first, access),
+        boost::make_transform_iterator(frames.second, access),
+        frameVocab->descriptors());
+}
+
+template<class Video, class DB>
+cv::Mat loadSceneDescriptor(SerializableScene& scene, Video&& video, DB&& db) {
+    if(scene.frameBag.empty()) {
+        scene.frameBag = getSceneDescriptor(scene, std::forward<Video>(video), std::forward<DB>(db));
+    }
+    
+    return scene.frameBag;
 }
 
 #endif

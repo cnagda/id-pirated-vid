@@ -3,72 +3,18 @@
 #include "frame.hpp"
 #include <vector>
 #include <memory>
-#include <string>
-#include <opencv2/opencv.hpp>
-#include <functional>
+#include <opencv2/core/mat.hpp>
 #include <experimental/filesystem>
-#include <type_traits>
 #include <optional>
 #include "database_iface.hpp"
-#include "vocabulary.hpp"
-#include <boost/range/algorithm.hpp>
-#include <boost/range/adaptor/transformed.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
-#include "matcher.hpp"
-#include <fstream>
+#include "vocab_type.hpp"
 #include <variant>
-
-#define CONFIG_FILE
 
 namespace fs = std::experimental::filesystem;
 
-class SIFTVideo;
-
-void SIFTwrite(const std::string& filename, const Frame& frame);
-Frame SIFTread(const std::string& filename);
-
-void SceneWrite(const std::string& filename, const SerializableScene& frame);
-SerializableScene SceneRead(const std::string& filename);
-
 std::string getAlphas(const std::string& input);
 void createFolder(const std::string& folder_name);
-SIFTVideo getSIFTVideo(const std::string& filename, std::function<void(cv::Mat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
 cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight);
-
-
-template<typename V, typename Db>
-bool saveVocabulary(V&& vocab, Db&& db) {
-    return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name);
-}
-
-template<typename V, typename Db>
-std::optional<V> loadVocabulary(Db&& db) {
-    auto v = db.loadVocab(V::vocab_name);
-    if(v) {
-        return V(v.value());
-    }
-    return std::nullopt;
-}
-
-template<typename V, typename Db>
-std::optional<V> loadOrComputeVocab(Db&& db, int K) {
-    auto vocab = loadVocabulary<V>(std::forward<Db>(db));
-    if(!vocab) {
-        if(K == -1) {
-            return std::nullopt;
-        }
-
-        V v;
-        if constexpr(std::is_same_v<typename V::vocab_type, Frame>) {
-            v = constructFrameVocabulary(db, K, 10);
-        } else if constexpr(std::is_base_of_v<typename V::vocab_type, IScene>) {
-            v = constructSceneVocabulary(db, K);
-        }
-        saveVocabulary(std::forward<V>(v), std::forward<Db>(db));
-        return v;
-    }
-    return vocab.value();
-}
 
 struct RuntimeArguments {
     int KScenes;
@@ -80,59 +26,28 @@ struct Configuration {
     int KScenes;
     int KFrames;
     double threshold;
-    StrategyType strategy;
+    StrategyType storageStrategy, loadStrategy;
 
     Configuration() : KScenes(-1), KFrames(-1), threshold(-1) {};
-    Configuration(const RuntimeArguments& args, StrategyType type)
-        : KScenes(args.KScenes), KFrames(args.KFrame), threshold(args.threshold), strategy(type) {};
-};
-
-struct SIFTVideo {
-    using size_type = std::vector<Frame>::size_type;
-
-    std::vector<Frame> SIFTFrames;
-    SIFTVideo(const std::vector<Frame>& frames) : SIFTFrames(frames) {};
-    SIFTVideo(std::vector<Frame>&& frames) : SIFTFrames(frames) {};
-    std::vector<Frame>& frames() & { return SIFTFrames; };
-    size_type frameCount() { return SIFTFrames.size(); };
+    Configuration(const RuntimeArguments& args, StrategyType storage, StrategyType load)
+        : KScenes(args.KScenes), KFrames(args.KFrame), threshold(args.threshold), 
+        storageStrategy(storage), loadStrategy(load) {};
 };
 
 template<typename Base>
 class InputVideoAdapter : public IVideo {
 private:
-    Base base;
-    std::vector<std::unique_ptr<IScene>> emptyScenes;
+    typename std::decay_t<Base> base;
+    std::vector<SerializableScene> emptyScenes;
 public:
-    using size_type = typename Base::size_type;
+    using size_type = typename std::decay_t<Base>::size_type;
 
     explicit InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
-    explicit InputVideoAdapter(const Base& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
     InputVideoAdapter(IVideo&& vid) : IVideo(vid), base(vid.frames()) {};
     InputVideoAdapter(IVideo& vid) : IVideo(vid), base(vid.frames()) {};
     size_type frameCount() override { return base.frameCount(); };
     std::vector<Frame>& frames() & override { return base.frames(); };
-    std::vector<std::unique_ptr<IScene>>& getScenes() & override { return emptyScenes; }
-};
-
-struct SerializableScene {
-    cv::Mat frameBag;
-    SIFTVideo::size_type startIdx, endIdx;
-    explicit SerializableScene(SIFTVideo::size_type startIdx, SIFTVideo::size_type endIdx) :
-        startIdx(startIdx), endIdx(endIdx), frameBag() {};
-    explicit SerializableScene(const cv::Mat& matrix, SIFTVideo::size_type startIdx, SIFTVideo::size_type endIdx) :
-        startIdx(startIdx), endIdx(endIdx), frameBag(matrix) {};
-
-    template<typename Video>
-    auto getFrameRange(Video& video) const {
-        auto& frames = video.frames();
-        return getFrameRange(frames.begin(), 
-        typename std::iterator_traits<decltype(frames.begin())>::iterator_category());
-    };
-
-    template<typename It>
-    auto getFrameRange(It begin, std::random_access_iterator_tag) const {
-        return std::make_pair(begin + startIdx, begin + endIdx);
-    };
+    std::vector<SerializableScene>& getScenes() & override { return emptyScenes; }
 };
 
 class FileLoader {
@@ -177,9 +92,13 @@ public:
     inline bool shouldBaggifyScenes(IVideo& video) override { return false; };
 };
 
-class AggressiveLoadStrategy {};
+struct AggressiveLoadStrategy {
+    constexpr operator StrategyType() { return Eager; };
+};
 
-class LazyLoadStrategy {};
+struct LazyLoadStrategy {
+    constexpr operator StrategyType() { return Lazy; };
+};
 
 class FileDatabase {
 private:
@@ -189,37 +108,14 @@ private:
     Configuration config;
     FileLoader loader;
 
-    typedef std::variant<LazyLoadStrategy, AggressiveLoadStrategy> LoadStrategy;
+    typedef StrategyType LoadStrategy;
     LoadStrategy loadStrategy;
 public:
     explicit FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args) :
     FileDatabase(fs::current_path() / "database", std::move(strat), l, args) {};
 
     explicit FileDatabase(const std::string& databasePath,
-        std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args)
-        : strategy(std::move(strat)), loadStrategy(l), config(args, strategy->getType()), databaseRoot(databasePath),
-        loader(databasePath) {
-            if(!fs::exists(databaseRoot)) {
-                fs::create_directories(databaseRoot);
-            }
-            Configuration configFromFile;
-            std::ifstream reader(databaseRoot / "config.bin", std::ifstream::binary);
-            if(reader.is_open()) {
-                reader.read((char*)&configFromFile, sizeof(configFromFile));
-                if(config.threshold == -1) {
-                    config.threshold = configFromFile.threshold;
-                }
-                if(config.KScenes == -1) {
-                    config.KScenes = configFromFile.KScenes;
-                }
-                if(config.KFrames == -1) {
-                    config.KFrames = configFromFile.KFrames;
-                }
-            }
-
-            std::ofstream writer(databaseRoot / "config.bin", std::ofstream::binary);
-            writer.write((char*)&config, sizeof(config));
-        };
+        std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args);
 
     std::unique_ptr<IVideo> saveVideo(IVideo& video);
     std::unique_ptr<IVideo> loadVideo(const std::string& key = "") const;
@@ -232,59 +128,9 @@ public:
     std::optional<ContainerVocab> loadVocab(const std::string& key) const;
 };
 
-
-class DatabaseScene : public IScene {
-    static_assert(std::is_convertible_v<std::unique_ptr<DatabaseScene>, std::unique_ptr<IScene>>, "not convertible");
-    std::vector<Frame> frames;
-    cv::Mat descriptorCache;
-    IVideo& video;
-    const FileDatabase& database;
-    SIFTVideo::size_type startIdx, endIdx;
-
-public:
-    DatabaseScene() = delete;
-
-    explicit DatabaseScene(IVideo& video, const FileDatabase& database, const SerializableScene& scene) :
-    video(video), database(database), startIdx(scene.startIdx), endIdx(scene.endIdx), frames(), descriptorCache(scene.frameBag) {};
-
-    const cv::Mat& descriptor() override {
-        if(descriptorCache.empty()) {
-            auto& frames = getFrames();
-            auto vocab = loadVocabulary<Vocab<Frame>>(database);
-            auto frameVocab = loadVocabulary<Vocab<IScene>>(database);
-            if(!vocab | !frameVocab) {
-                throw std::runtime_error("Scene couldn't get a frame vocabulary");
-            }
-            auto access = [vocab = vocab->descriptors()](auto frame){ return baggify(frame.descriptors, vocab); };
-            descriptorCache = baggify(
-                boost::make_transform_iterator(frames.begin(), access),
-                boost::make_transform_iterator(frames.end(), access),
-                frameVocab->descriptors());
-        }
-
-        return descriptorCache;
-    }
-
-    auto getFrameRange() const {
-        auto& frames = video.frames();
-        return std::make_pair(frames.begin() + startIdx, frames.begin() + endIdx);
-    }
-
-    const std::vector<Frame>& getFrames() override {
-        if(frames.empty()) {
-            boost::push_back(frames, getFrameRange());
-        }
-        return frames;
-    }
-
-    operator SerializableScene() override {
-        return SerializableScene{descriptorCache, startIdx, endIdx};
-    }
-};
-
 class DatabaseVideo : public IVideo {
     const FileDatabase& db;
-    std::vector<std::unique_ptr<IScene>> sceneCache;
+    std::vector<SerializableScene> sceneCache;
     std::vector<Frame> frameCache;
 public:
     DatabaseVideo() = delete;
@@ -295,37 +141,26 @@ public:
     explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<SerializableScene> scenes) :
     DatabaseVideo(database, key, {}, scenes) {};
     explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key),
-    db(database), frameCache(frames), sceneCache() {
-        boost::push_back(sceneCache, scenes | boost::adaptors::transformed(
-            [this](auto scene){ return std::make_unique<DatabaseScene>(*this, db, scene); }
-        ));
-    };
+    db(database), frameCache(frames), sceneCache(scenes) {};
 
 
-    size_type frameCount() override { return frames().size(); };
-    std::vector<Frame>& frames() & override { 
-        if(frameCache.empty()) {
-            auto loader = db.getFileLoader();
-            IVideo::size_type index = 0;
-            while(auto frame = loader.readFrame(name, index++)) frameCache.push_back(frame.value());
-        }
-        return frameCache; 
-    };
+    inline size_type frameCount() override { return frameCache.size(); };
+    std::vector<Frame>& frames() & override;
 
-    std::vector<std::unique_ptr<IScene>>& getScenes() & override;
+    std::vector<SerializableScene>& getScenes() & override;
 };
 
 inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene, double threshold) {
     return std::make_unique<FileDatabase>(dbPath,
         std::make_unique<AggressiveStorageStrategy>(),
-        AggressiveLoadStrategy{},
+        LazyLoadStrategy{},
         RuntimeArguments{KScene, KFrame, threshold});
 }
 
 inline std::unique_ptr<FileDatabase> query_database_factory(const std::string& dbPath, int KFrame, int KScene, double threshold) {
     return std::make_unique<FileDatabase>(dbPath,
-        std::make_unique<AggressiveStorageStrategy>(),
-        LazyLoadStrategy{},
+        std::make_unique<LazyStorageStrategy>(),
+        AggressiveLoadStrategy{},
         RuntimeArguments{KScene, KFrame, threshold});
 }
 
