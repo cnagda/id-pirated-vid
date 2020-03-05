@@ -100,7 +100,7 @@ int main(int argc, char** argv )
                 std::cerr << "not enough info to compute scenes" << std::endl;
                 break;
             }
-            
+
         }
     }
 

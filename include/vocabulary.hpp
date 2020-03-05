@@ -103,8 +103,8 @@ auto flatScenes(Video& video, Cmp&& comp, double threshold){
     //     }
     // }
 
-    for(int i = FRAMES_PER_SCENE - 1; i < frames.size(); i+=FRAMES_PER_SCENE) {
-        while (frames[i].descriptors.empty() && i < frames.size()) { i++; }
+    for(int i = FRAMES_PER_SCENE - 1; i < frames.size() - FRAMES_PER_SCENE; i+=FRAMES_PER_SCENE) {
+        while (frames[i].descriptors.empty() && i < frames.size() - FRAMES_PER_SCENE) { i++; }
         if (i == frames.size()) { break; }
         retval.push_back({last, i});
         last = i;
