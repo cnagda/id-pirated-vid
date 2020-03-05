@@ -5,6 +5,7 @@
 #include <string>
 #include "database.hpp"
 #include "matcher.hpp"
+#include <future>
 
 #define DBPATH      1
 #define VIDPATH     2
@@ -82,7 +83,15 @@ int main(int argc, char** argv )
     }
 
     if(shouldRecalculateFrames) {
-        for(auto v : db->listVideos()) {
+        for(auto entry : fs::directory_iterator(argv[DBPATH])) {
+            if(fs::is_directory(entry) && fs::exists(entry.path() / "scenes")) {
+                fs::remove_all(entry.path() / "scenes");
+            }
+        }
+
+        std::shared_ptr db_shared(std::move(db));
+
+        auto func = [](auto v, auto db) -> void {
             auto video = db->loadVideo(v);
             try {
                 auto& scenes = video->getScenes();
@@ -94,13 +103,20 @@ int main(int argc, char** argv )
                         break;
                     }
                 }
-
                 db->saveVideo(*video);
             } catch(...) {
                 std::cerr << "not enough info to compute scenes" << std::endl;
-                break;
             }
-            
+        };
+
+        std::vector<std::future<void>> runners;
+
+        for(auto v : db_shared->listVideos()) {
+            runners.push_back(std::async(std::launch::async, func, v, db_shared));
+        }
+
+        for(auto& i : runners) {
+            i.wait();
         }
     }
 
