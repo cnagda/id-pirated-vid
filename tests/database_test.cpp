@@ -86,11 +86,11 @@ TEST_F(DatabaseSuite, EagerDatabase) {
     auto& loaded = loaded_ptr->frames();
     cout << "size: " << vid->frames().size() << endl;
 
-    EXPECT_TRUE(vid->frames().size() > 0);
-    EXPECT_TRUE(vid->frames().size() == loaded.size());
+    EXPECT_GT(vid->frames().size(), 0);
+    EXPECT_EQ(vid->frames().size(), loaded.size());
     EXPECT_TRUE(equal(vid->frames().begin(), vid->frames().end(), loaded.begin()));
 
-    EXPECT_TRUE(vid->getScenes().size() > 0);
-    EXPECT_TRUE(vid->getScenes().size() == loaded_ptr->getScenes().size());
+    EXPECT_GT(vid->getScenes().size(), 0);
+    EXPECT_EQ(vid->getScenes().size(), loaded_ptr->getScenes().size());
     // EXPECT_TRUE(equal(vid->getScenes().begin(), vid->getScenes().end(), loaded_ptr->getScenes().begin()));
 }

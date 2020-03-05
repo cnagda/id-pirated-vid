@@ -58,7 +58,7 @@ TEST_F(DatabaseFixture, InDatabase) {
     auto match = findMatch(*video, *db);
     ASSERT_TRUE(match.has_value());
     auto topMatch = match.value();
-    EXPECT_TRUE(topMatch.video == video->name);
-    EXPECT_TRUE(topMatch.startFrame == 0);
-    EXPECT_TRUE(topMatch.endFrame == video->getScenes().size());
+    EXPECT_EQ(topMatch.video, video->name);
+    EXPECT_EQ(topMatch.startFrame, 0);
+    EXPECT_EQ(topMatch.endFrame, video->getScenes().size());
 }
