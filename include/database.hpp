@@ -16,6 +16,7 @@
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include "matcher.hpp"
 #include <fstream>
+#include <variant>
 
 #define CONFIG_FILE
 
@@ -79,10 +80,10 @@ struct Configuration {
     int KScenes;
     int KFrames;
     double threshold;
-    SaveStrategyType strategy;
+    StrategyType strategy;
 
     Configuration() : KScenes(-1), KFrames(-1), threshold(-1) {};
-    Configuration(const RuntimeArguments& args, SaveStrategyType type)
+    Configuration(const RuntimeArguments& args, StrategyType type)
         : KScenes(args.KScenes), KFrames(args.KFrame), threshold(args.threshold), strategy(type) {};
 };
 
@@ -162,7 +163,7 @@ public:
 
 class AggressiveStorageStrategy : public IVideoStorageStrategy {
 public:
-    inline SaveStrategyType getType() const { return Eager; };
+    inline StrategyType getType() const { return Eager; };
     inline bool shouldBaggifyFrames(IVideo& video) override { return true; };
     inline bool shouldComputeScenes(IVideo& video) override { return true; };
     inline bool shouldBaggifyScenes(IVideo& video) override { return true; };
@@ -170,11 +171,15 @@ public:
 
 class LazyStorageStrategy : public IVideoStorageStrategy {
 public:
-    inline SaveStrategyType getType() const { return Lazy; };
+    inline StrategyType getType() const { return Lazy; };
     inline bool shouldBaggifyFrames(IVideo& video) override { return false; };
     inline bool shouldComputeScenes(IVideo& video) override { return false; };
     inline bool shouldBaggifyScenes(IVideo& video) override { return false; };
 };
+
+class AggressiveLoadStrategy {};
+
+class LazyLoadStrategy {};
 
 class FileDatabase {
 private:
@@ -183,13 +188,16 @@ private:
     std::unique_ptr<IVideoStorageStrategy> strategy;
     Configuration config;
     FileLoader loader;
+
+    typedef std::variant<LazyLoadStrategy, AggressiveLoadStrategy> LoadStrategy;
+    LoadStrategy loadStrategy;
 public:
-    explicit FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args) :
-    FileDatabase(fs::current_path() / "database", std::move(strat), args) {};
+    explicit FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args) :
+    FileDatabase(fs::current_path() / "database", std::move(strat), l, args) {};
 
     explicit FileDatabase(const std::string& databasePath,
-        std::unique_ptr<IVideoStorageStrategy>&& strat, RuntimeArguments args)
-        : strategy(std::move(strat)), config(args, strategy->getType()), databaseRoot(databasePath),
+        std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args)
+        : strategy(std::move(strat)), loadStrategy(l), config(args, strategy->getType()), databaseRoot(databasePath),
         loader(databasePath) {
             if(!fs::exists(databaseRoot)) {
                 fs::create_directories(databaseRoot);
@@ -207,16 +215,6 @@ public:
                 if(config.KFrames == -1) {
                     config.KFrames = configFromFile.KFrames;
                 }
-            }
-
-            if(args.threshold != -1
-                || args.KFrame != -1
-                || args.KScenes != -1) {
-                    for(auto entry : fs::directory_iterator(databaseRoot)) {
-                        if(fs::is_directory(entry) && fs::exists(entry.path() / "scenes")) {
-                            fs::remove_all(entry.path() / "scenes");
-                        }
-                    }
             }
 
             std::ofstream writer(databaseRoot / "config.bin", std::ofstream::binary);
@@ -251,7 +249,7 @@ public:
 
     const cv::Mat& descriptor() override {
         if(descriptorCache.empty()) {
-            auto frames = getFrames();
+            auto& frames = getFrames();
             auto vocab = loadVocabulary<Vocab<Frame>>(database);
             auto frameVocab = loadVocabulary<Vocab<IScene>>(database);
             if(!vocab | !frameVocab) {
@@ -290,8 +288,12 @@ class DatabaseVideo : public IVideo {
     std::vector<Frame> frameCache;
 public:
     DatabaseVideo() = delete;
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) : IVideo(key),
-    db(database), frameCache(frames), sceneCache() {};
+    explicit DatabaseVideo(const FileDatabase& database, const std::string& key) : 
+    DatabaseVideo(database, key, {}, {}) {};
+    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) :
+    DatabaseVideo(database, key, frames, {}) {};
+    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<SerializableScene> scenes) :
+    DatabaseVideo(database, key, {}, scenes) {};
     explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key),
     db(database), frameCache(frames), sceneCache() {
         boost::push_back(sceneCache, scenes | boost::adaptors::transformed(
@@ -309,6 +311,14 @@ public:
 inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene, double threshold) {
     return std::make_unique<FileDatabase>(dbPath,
         std::make_unique<AggressiveStorageStrategy>(),
+        AggressiveLoadStrategy{},
+        RuntimeArguments{KScene, KFrame, threshold});
+}
+
+inline std::unique_ptr<FileDatabase> query_database_factory(const std::string& dbPath, int KFrame, int KScene, double threshold) {
+    return std::make_unique<FileDatabase>(dbPath,
+        std::make_unique<AggressiveStorageStrategy>(),
+        LazyLoadStrategy{},
         RuntimeArguments{KScene, KFrame, threshold});
 }
 

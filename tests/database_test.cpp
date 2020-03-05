@@ -52,7 +52,9 @@ TEST(FileRW, SIFTrwTest) {
 
 TEST_F(DatabaseSuite, FileDatabase) {
     FileDatabase db(fs::current_path() / "database_test_dir",
-        std::make_unique<LazyStorageStrategy>(), RuntimeArguments{200, 20, 0.2});
+        std::make_unique<LazyStorageStrategy>(), 
+        LazyLoadStrategy{},
+        RuntimeArguments{200, 20, 0.2});
     auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
     
     auto vid = db.saveVideo(video)->frames();
@@ -70,7 +72,9 @@ TEST_F(DatabaseSuite, FileDatabase) {
 
 TEST_F(DatabaseSuite, EagerDatabase) {
     FileDatabase db(fs::current_path() / "database_test_dir", 
-        std::make_unique<AggressiveStorageStrategy>(), RuntimeArguments{200, 20, 0.2});
+        std::make_unique<AggressiveStorageStrategy>(), 
+        AggressiveLoadStrategy{},
+        RuntimeArguments{200, 20, 0.2});
     auto video = make_video_adapter(getSIFTVideo("../sample.mp4"), "sample.mp4");
     
     auto vid = db.saveVideo(video);

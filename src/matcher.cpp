@@ -13,7 +13,8 @@ Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int
     cv::Mat descriptors;
 
     for(auto video : database.listVideos()) {
-        auto frames = database.loadVideo(video)->frames();
+        auto v = database.loadVideo(video);
+        auto &frames = v->frames();
         for(auto i = frames.begin(); i < frames.end(); i += speedinator)
                 descriptors.push_back(i->descriptors);
     }
@@ -31,7 +32,8 @@ Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned in
     cv::Mat descriptors;
 
     for(auto video : database.listVideos()) {
-        auto frames = database.loadVideo(video)->frames();
+        auto v = database.loadVideo(video);
+        auto& frames = v->frames();
         for(auto i = frames.begin(); i < frames.end(); i += speedinator)
             descriptors.push_back(baggify(i->descriptors, d));
     }

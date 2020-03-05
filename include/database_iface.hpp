@@ -45,19 +45,28 @@ public:
     virtual const T& getValue() const & = 0;
 };
 
-enum SaveStrategyType {
+enum StrategyType {
     Lazy,
     Eager
 };
 
 class IVideoStorageStrategy {
 public:
-    virtual SaveStrategyType getType() const = 0;
+    virtual StrategyType getType() const = 0;
     virtual bool shouldBaggifyFrames(IVideo& video) = 0;
     virtual bool shouldComputeScenes(IVideo& video) = 0;
     virtual bool shouldBaggifyScenes(IVideo& video) = 0;
     virtual ~IVideoStorageStrategy() = default;
 };
+
+/* templated thing
+class IVideoLoadStrategy {
+public:
+    static StrategyType getType() = 0;
+    static bool shouldLoadFrames() = 0;
+    static bool shouldLoadScenes() = 0;
+}; 
+*/
 
 
 class ContainerVocab {

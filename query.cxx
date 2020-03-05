@@ -35,7 +35,7 @@ int main(int argc, char** argv )
         return -1;
     }
 
-    auto& fd = *database_factory(argv[DBPATH], -1, -1, -1).release();
+    auto& fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
     std::string videoname = fs::path(argv[VIDPATH]).filename();
     auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo(argv[VIDPATH]), videoname);
     auto video2 = make_query_adapter(fd, video, "totallydifferenttestvid.mp4");

@@ -278,7 +278,9 @@ std::unique_ptr<IVideo> FileDatabase::loadVideo(const std::string& key) const {
     std::vector<Frame> frames;
     SIFTVideo::size_type index = 0;
 
-    while(auto f = loader.readFrame(key, index++)) frames.push_back(f.value());
+    if(std::holds_alternative<AggressiveLoadStrategy>(loadStrategy)) {
+        while(auto f = loader.readFrame(key, index++)) frames.push_back(f.value());
+    }
 
     if(!fs::exists(databaseRoot / key / "scenes")) {
         return std::make_unique<DatabaseVideo>(*this, key, frames);
@@ -286,7 +288,9 @@ std::unique_ptr<IVideo> FileDatabase::loadVideo(const std::string& key) const {
 
     std::vector<SerializableScene> scenes;
     index = 0;
-    while(auto f = loader.readScene(key, index++)) scenes.push_back(f.value());
+    if(std::holds_alternative<AggressiveLoadStrategy>(loadStrategy)) {
+        while(auto f = loader.readScene(key, index++)) scenes.push_back(f.value());
+    }
 
     return std::make_unique<DatabaseVideo>(*this, key, frames, scenes);
 }
