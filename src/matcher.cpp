@@ -66,7 +66,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
     auto deref = [](auto& i) { return i->descriptor(); };
 
-    MatchInfo match;
+    MatchInfo match{};
     std::vector<cv::Mat> targetScenes;
     boost::push_back(targetScenes, target.getScenes() | boost::adaptors::transformed(deref));
 
