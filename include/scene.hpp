@@ -16,21 +16,21 @@ struct SerializableScene {
         startIdx(startIdx), endIdx(endIdx), frameBag(matrix) {};
 
     template<typename Video>
-    auto getFrameRange(Video& video) const {
+    inline auto getFrameRange(Video&& video) const {
         auto& frames = video.frames();
         return getFrameRange(frames.begin(), 
         typename std::iterator_traits<decltype(frames.begin())>::iterator_category());
     };
 
     template<typename It>
-    auto getFrameRange(It begin, std::random_access_iterator_tag) const {
+    inline auto getFrameRange(It begin, std::random_access_iterator_tag) const {
         return std::make_pair(begin + startIdx, begin + endIdx);
     };
 
     template<typename Video, typename DB>
     const cv::Mat& descriptor(Video&& video, DB&& database) & {
         if(frameBag.empty()) {
-            auto frames = getFrameRange(video);
+            auto frames = getFrameRange(std::forward<Video>(video));
             auto vocab = loadVocabulary<Vocab<Frame>>(database);
             auto frameVocab = loadVocabulary<Vocab<SerializableScene>>(database);
             if(!vocab | !frameVocab) {
