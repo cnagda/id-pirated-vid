@@ -2,7 +2,6 @@
 #define SCENE_HPP
 #include "frame.hpp"
 #include "video.hpp"
-#include "vocabulary.hpp"
 #include <string>
 
 struct SerializableScene {
@@ -26,25 +25,6 @@ struct SerializableScene {
     inline auto getFrameRange(It begin, std::random_access_iterator_tag) const {
         return std::make_pair(begin + startIdx, begin + endIdx);
     };
-
-    template<typename Video, typename DB>
-    const cv::Mat& descriptor(Video&& video, DB&& database) & {
-        if(frameBag.empty()) {
-            auto frames = getFrameRange(std::forward<Video>(video));
-            auto vocab = loadVocabulary<Vocab<Frame>>(database);
-            auto frameVocab = loadVocabulary<Vocab<SerializableScene>>(database);
-            if(!vocab | !frameVocab) {
-                throw std::runtime_error("Scene couldn't get a frame vocabulary");
-            }
-            auto access = [vocab = vocab->descriptors()](auto frame){ return baggify(frame.descriptors, vocab); };
-            frameBag = baggify(
-                boost::make_transform_iterator(frames.first, access),
-                boost::make_transform_iterator(frames.second, access),
-                frameVocab->descriptors());
-        }
-
-        return frameBag;
-    }
 };
 
 void SceneWrite(const std::string& filename, const SerializableScene& frame);

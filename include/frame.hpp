@@ -22,7 +22,7 @@ inline bool matEqual(const cv::Mat& a, const cv::Mat& b) {
 class Frame {
 public:
     std::vector<cv::KeyPoint> keyPoints;
-    cv::Mat descriptors;
+    cv::Mat descriptors, frameDescriptor;
     bool operator==(const Frame& f2) const {
         return std::equal(keyPoints.begin(), keyPoints.end(), f2.keyPoints.begin(), keyPointEqual) &&
             descriptors.size == f2.descriptors.size &&

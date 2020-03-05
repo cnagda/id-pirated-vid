@@ -26,23 +26,23 @@ struct Configuration {
     int KScenes;
     int KFrames;
     double threshold;
-    StrategyType strategy;
+    StrategyType storageStrategy, loadStrategy;
 
     Configuration() : KScenes(-1), KFrames(-1), threshold(-1) {};
-    Configuration(const RuntimeArguments& args, StrategyType type)
-        : KScenes(args.KScenes), KFrames(args.KFrame), threshold(args.threshold), strategy(type) {};
+    Configuration(const RuntimeArguments& args, StrategyType storage, StrategyType load)
+        : KScenes(args.KScenes), KFrames(args.KFrame), threshold(args.threshold), 
+        storageStrategy(storage), loadStrategy(load) {};
 };
 
 template<typename Base>
 class InputVideoAdapter : public IVideo {
 private:
-    Base base;
+    typename std::decay_t<Base> base;
     std::vector<SerializableScene> emptyScenes;
 public:
-    using size_type = typename Base::size_type;
+    using size_type = typename std::decay_t<Base>::size_type;
 
     explicit InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
-    explicit InputVideoAdapter(const Base& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
     InputVideoAdapter(IVideo&& vid) : IVideo(vid), base(vid.frames()) {};
     InputVideoAdapter(IVideo& vid) : IVideo(vid), base(vid.frames()) {};
     size_type frameCount() override { return base.frameCount(); };
@@ -92,9 +92,13 @@ public:
     inline bool shouldBaggifyScenes(IVideo& video) override { return false; };
 };
 
-class AggressiveLoadStrategy {};
+struct AggressiveLoadStrategy {
+    constexpr operator StrategyType() { return Eager; };
+};
 
-class LazyLoadStrategy {};
+struct LazyLoadStrategy {
+    constexpr operator StrategyType() { return Lazy; };
+};
 
 class FileDatabase {
 private:
@@ -104,7 +108,7 @@ private:
     Configuration config;
     FileLoader loader;
 
-    typedef std::variant<LazyLoadStrategy, AggressiveLoadStrategy> LoadStrategy;
+    typedef StrategyType LoadStrategy;
     LoadStrategy loadStrategy;
 public:
     explicit FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args) :
@@ -149,14 +153,14 @@ public:
 inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath, int KFrame, int KScene, double threshold) {
     return std::make_unique<FileDatabase>(dbPath,
         std::make_unique<AggressiveStorageStrategy>(),
-        AggressiveLoadStrategy{},
+        LazyLoadStrategy{},
         RuntimeArguments{KScene, KFrame, threshold});
 }
 
 inline std::unique_ptr<FileDatabase> query_database_factory(const std::string& dbPath, int KFrame, int KScene, double threshold) {
     return std::make_unique<FileDatabase>(dbPath,
-        std::make_unique<AggressiveStorageStrategy>(),
-        LazyLoadStrategy{},
+        std::make_unique<LazyStorageStrategy>(),
+        AggressiveLoadStrategy{},
         RuntimeArguments{KScene, KFrame, threshold});
 }
 

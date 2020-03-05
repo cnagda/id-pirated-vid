@@ -11,6 +11,7 @@
 #include <type_traits>
 #include "frame.hpp"
 #include "vocab_type.hpp"
+#include "scene.hpp"
 
 class SerializableScene;
 class FileDatabase;
@@ -74,12 +75,12 @@ cv::Mat baggify(It rangeBegin, It rangeEnd, Vocab&& vocab) {
     cv::Mat accumulator;
     for(auto i = rangeBegin; i != rangeEnd; ++i)
         accumulator.push_back(*i);
-    return baggify(accumulator, vocab);
+    return baggify(accumulator, std::forward<Vocab>(vocab));
 }
 
 template<typename It, typename Vocab>
 inline cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
-    return baggify(pair.first, pair.second, vocab);
+    return baggify(pair.first, pair.second, std::forward<Vocab>(vocab));
 }
 
 template<class Video, typename Cmp>
@@ -186,6 +187,44 @@ std::optional<V> loadOrComputeVocab(Db&& db, int K) {
         return v;
     }
     return vocab.value();
+}
+
+
+template<class Vocab>
+cv::Mat loadFrameDescriptor(Frame& frame, Vocab&& vocab) {
+    if(frame.frameDescriptor.empty()) {
+        frame.frameDescriptor = getFrameDescriptor(frame, std::forward<Vocab>(vocab));
+    }
+    return frame.frameDescriptor;
+}
+
+template<class Vocab>
+inline cv::Mat getFrameDescriptor(const Frame& frame, Vocab&& vocab) {   
+    return baggify(frame.descriptors, std::forward<Vocab>(vocab));
+}
+
+template<class Video, class DB>
+cv::Mat getSceneDescriptor(const SerializableScene& scene, Video&& video, DB&& database) {
+    auto frames = scene.getFrameRange(std::forward<Video>(video));
+    auto vocab = loadVocabulary<Vocab<Frame>>(std::forward<DB>(database));
+    auto frameVocab = loadVocabulary<Vocab<SerializableScene>>(std::forward<DB>(database));
+    if(!vocab | !frameVocab) {
+        return scene.frameBag;
+    }
+    auto access = [vocab = vocab->descriptors()](auto frame){ return getFrameDescriptor(frame, vocab); };
+    return baggify(
+        boost::make_transform_iterator(frames.first, access),
+        boost::make_transform_iterator(frames.second, access),
+        frameVocab->descriptors());
+}
+
+template<class Video, class DB>
+cv::Mat loadSceneDescriptor(SerializableScene& scene, Video&& video, DB&& db) {
+    if(scene.frameBag.empty()) {
+        scene.frameBag = getSceneDescriptor(scene, std::forward<Video>(video), std::forward<DB>(db));
+    }
+    
+    return scene.frameBag;
 }
 
 #endif

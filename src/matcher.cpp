@@ -64,17 +64,19 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
     auto videopaths = db.listVideos();
 
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
-    auto deref = [&target, &db](auto i) { return i.descriptor(target, db); };
+    auto deref = [&target, &db](auto i) { return getSceneDescriptor(i, target, db); };
 
     MatchInfo match{};
     std::vector<cv::Mat> targetScenes;
-    boost::push_back(targetScenes, target.getScenes() | boost::adaptors::transformed(deref));
+    boost::push_back(targetScenes, target.getScenes() 
+        | boost::adaptors::transformed(deref));
 
     for(auto v2 : videopaths) {
         std::cout << "Calculating match for " << v2 << std::endl;
         std::vector<cv::Mat> knownScenes;
         auto v = db.loadVideo(v2);
-        auto deref = [&v, &db](auto i) { return i.descriptor(*v, db); };
+
+        auto deref = [&v, &db](auto i) { return getSceneDescriptor(i, *v, db); };
         boost::push_back(knownScenes, v->getScenes() | boost::adaptors::transformed(deref));
 
         auto&& alignments = calculateAlignment(targetScenes, knownScenes, intcomp, 0, 2);
