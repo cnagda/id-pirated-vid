@@ -3,11 +3,14 @@
 
 #include "concepts.hpp"
 #include <iostream>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/mat.hpp>
+#include <opencv2/features2d.hpp>
 #include <string>
 #include <boost/iterator/transform_iterator.hpp>
 #include <type_traits>
 #include "frame.hpp"
+#include "vocab_type.hpp"
 
 class SerializableScene;
 class FileDatabase;
@@ -17,32 +20,6 @@ struct sortable{
     RankType rank;
     T data;
     bool operator<(const sortable& a) const {  return rank < a.rank; };
-};
-
-
-class ContainerVocab {
-private:
-    cv::Mat desc;
-    std::string hash;
-public:
-    ContainerVocab() = default;
-    ContainerVocab(const cv::Mat& descriptors) : desc(descriptors), hash() {};
-    std::string getHash() const {
-        return hash;
-    }
-    cv::Mat descriptors() const {
-        return desc;
-    }
-    static const std::string vocab_name;
-};
-
-template<typename T>
-class Vocab : public ContainerVocab {
-public:
-    using ContainerVocab::ContainerVocab;
-    Vocab(const ContainerVocab& v) : ContainerVocab(v) {};
-    static const std::string vocab_name;
-    typedef T vocab_type;
 };
 
 
@@ -176,57 +153,6 @@ inline std::vector<cv::Mat> flatScenesBags(Video &video, Cmp&& comp, double thre
     auto ss = flatScenes(video, comp, threshold);
     return flatScenesBags(video, ss.begin(), ss.end(), frameVocab);
 }
-
-void visualizeSubset(std::string fname, const std::vector<int>& subset = {});
-
-template<typename RangeIt>
-std::enable_if_t<is_pair_iterator_v<RangeIt>, void>
-visualizeSubset(std::string fname, RangeIt begin, RangeIt end) {
-    std::vector<int> subset;
-    for(auto i = begin; i < end; i++)
-        for(auto j = begin->first; j < begin->second; j++)
-        subset.push_back(j);
-
-    visualizeSubset(fname, subset);
-}
-
-template<typename It>
-std::enable_if_t<!is_pair_iterator_v<It>, void>
-visualizeSubset(std::string fname, It begin, It end) {
-    auto size = std::distance(begin, end);
-    std::cout << "In visualise subset" << std::endl;
-
-    using namespace cv;
-
-    namedWindow("Display window", WINDOW_NORMAL );
-
-    VideoCapture cap(fname, CAP_ANY);
-
-    int count = -1;
-    int index = 0;
-    Mat image;
-
-    while(cap.read(image)){
-        ++count;
-        if(size && count != begin[index]){
-            continue;
-        }
-
-        index++;
-        if(index >= size){
-            index = 0;
-        }
-        imshow("Display window", image);
-        waitKey(0);
-    };
-    destroyWindow("Display window");
-}
-
-
-inline void visualizeSubset(std::string fname, const std::vector<int>& subset){
-    visualizeSubset(fname, subset.begin(), subset.end());
-}
-
 
 template<typename V, typename Db>
 bool saveVocabulary(V&& vocab, Db&& db) {

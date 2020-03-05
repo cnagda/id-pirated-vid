@@ -1,8 +1,9 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
-// #include <opencv2/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
 #include <string>
+#include <memory>
+#include <vector>
+#include "opencv2/highgui.hpp"
 #include "database.hpp"
 #include "matcher.hpp"
 #include <future>
@@ -14,7 +15,6 @@
 #define THRESHOLD   5       // TODO: do something with this??????
 
 using namespace cv;
-using namespace cv::xfeatures2d;
 using namespace std;
 
 namespace fs = std::experimental::filesystem;

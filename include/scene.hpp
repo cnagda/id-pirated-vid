@@ -30,7 +30,7 @@ struct SerializableScene {
     template<typename Video, typename DB>
     const cv::Mat& descriptor(Video&& video, DB&& database) & {
         if(frameBag.empty()) {
-            auto& frames = video.frames();
+            auto frames = getFrameRange(video);
             auto vocab = loadVocabulary<Vocab<Frame>>(database);
             auto frameVocab = loadVocabulary<Vocab<SerializableScene>>(database);
             if(!vocab | !frameVocab) {
@@ -38,8 +38,8 @@ struct SerializableScene {
             }
             auto access = [vocab = vocab->descriptors()](auto frame){ return baggify(frame.descriptors, vocab); };
             frameBag = baggify(
-                boost::make_transform_iterator(frames.begin(), access),
-                boost::make_transform_iterator(frames.end(), access),
+                boost::make_transform_iterator(frames.first, access),
+                boost::make_transform_iterator(frames.second, access),
                 frameVocab->descriptors());
         }
 

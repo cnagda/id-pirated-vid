@@ -1,20 +1,14 @@
 #include <iostream>
-#include <opencv2/opencv.hpp>
 #include <string>
 #include "database.hpp"
 #include "matcher.hpp"
-#include "instrumentation.hpp"
 #include <experimental/filesystem>
 #include "sw.hpp"
-#include "vocabulary.hpp"
-#include "kmeans2.hpp"
-#include <boost/range/adaptor/transformed.hpp>
 
 #define DBPATH      1
 #define VIDPATH     2
 
 namespace fs = std::experimental::filesystem;
-using namespace cv;
 using namespace std;
 
 bool file_exists(const string& fname){

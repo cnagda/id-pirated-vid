@@ -2,11 +2,8 @@
 #define DATABASE_ERASURE_HPP
 #include <string>
 #include <vector>
-#include <memory>
-#include <opencv2/opencv.hpp>
 #include "frame.hpp"
 #include "scene.hpp"
-#include <exception>
 
 class IVideo {
 public:

@@ -3,17 +3,12 @@
 #include "frame.hpp"
 #include <vector>
 #include <memory>
-#include <string>
-#include <opencv2/opencv.hpp>
-#include <functional>
+#include <opencv2/core/mat.hpp>
 #include <experimental/filesystem>
-#include <type_traits>
 #include <optional>
 #include "database_iface.hpp"
-#include <fstream>
+#include "vocab_type.hpp"
 #include <variant>
-
-#define CONFIG_FILE
 
 namespace fs = std::experimental::filesystem;
 
@@ -116,30 +111,7 @@ public:
     FileDatabase(fs::current_path() / "database", std::move(strat), l, args) {};
 
     explicit FileDatabase(const std::string& databasePath,
-        std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args)
-        : strategy(std::move(strat)), loadStrategy(l), config(args, strategy->getType()), databaseRoot(databasePath),
-        loader(databasePath) {
-            if(!fs::exists(databaseRoot)) {
-                fs::create_directories(databaseRoot);
-            }
-            Configuration configFromFile;
-            std::ifstream reader(databaseRoot / "config.bin", std::ifstream::binary);
-            if(reader.is_open()) {
-                reader.read((char*)&configFromFile, sizeof(configFromFile));
-                if(config.threshold == -1) {
-                    config.threshold = configFromFile.threshold;
-                }
-                if(config.KScenes == -1) {
-                    config.KScenes = configFromFile.KScenes;
-                }
-                if(config.KFrames == -1) {
-                    config.KFrames = configFromFile.KFrames;
-                }
-            }
-
-            std::ofstream writer(databaseRoot / "config.bin", std::ofstream::binary);
-            writer.write((char*)&config, sizeof(config));
-        };
+        std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args);
 
     std::unique_ptr<IVideo> saveVideo(IVideo& video);
     std::unique_ptr<IVideo> loadVideo(const std::string& key = "") const;

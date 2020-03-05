@@ -1,6 +1,5 @@
 #include "instrumentation.hpp"
 #include <experimental/filesystem>
-#include <algorithm>
 #include <iostream>
 
 namespace fs = std::experimental::filesystem;
