@@ -97,7 +97,7 @@ int main(int argc, char** argv )
                 auto& scenes = video->getScenes();
                 for(auto& scene : scenes) {
                     try{
-                        scene->descriptor();
+                        scene.descriptor(*video, *db);
                     } catch(...) {
                         std::cerr << "Not enough info to compute scene descriptors" << std::endl;
                         break;

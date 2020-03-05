@@ -26,4 +26,7 @@ public:
     static const std::string vocab_name;
 };
 
+void SIFTwrite(const std::string& filename, const Frame& frame);
+Frame SIFTread(const std::string& filename);
+
 #endif

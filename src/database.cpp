@@ -5,6 +5,10 @@
 #include <memory>
 #include "vocabulary.hpp"
 #include "matcher.hpp"
+#include "video.hpp"
+#include <boost/range/algorithm.hpp>
+#include <boost/range/adaptor/transformed.hpp>
+#include <boost/range/algorithm_ext/push_back.hpp>
 
 using namespace std;
 using namespace cv;
@@ -184,7 +188,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
     return SIFTVideo(frames);
 }
 
-const std::string IScene::vocab_name = "SceneVocab.mat";
+const std::string SerializableScene::vocab_name = "SceneVocab.mat";
 const std::string Frame::vocab_name = "FrameVocab.mat";
 
 template<typename T>
@@ -217,8 +221,8 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         fs::remove_all(video_dir / "scenes");
         fs::create_directories(video_dir / "scenes");
         for(auto& scene : scenes) {
-            SceneWrite(video_dir / "scenes" / std::to_string(index++), *scene);
-            loadedScenes.push_back(*scene);
+            SceneWrite(video_dir / "scenes" / std::to_string(index++), scene);
+            loadedScenes.push_back(scene);
         }
     }
     else if(strategy->shouldComputeScenes(video)) {
@@ -242,7 +246,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
             }
 
             if(strategy->shouldBaggifyScenes(video)) {
-                auto frameVocab = loadVocabulary<Vocab<IScene>>(*this);
+                auto frameVocab = loadVocabulary<Vocab<SerializableScene>>(*this);
                 if(!frameVocab) {
                     return std::make_unique<DatabaseVideo>(*this, video.name, frames, loadedScenes);
                 }
@@ -312,13 +316,12 @@ std::optional<ContainerVocab> FileDatabase::loadVocab(const std::string& key) co
     return std::make_optional<ContainerVocab>(myvocab);
 }
 
-std::vector<std::unique_ptr<IScene>>& DatabaseVideo::getScenes() & {
+std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
     if(sceneCache.empty()) {
         auto loader = db.getFileLoader();
         SIFTVideo::size_type index = 0;
         while(auto scene = loader.readScene(name, index++))
-            sceneCache.push_back(std::make_unique<DatabaseScene>(
-                *this, db, scene.value()));
+            sceneCache.push_back(scene.value());
 
         if(sceneCache.empty()) {
             auto config = db.getConfig();
@@ -335,15 +338,21 @@ std::vector<std::unique_ptr<IScene>>& DatabaseVideo::getScenes() & {
             boost::push_back(sceneCache, ss
             | boost::adaptors::transformed([](auto scene){
                 return SerializableScene{scene.first, scene.second};
-            })
-            | boost::adaptors::transformed([this](auto scene) {
-                return std::make_unique<DatabaseScene>(*this, db, scene);
             }));
         }
     }
 
     return sceneCache;
 }
+
+std::vector<Frame>& DatabaseVideo::frames() & { 
+    if(frameCache.empty()) {
+        auto loader = db.getFileLoader();
+        IVideo::size_type index = 0;
+        while(auto frame = loader.readFrame(name, index++)) frameCache.push_back(frame.value());
+    }
+    return frameCache; 
+};
 
 std::optional<Frame> FileLoader::readFrame(const std::string& videoName, SIFTVideo::size_type index) const {
     auto path = rootDir / videoName / "frames" / to_string(index);

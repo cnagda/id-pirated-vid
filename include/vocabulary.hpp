@@ -5,15 +5,44 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <string>
-#include "database_iface.hpp"
-#include "instrumentation.hpp"
 #include <boost/iterator/transform_iterator.hpp>
+#include <type_traits>
+#include "frame.hpp"
+
+class SerializableScene;
+class FileDatabase;
 
 template <class T, class RankType>
 struct sortable{
     RankType rank;
     T data;
     bool operator<(const sortable& a) const {  return rank < a.rank; };
+};
+
+
+class ContainerVocab {
+private:
+    cv::Mat desc;
+    std::string hash;
+public:
+    ContainerVocab() = default;
+    ContainerVocab(const cv::Mat& descriptors) : desc(descriptors), hash() {};
+    std::string getHash() const {
+        return hash;
+    }
+    cv::Mat descriptors() const {
+        return desc;
+    }
+    static const std::string vocab_name;
+};
+
+template<typename T>
+class Vocab : public ContainerVocab {
+public:
+    using ContainerVocab::ContainerVocab;
+    Vocab(const ContainerVocab& v) : ContainerVocab(v) {};
+    static const std::string vocab_name;
+    typedef T vocab_type;
 };
 
 
@@ -39,7 +68,7 @@ cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = c
 }
 
 Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
-Vocab<IScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
+Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
 
 template<typename Matrix, typename Vocab>
 cv::Mat baggify(Matrix&& f, Vocab&& vocab) {
@@ -78,7 +107,7 @@ inline cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
 
 template<class Video, typename Cmp>
 auto flatScenes(Video& video, Cmp&& comp, double threshold){
-    typedef IVideo::size_type index_t;
+    typedef typename std::decay_t<Video>::size_type index_t;
     std::cout << "In flatScenes" << std::endl;
 
     std::vector<std::pair<index_t, index_t>> retval;
@@ -196,6 +225,41 @@ visualizeSubset(std::string fname, It begin, It end) {
 
 inline void visualizeSubset(std::string fname, const std::vector<int>& subset){
     visualizeSubset(fname, subset.begin(), subset.end());
+}
+
+
+template<typename V, typename Db>
+bool saveVocabulary(V&& vocab, Db&& db) {
+    return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name);
+}
+
+template<typename V, typename Db>
+std::optional<V> loadVocabulary(Db&& db) {
+    auto v = db.loadVocab(V::vocab_name);
+    if(v) {
+        return V(v.value());
+    }
+    return std::nullopt;
+}
+
+template<typename V, typename Db>
+std::optional<V> loadOrComputeVocab(Db&& db, int K) {
+    auto vocab = loadVocabulary<V>(std::forward<Db>(db));
+    if(!vocab) {
+        if(K == -1) {
+            return std::nullopt;
+        }
+
+        V v;
+        if constexpr(std::is_same_v<typename V::vocab_type, Frame>) {
+            v = constructFrameVocabulary(db, K, 10);
+        } else if constexpr(std::is_base_of_v<typename V::vocab_type, SerializableScene>) {
+            v = constructSceneVocabulary(db, K);
+        }
+        saveVocabulary(std::forward<V>(v), std::forward<Db>(db));
+        return v;
+    }
+    return vocab.value();
 }
 
 #endif
