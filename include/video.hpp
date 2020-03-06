@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include <opencv2/opencv.hpp>
 #include "frame.hpp"
 
 struct SIFTVideo {

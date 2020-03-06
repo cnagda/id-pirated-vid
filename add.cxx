@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "opencv2/highgui.hpp"
+#include "vocabulary.hpp"
 #include "database.hpp"
 #include "matcher.hpp"
 #include <future>

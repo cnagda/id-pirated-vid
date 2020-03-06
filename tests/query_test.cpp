@@ -1,9 +1,9 @@
 #include "gtest/gtest.h"
 #include <iostream>
-#include <opencv2/opencv.hpp>
 #include <experimental/filesystem>
 #include "database.hpp"
 #include "matcher.hpp"
+#include "vocabulary.hpp"
 
 namespace fs = std::experimental::filesystem;
 

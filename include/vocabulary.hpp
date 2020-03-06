@@ -227,4 +227,16 @@ cv::Mat loadSceneDescriptor(SerializableScene& scene, Video&& video, DB&& db) {
     return scene.frameBag;
 }
 
+
+template<typename Vocab> class BOWComparator {
+    static_assert(std::is_constructible_v<Vocab, Vocab>,
+                  "Vocab must be constructible");
+    const Vocab vocab;
+public:
+    BOWComparator(const Vocab& vocab) : vocab(vocab) {};
+    double operator()(Frame& f1, Frame& f2) const {
+        return frameSimilarity(f1, f2, [this](Frame& f){ return loadFrameDescriptor(f, vocab); });
+    }
+};
+
 #endif
