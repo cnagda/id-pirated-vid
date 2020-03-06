@@ -25,9 +25,11 @@ Alternatively, build opencv itself with opencv_contrib.
 My build string:
 ```
 cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local \
- -DOPENCV_EXTRA_MODULES_PATH=<opencv_contrib_path>/modules -D WITH_FFMPEG=ON -D WITH_OPENMP=ON \
- -DOPENCV_ENABLE_NONFREE=ON -D BUILD_EXAMPLES=OFF -WITH_GTK=ON -D BUILD_opencv_apps=OFF -D BUILD_DOCS=OFF \
--D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF <opencv_src>
+ -DOPENCV_EXTRA_MODULES_PATH=<opencv_contrib>/modules \
+-D WITH_CUDA=ON -D WITH_VA=ON -D WITH_VA_INTEL=ON -D WITH_CUBLAS=ON \
+-D WITH_FFMPEG=ON -D WITH_OPENMP=ON  -DOPENCV_ENABLE_NONFREE=ON \
+ -D BUILD_EXAMPLES=OFF -D WITH_GTK=ON -D BUILD_opencv_apps=OFF -D BUILD_DOCS=OFF \
+ -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF <opencv_src>
 ```
 
 ## Using ffmpeg
