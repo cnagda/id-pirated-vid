@@ -14,6 +14,7 @@ enable_testing()
 
 option(BUILD_TESTING "Build tests" OFF)
 option(PRINT_DEBUG "Add debug messages" OFF)
+option(BUILD_OPTIONAL "Build testing binaries" OFF)
 
 if(PRINT_DEBUG)
     add_definitions(-DSW_COUT)
@@ -30,14 +31,17 @@ endif(BUILD_TESTING)
 
 add_executable(add add.cxx)
 add_executable(query query.cxx)
-add_executable(bench bench.cxx)
-add_executable(keyframes keyframes.cxx)
+
+if(BUILD_OPTIONAL)
+    add_executable(bench bench.cxx)
+    add_executable(keyframes keyframes.cxx)
+    target_link_libraries( bench database )
+    target_link_libraries( keyframes database )
+endif()
 
 target_link_libraries( add database )
-target_link_libraries( bench database )
-target_link_libraries( keyframes database )
+target_link_libraries( query database )
 
 add_dependencies(add sample_videos)
 add_dependencies(query python_scripts)
 
-target_link_libraries( query database )

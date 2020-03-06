@@ -3,14 +3,9 @@
 
 #include "instrumentation.hpp"
 #include "database_iface.hpp"
-#include "vocabulary.hpp"
-#include "matrix.hpp"
-#include "sw.hpp"
 #include <opencv2/opencv.hpp>
+#include "sw.hpp"
 #include <optional>
-#include <iterator>
-#include <type_traits>
-#include <exception>
 
 struct MatchInfo {
     double matchConfidence;
@@ -30,27 +25,15 @@ double cosineSimilarity(Matrix&& b1, Matrix&& b2) {
 }
 
 template<typename Extractor>
-double frameSimilarity(const Frame& f1, const Frame& f2, Extractor&& extractor){
+double frameSimilarity(Frame& f1, Frame& f2, Extractor&& extractor){
     auto b1 = extractor(f1), b2 = extractor(f2);
 
     return cosineSimilarity(b1, b2);
 }
 
-template<typename Vocab> class BOWComparator {
-    static_assert(std::is_constructible_v<Vocab, Vocab>,
-                  "Vocab must be constructible");
-    const Vocab vocab;
-public:
-    BOWComparator(const Vocab& vocab) : vocab(vocab) {};
-    double operator()(const Frame& f1, const Frame& f2) const {
-        return frameSimilarity(f1, f2, [this](const Frame& f){ return baggify(f.descriptors, vocab); });
-    }
-};
-
-
 class ColorComparator {
 public:
-    double operator()(const Frame& f1, const Frame& f2) const;
+    double operator()(Frame& f1, Frame& f2) const;
 };
 
 double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter);

@@ -426,7 +426,7 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     return DatabaseVideo(db, key, frames, loadedScenes);
 }
 
-double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
+double ColorComparator::operator()(Frame& f1, Frame& f2) const {
     // TODO implement this
     return 0;
 }
