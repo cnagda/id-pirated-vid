@@ -119,10 +119,10 @@ std::vector<Alignment> calculateAlignment(Range&& known, Range&& unknown, Cmp&& 
 
     std::transform(alignments.begin(), alignments.end(), std::back_inserter(ret), [&known, &unknown](auto val) -> Alignment {
         return Alignment{
-            std::distance(known.begin(), val.startKnown),
-            std::distance(unknown.begin(), val.startUnknown),
-            std::distance(known.begin(), val.endKnown),
-            std::distance(unknown.begin(), val.endUnknown),
+            static_cast<unsigned int>(std::distance(known.begin(), val.startKnown)),
+            static_cast<unsigned int>(std::distance(unknown.begin(), val.startUnknown)),
+            static_cast<unsigned int>(std::distance(known.begin(), val.endKnown)),
+            static_cast<unsigned int>(std::distance(unknown.begin(), val.endUnknown)),
             val.score
         };
     });
