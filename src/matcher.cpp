@@ -85,7 +85,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
             auto& a = alignments[0];
             std::cout << "Highest score: " << a.score << std::endl;
             if(a.score > match.matchConfidence) {
-                match = MatchInfo{a.score, a.startKnown, a.endKnown, v2, alignments};
+                match = MatchInfo{static_cast<double>(a.score), a.startKnown, a.endKnown, v2, alignments};
             }
         }
 
