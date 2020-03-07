@@ -9,6 +9,7 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
+#include <opencv2/imgproc.hpp>
 
 using namespace std;
 using namespace cv;
@@ -139,6 +140,31 @@ void SIFTwrite(const string &filename, const Frame& frame)
             }
         }
     }
+
+    {
+        const auto& mat = frame.colorHistogram;
+        // Header
+        int type = mat.type();
+        int channels = mat.channels();
+        fs.write((char *)&mat.rows, sizeof(int)); // rows
+        fs.write((char *)&mat.cols, sizeof(int)); // cols
+        fs.write((char *)&type, sizeof(int));     // type
+        fs.write((char *)&channels, sizeof(int)); // channels
+
+        // Data
+        if (mat.isContinuous())
+        {
+            fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
+        }
+        else
+        {
+            int rowsz = CV_ELEM_SIZE(type) * mat.cols * channels;
+            for (int r = 0; r < mat.rows; ++r)
+            {
+                fs.write(mat.ptr<char>(r), rowsz);
+            }
+        }
+    }
 }
 
 Frame SIFTread(const string &filename)
@@ -180,7 +206,20 @@ Frame SIFTread(const string &filename)
         fs.read((char *)(frameMat.data + r * cols2 * CV_ELEM_SIZE(type2)), CV_ELEM_SIZE(type2) * cols2);
     }
 
-    return Frame{keyPoints, mat, frameMat};
+    // Header
+    int rows3, cols3, type3, channels3;
+    fs.read((char *)&rows3, sizeof(int));     // rows3
+    fs.read((char *)&cols3, sizeof(int));     // cols3
+    fs.read((char *)&type3, sizeof(int));     // type3
+    fs.read((char *)&channels3, sizeof(int)); // channels
+    Mat colorHistogram(rows3, cols3, type3);
+
+    for (int r = 0; r < rows3; r++)
+    {
+        fs.read((char *)(colorHistogram.data + r * cols3 * CV_ELEM_SIZE(type3)), CV_ELEM_SIZE(type3) * cols3);
+    }
+
+    return Frame{keyPoints, mat, frameMat, colorHistogram};
 }
 
 cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight){
@@ -203,7 +242,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
     VideoCapture cap(filepath, CAP_ANY);
 
     vector<KeyPoint> keyPoints;
-    Mat descriptors, image;
+    Mat descriptors, image, hsv;
 
     size_t index = 0;
 
@@ -211,15 +250,36 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
 
     while (cap.read(image))
     { // test only loading 2 frames
+        Mat colorHistogram;
+
         if(!(++index % 40)){
             std::cout << "Frame " << index << "/" << num_frames << std::endl;
         }
 
         image = scaleToTarget(image, cropsize.first, cropsize.second);
+        cvtColor(image, hsv, COLOR_BGR2HSV);
 
         detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
 
-        Frame frame{keyPoints, descriptors};
+        int hbins = 30, sbins = 32;
+        int histSize[] = {hbins, sbins};
+        // hue varies from 0 to 179, see cvtColor
+        float hranges[] = { 0, 180 };
+        // saturation varies from 0 (black-gray-white) to
+        // 255 (pure spectrum color)
+        float sranges[] = { 0, 256 };
+        const float* ranges[] = { hranges, sranges };
+        MatND hist;
+        // we compute the histogram from the 0-th and 1-st channels
+        int channels[] = {0, 1};
+
+        calcHist( &hsv, 1, channels, Mat(), // do not use mask
+                     colorHistogram, 2, histSize, ranges,
+                     true, // the histogram is uniform
+                     false );
+        normalize( colorHistogram, colorHistogram, 0, 1, NORM_MINMAX, -1, Mat() );
+
+        Frame frame{keyPoints, descriptors, Mat(), colorHistogram};
 
         frames.push_back(frame);
 
@@ -277,7 +337,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
                 loadFrameDescriptor(frame, vocab->descriptors());
             }
         }
-        
+
     }
 
     if(!frames.empty()) {
@@ -303,12 +363,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         }
     }
     else if(strategy->shouldComputeScenes(video)) {
-        auto vocab = loadVocabulary<Vocab<Frame>>(*this);
-        if(!vocab || config.threshold == -1) {
-            return std::make_unique<DatabaseVideo>(*this, video.name, frames);
-        }
-
-        auto comp = BOWComparator(vocab->descriptors());
+        ColorComparator comp;
         auto flat = flatScenes(video, comp, config.threshold);
 
         if(!flat.empty()) {
@@ -396,14 +451,10 @@ std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
 
         if(sceneCache.empty()) {
             auto config = db.getConfig();
-            auto vocab = loadVocabulary<Vocab<Frame>>(db);
-            if(!vocab) {
-                throw std::runtime_error("video could not load vocab");
-            }
             if(config.threshold == -1) {
                 throw std::runtime_error("no threshold was provided to calculate scenes");
             }
-            auto comp = BOWComparator(vocab->descriptors());
+            ColorComparator comp;
             auto ss = flatScenes(*this, comp, config.threshold);
             std::cout << "Found " << ss.size() << " scenes, serializing now" << std::endl;
             boost::push_back(sceneCache, ss
@@ -416,13 +467,13 @@ std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
     return sceneCache;
 }
 
-std::vector<Frame>& DatabaseVideo::frames() & { 
+std::vector<Frame>& DatabaseVideo::frames() & {
     if(frameCache.empty()) {
         auto loader = db.getFileLoader();
         IVideo::size_type index = 0;
         while(auto frame = loader.readFrame(name, index++)) frameCache.push_back(frame.value());
     }
-    return frameCache; 
+    return frameCache;
 };
 
 std::optional<Frame> FileLoader::readFrame(const std::string& videoName, SIFTVideo::size_type index) const {
@@ -468,6 +519,12 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
 }
 
 double ColorComparator::operator()(Frame& f1, Frame& f2) const {
-    // TODO implement this
-    return 0;
+
+    std::cout << "rows: " << f1.colorHistogram.rows << " cols "  << f1.colorHistogram.cols << " channels " << f1.colorHistogram.channels() << std::endl;
+    // std::cout << f1.colorHistogram << std::endl << f2.colorHistogram << std::endl;
+    auto subbed = f1.colorHistogram - f2.colorHistogram;
+    auto val = cv::sum(subbed)[0];
+    //  double val = cv::compareHist(f1.colorHistogram, f2.colorHistogram, HISTCMP_BHATTACHARYYA);
+    std::cout << "color similarity: " << std::setprecision(15) << val << std::endl;
+    return val;
 }
