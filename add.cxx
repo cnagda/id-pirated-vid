@@ -102,7 +102,7 @@ int main(int argc, char** argv )
 
         auto func = [fvocab = vocab->descriptors(), &sceneVocab](auto v, auto db) -> void {
             auto video = db->loadVideo(v);
-            try {
+            // try {
                 for(Frame& frame : video->frames()) {
                     frame.frameDescriptor = getFrameDescriptor(frame, fvocab);
                 }
@@ -114,17 +114,18 @@ int main(int argc, char** argv )
                         scene.frameBag = getSceneDescriptor(scene, *video, *db);
                     }
                 }
-                
+
                 db->saveVideo(*video);
-            } catch(...) {
-                std::cerr << "not enough info to compute scenes" << std::endl;
-            }
+        //    } catch(...) {
+        //        std::cerr << "not enough info to compute scenes" << std::endl;
+        //    }
         };
 
         std::vector<std::future<void>> runners;
 
         for(auto v : db_shared->listVideos()) {
-            runners.push_back(std::async(std::launch::async, func, v, db_shared));
+            //runners.push_back(std::async(std::launch::async, func, v, db_shared));
+            func(v, db_shared);
         }
 
         for(auto& i : runners) {
