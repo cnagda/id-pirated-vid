@@ -85,33 +85,60 @@ void SceneWrite(const std::string& filename, const SerializableScene& scene) {
 
 void SIFTwrite(const string &filename, const Frame& frame)
 {
-    const auto& mat = frame.descriptors;
     const auto& keyPoints = frame.keyPoints;
     ofstream fs(filename, fstream::binary);
 
-    // Header
-    int type = mat.type();
-    int channels = mat.channels();
-    fs.write((char *)&mat.rows, sizeof(int)); // rows
-    fs.write((char *)&mat.cols, sizeof(int)); // cols
-    fs.write((char *)&type, sizeof(int));     // type
-    fs.write((char *)&channels, sizeof(int)); // channels
+    {
+        const auto& mat = frame.descriptors;
+        // Header
+        int type = mat.type();
+        int channels = mat.channels();
+        fs.write((char *)&mat.rows, sizeof(int)); // rows
+        fs.write((char *)&mat.cols, sizeof(int)); // cols
+        fs.write((char *)&type, sizeof(int));     // type
+        fs.write((char *)&channels, sizeof(int)); // channels
 
-    // Data
-    if (mat.isContinuous())
-    {
-        fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
-    }
-    else
-    {
-        int rowsz = CV_ELEM_SIZE(type) * mat.cols;
-        for (int r = 0; r < mat.rows; ++r)
+        // Data
+        if (mat.isContinuous())
         {
-            fs.write(mat.ptr<char>(r), rowsz);
+            fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
+        }
+        else
+        {
+            int rowsz = CV_ELEM_SIZE(type) * mat.cols;
+            for (int r = 0; r < mat.rows; ++r)
+            {
+                fs.write(mat.ptr<char>(r), rowsz);
+            }
         }
     }
 
     fs.write((char *)&keyPoints[0], keyPoints.size() * sizeof(KeyPoint));
+
+    {
+        const auto& mat = frame.frameDescriptor;
+        // Header
+        int type = mat.type();
+        int channels = mat.channels();
+        fs.write((char *)&mat.rows, sizeof(int)); // rows
+        fs.write((char *)&mat.cols, sizeof(int)); // cols
+        fs.write((char *)&type, sizeof(int));     // type
+        fs.write((char *)&channels, sizeof(int)); // channels
+
+        // Data
+        if (mat.isContinuous())
+        {
+            fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
+        }
+        else
+        {
+            int rowsz = CV_ELEM_SIZE(type) * mat.cols;
+            for (int r = 0; r < mat.rows; ++r)
+            {
+                fs.write(mat.ptr<char>(r), rowsz);
+            }
+        }
+    }
 }
 
 Frame SIFTread(const string &filename)
@@ -139,7 +166,21 @@ Frame SIFTread(const string &filename)
         fs.read((char *)&k, sizeof(KeyPoint));
         keyPoints.push_back(k);
     }
-    return Frame{keyPoints, mat};
+
+    // Header
+    int rows2, cols2, type2, channels2;
+    fs.read((char *)&rows2, sizeof(int));     // rows2
+    fs.read((char *)&cols2, sizeof(int));     // cols2
+    fs.read((char *)&type2, sizeof(int));     // type2
+    fs.read((char *)&channels2, sizeof(int)); // channels
+    Mat frameMat(rows2, cols2, type2);
+
+    for (int r = 0; r < rows2; r++)
+    {
+        fs.read((char *)(frameMat.data + r * cols2 * CV_ELEM_SIZE(type2)), CV_ELEM_SIZE(type2) * cols2);
+    }
+
+    return Frame{keyPoints, mat, frameMat};
 }
 
 cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight){
