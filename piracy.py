@@ -41,10 +41,11 @@ def call_execs(args):
             if i == len(args.paths) - 1:
                 call_args.append(str(args.kScene))
                 call_args.append(str(args.kFrame))
+                call_args.append(str(args.thresholdScene))
             else:
                 call_args.append("-1")
                 call_args.append("-1")
-            call_args.append(str(args.thresholdScene))
+                call_args.append("-1")
         else:
             call_args.append('./build/query')
             call_args.append(args.databasePath)
@@ -97,7 +98,7 @@ def main():
         '-thresholdScene',
         metavar='TS',
         help='threshold for inter-scene similarity',
-        default=0.2,
+        default=-1,
         type=float
     )
 
