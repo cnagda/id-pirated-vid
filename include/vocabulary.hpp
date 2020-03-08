@@ -211,7 +211,7 @@ cv::Mat getSceneDescriptor(const SerializableScene& scene, Video&& video, DB&& d
     if(!vocab | !frameVocab) {
         return scene.frameBag;
     }
-    auto access = [vocab = vocab->descriptors()](auto frame){ return getFrameDescriptor(frame, vocab); };
+    auto access = [vocab = vocab->descriptors()](auto frame){ return loadFrameDescriptor(frame, vocab); };
     return baggify(
         boost::make_transform_iterator(frames.first, access),
         boost::make_transform_iterator(frames.second, access),

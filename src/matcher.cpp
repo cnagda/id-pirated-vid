@@ -10,7 +10,7 @@
 #include <boost/range/algorithm_ext/push_back.hpp>
 
 Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator) {
-    cv::Mat descriptors;
+    std::vector<cv::Mat> descriptors;
 
     for(auto video : database.listVideos()) {
         auto v = database.loadVideo(video);
@@ -29,13 +29,13 @@ Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase& database, 
     }
     auto d = vocab->descriptors();
 
-    cv::Mat descriptors;
+    std::vector<cv::Mat> descriptors;
 
     for(auto video : database.listVideos()) {
         auto v = database.loadVideo(video);
         auto& frames = v->frames();
         for(auto i = frames.begin(); i < frames.end(); i += speedinator)
-            descriptors.push_back(baggify(i->descriptors, d));
+            descriptors.push_back(loadFrameDescriptor(*i, d));
     }
 
     return Vocab<SerializableScene>(constructVocabulary(descriptors, K));
