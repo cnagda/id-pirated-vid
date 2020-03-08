@@ -116,16 +116,15 @@ int main(int argc, char** argv )
                 }
 
                 db->saveVideo(*video);
-        //    } catch(...) {
-        //        std::cerr << "not enough info to compute scenes" << std::endl;
-        //    }
+            } catch(...) {
+                std::cerr << "not enough info to compute scenes" << std::endl;
+            }
         };
 
         std::vector<std::future<void>> runners;
 
         for(auto v : db_shared->listVideos()) {
-            //runners.push_back(std::async(std::launch::async, func, v, db_shared));
-            func(v, db_shared);
+            runners.push_back(std::async(std::launch::async, func, v, db_shared));
         }
 
         for(auto& i : runners) {

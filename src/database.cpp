@@ -6,10 +6,14 @@
 #include "vocabulary.hpp"
 #include "matcher.hpp"
 #include "video.hpp"
+#include "scene_detector.hpp"
 #include <boost/range/algorithm.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include "imgproc.hpp"
+
+#define HBINS 32
+#define SBINS 30
 
 #define HBINS 32
 #define SBINS 30
@@ -175,7 +179,7 @@ Frame SIFTread(const string &filename)
     ifstream fs(filename, fstream::binary);
 
     // Header
-    int rows, cols, type, channels;
+    int rows = 0, cols = 0, type = 0, channels = 0;
     fs.read((char *)&rows, sizeof(int));     // rows
     fs.read((char *)&cols, sizeof(int));     // cols
     fs.read((char *)&type, sizeof(int));     // type
@@ -197,7 +201,7 @@ Frame SIFTread(const string &filename)
     }
 
     // Header
-    int rows2, cols2, type2, channels2;
+    int rows2 = 0, cols2 = 0, type2 = 0, channels2 = 0;
     fs.read((char *)&rows2, sizeof(int));     // rows2
     fs.read((char *)&cols2, sizeof(int));     // cols2
     fs.read((char *)&type2, sizeof(int));     // type2
@@ -210,7 +214,7 @@ Frame SIFTread(const string &filename)
     }
 
     // Header
-    int rows3, cols3, type3, channels3;
+    int rows3 = 0, cols3 = 0, type3 = 0, channels3 = 0;
     fs.read((char *)&rows3, sizeof(int));     // rows3
     fs.read((char *)&cols3, sizeof(int));     // cols3
     fs.read((char *)&type3, sizeof(int));     // type3
@@ -253,8 +257,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
 
         detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
 
-        int hbins = 30, sbins = 32;
-        int histSize[] = {hbins, sbins};
+        int histSize[] = {HBINS, SBINS};
         // hue varies from 0 to 179, see cvtColor
         float hranges[] = { 0, 180 };
         // saturation varies from 0 (black-gray-white) to
@@ -356,7 +359,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     }
     else if(strategy->shouldComputeScenes(video)) {
         ColorComparator comp;
-        auto flat = flatScenes(video, comp, config.threshold);
+        auto flat = convolutionalDetector(video, comp, config.threshold);
 
         if(!flat.empty()) {
             fs::remove_all(video_dir / "scenes");
@@ -447,7 +450,7 @@ std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
                 throw std::runtime_error("no threshold was provided to calculate scenes");
             }
             ColorComparator comp;
-            auto ss = flatScenes(*this, comp, config.threshold);
+            auto ss = convolutionalDetector(*this, comp, config.threshold);
             std::cout << "Found " << ss.size() << " scenes, serializing now" << std::endl;
             boost::push_back(sceneCache, ss
             | boost::adaptors::transformed([](auto scene){
@@ -495,7 +498,7 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     auto vocab = loadOrComputeVocab<Vocab<Frame>>(db, config.KFrames);
 
     auto comp = BOWComparator(vocab->descriptors());
-    auto scenes = flatScenes(video, comp, config.threshold);
+    auto scenes = convolutionalDetector(video, comp, config.threshold);
 
     std::cout << "Found " << scenes.size() << " scenes, serializing now" << std::endl;
 
@@ -510,13 +513,19 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     return DatabaseVideo(db, key, frames, loadedScenes);
 }
 
-double ColorComparator::operator()(Frame& f1, Frame& f2) const {
+double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
+    if(f1.colorHistogram.rows != HBINS || f1.colorHistogram.cols != SBINS) {
+        std::cerr 
+            << "rows: " << f1.colorHistogram.rows 
+            << " cols: " << f1.colorHistogram.cols << std::endl;
+        throw std::runtime_error("color histogram is wrong size");
+    }
 
-    std::cout << "rows: " << f1.colorHistogram.rows << " cols "  << f1.colorHistogram.cols << " channels " << f1.colorHistogram.channels() << std::endl;
-    // std::cout << f1.colorHistogram << std::endl << f2.colorHistogram << std::endl;
+    if(f1.colorHistogram.size() != f2.colorHistogram.size()) {
+        throw std::runtime_error("colorhistograms not matching");
+    }
+
     auto subbed = f1.colorHistogram - f2.colorHistogram;
     auto val = cv::sum(subbed)[0];
-    //  double val = cv::compareHist(f1.colorHistogram, f2.colorHistogram, HISTCMP_BHATTACHARYYA);
-    std::cout << "color similarity: " << std::setprecision(15) << val << std::endl;
-    return val;
+    return std::abs(val);
 }
