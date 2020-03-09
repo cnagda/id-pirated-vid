@@ -159,7 +159,7 @@ inline std::unique_ptr<FileDatabase> database_factory(const std::string& dbPath,
 inline std::unique_ptr<FileDatabase> query_database_factory(const std::string& dbPath, int KFrame, int KScene, double threshold) {
     return std::make_unique<FileDatabase>(dbPath,
         std::make_unique<LazyStorageStrategy>(),
-        AggressiveLoadStrategy{},
+        LazyLoadStrategy{},
         RuntimeArguments{KScene, KFrame, threshold});
 }
 
