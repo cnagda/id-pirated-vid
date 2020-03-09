@@ -16,6 +16,6 @@ struct SIFTVideo {
     size_type frameCount() { return SIFTFrames.size(); };
 };
 
-SIFTVideo getSIFTVideo(const std::string& filename, std::function<void(cv::Mat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
+SIFTVideo getSIFTVideo(const std::string& filename, std::function<void(cv::UMat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
 
 #endif

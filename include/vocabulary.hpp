@@ -44,7 +44,11 @@ cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = c
 	cv::Mat accumulator;
     for(auto i = start; i != end; ++i)
         accumulator.push_back(*i);
-    return constructVocabulary(accumulator, K, labels);
+
+    cv::UMat copy;
+    accumulator.copyTo(copy);
+
+    return constructVocabulary(copy, K, labels);
 }
 
 Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator = 1);
@@ -121,47 +125,6 @@ auto flatScenes(Video& video, Cmp&& comp, double threshold){
     }
 
     return retval;
-}
-
-template<typename RangeIt, typename Vocab>
-std::enable_if_t<is_pair_iterator_v<RangeIt> &&
-    !std::is_integral_v<decltype(std::declval<RangeIt>()->first)>, std::vector<cv::Mat>>
-flatScenesBags(RangeIt start, RangeIt end, Vocab&& frameVocab) {
-    std::cout << "In flatScenesBags" << std::endl;
-
-    std::vector<cv::Mat> retval2;
-
-    for(auto i = start; i < end; i++){
-        retval2.push_back(baggify(*i, frameVocab));
-    }
-    return retval2;
-}
-
-template<class Video, typename IndexIt, typename Vocab>
-std::enable_if_t<is_pair_iterator_v<IndexIt> &&
-    std::is_integral_v<decltype(std::declval<IndexIt>()->first)>, std::vector<cv::Mat>>
-flatScenesBags(Video& video, IndexIt start, IndexIt end, Vocab&& vocab, Vocab&& frameVocab){
-    static_assert(is_pair_iterator_v<IndexIt>,
-        "flatScenesBags requires an iterator to a pair");
-
-    auto accessor = [vocab](const Frame& frame) { return baggify(frame.descriptors, vocab); };
-    auto& frames = video.frames();
-    auto begin = frames.begin();
-
-    auto func = [begin, accessor](auto i) {
-        return std::make_pair(
-            boost::make_transform_iterator(begin + i.first, accessor),
-            boost::make_transform_iterator(begin + i.second, accessor));
-    };
-
-    return flatScenesBags(boost::make_transform_iterator(start, func),
-        boost::make_transform_iterator(end, func), frameVocab);
-}
-
-template<class Video, typename Cmp, typename Vocab>
-inline std::vector<cv::Mat> flatScenesBags(Video &video, Cmp&& comp, double threshold, Vocab&& vocab, Vocab&& frameVocab) {
-    auto ss = flatScenes(video, comp, threshold);
-    return flatScenesBags(video, ss.begin(), ss.end(), frameVocab);
 }
 
 template<typename V, typename Db>

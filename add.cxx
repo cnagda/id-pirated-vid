@@ -7,6 +7,7 @@
 #include "vocabulary.hpp"
 #include "database.hpp"
 #include "matcher.hpp"
+#include "imgproc.hpp"
 #include <future>
 
 #define DBPATH      1
@@ -45,7 +46,7 @@ int main(int argc, char** argv )
     auto db = database_factory(argv[DBPATH], kFrame, kScene, threshold);
 
     if (!isUnspecified(argv[VIDPATH])) {
-        auto video = make_video_adapter(getSIFTVideo(argv[VIDPATH], [DEBUG](Mat image, Frame frame){
+        auto video = make_video_adapter(getSIFTVideo(argv[VIDPATH], [DEBUG](UMat image, Frame frame){
             Mat output;
             auto descriptors = frame.descriptors;
             auto keyPoints = frame.keyPoints;
@@ -84,6 +85,13 @@ int main(int argc, char** argv )
     }
 
     if(shouldRecalculateFrames) {
+        auto vocab = loadVocabulary<Vocab<Frame>>(*db);
+        auto sceneVocab = loadVocabulary<Vocab<SerializableScene>>(*db);
+
+        if(!vocab) {
+            throw std::runtime_error("no frame vocab");
+        }
+
         for(auto entry : fs::directory_iterator(argv[DBPATH])) {
             if(fs::is_directory(entry) && fs::exists(entry.path() / "scenes")) {
                 fs::remove_all(entry.path() / "scenes");
@@ -92,18 +100,21 @@ int main(int argc, char** argv )
 
         std::shared_ptr db_shared(std::move(db));
 
-        auto func = [](auto v, auto db) -> void {
+        auto func = [fvocab = vocab->descriptors(), &sceneVocab](auto v, auto db) -> void {
             auto video = db->loadVideo(v);
             try {
+                for(Frame& frame : video->frames()) {
+                    frame.frameDescriptor = getFrameDescriptor(frame, fvocab);
+                }
+
                 auto& scenes = video->getScenes();
-                for(auto& scene : scenes) {
-                    try{
-                        loadSceneDescriptor(scene, *video, *db);
-                    } catch(...) {
-                        std::cerr << "Not enough info to compute scene descriptors" << std::endl;
-                        break;
+
+                if(sceneVocab) {
+                    for(SerializableScene& scene : scenes) {
+                        scene.frameBag = getSceneDescriptor(scene, *video, *db);
                     }
                 }
+                
                 db->saveVideo(*video);
             } catch(...) {
                 std::cerr << "not enough info to compute scenes" << std::endl;

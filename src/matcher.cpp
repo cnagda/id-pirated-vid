@@ -10,7 +10,7 @@
 #include <boost/range/algorithm_ext/push_back.hpp>
 
 Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator) {
-    std::vector<cv::Mat> descriptors;
+    cv::Mat descriptors;
 
     for(auto video : database.listVideos()) {
         auto v = database.loadVideo(video);
@@ -18,8 +18,10 @@ Vocab<Frame> constructFrameVocabulary(const FileDatabase& database, unsigned int
         for(auto i = frames.begin(); i < frames.end(); i += speedinator)
                 descriptors.push_back(i->descriptors);
     }
+    cv::UMat copy;
+    descriptors.copyTo(copy);
 
-    return Vocab<Frame>(constructVocabulary(descriptors, K));
+    return Vocab<Frame>(constructVocabulary(copy, K));
 }
 
 Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase& database, unsigned int K, unsigned int speedinator) {
@@ -29,16 +31,19 @@ Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase& database, 
     }
     auto d = vocab->descriptors();
 
-    std::vector<cv::Mat> descriptors;
+    cv::Mat descriptors;
 
     for(auto video : database.listVideos()) {
         auto v = database.loadVideo(video);
         auto& frames = v->frames();
         for(auto i = frames.begin(); i < frames.end(); i += speedinator)
-            descriptors.push_back(loadFrameDescriptor(*i, d));
+            descriptors.push_back(getFrameDescriptor(*i, d));
     }
 
-    return Vocab<SerializableScene>(constructVocabulary(descriptors, K));
+    cv::UMat copy;
+    descriptors.copyTo(copy);
+
+    return Vocab<SerializableScene>(constructVocabulary(copy, K));
 }
 
 double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter){

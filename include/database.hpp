@@ -14,7 +14,6 @@ namespace fs = std::experimental::filesystem;
 
 std::string getAlphas(const std::string& input);
 void createFolder(const std::string& folder_name);
-cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight);
 
 struct RuntimeArguments {
     int KScenes;

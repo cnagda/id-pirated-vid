@@ -9,6 +9,10 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
+#include "imgproc.hpp"
+
+#define HBINS 32
+#define SBINS 30
 
 using namespace std;
 using namespace cv;
@@ -183,19 +187,7 @@ Frame SIFTread(const string &filename)
     return Frame{keyPoints, mat, frameMat};
 }
 
-cv::Mat scaleToTarget(cv::Mat image, int targetWidth, int targetHeight){
-    int srcWidth = image.cols;
-    int srcHeight = image.rows;
-
-    double ratio = std::min((double)targetHeight/srcHeight, (double)targetWidth/srcWidth);
-
-    cv::Mat retval;
-
-    resize(image, retval, Size(), ratio, ratio);
-    return retval;
-}
-
-SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Frame)> callback, std::pair<int, int> cropsize) {
+SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Frame)> callback, std::pair<int, int> cropsize) {
     vector<Frame> frames;
 
     Ptr<FeatureDetector> detector = xfeatures2d::SiftFeatureDetector::create(500);
@@ -203,7 +195,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
     VideoCapture cap(filepath, CAP_ANY);
 
     vector<KeyPoint> keyPoints;
-    Mat descriptors, image;
+    UMat image;
 
     size_t index = 0;
 
@@ -214,12 +206,33 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(Mat, Fram
         if(!(++index % 40)){
             std::cout << "Frame " << index << "/" << num_frames << std::endl;
         }
+        UMat descriptors, colorHistogram, hsv;
 
         image = scaleToTarget(image, cropsize.first, cropsize.second);
 
         detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
 
-        Frame frame{keyPoints, descriptors};
+        std::vector<int> histSize{HBINS, SBINS};
+        // hue varies from 0 to 179, see cvtColor
+        float hranges[] = { 0, 180 };
+        // saturation varies from 0 (black-gray-white) to
+        // 255 (pure spectrum color)
+        float sranges[] = { 0, 256 };
+        std::vector<float> ranges{ 0, 180, 0, 256 };
+        // we compute the histogram from the 0-th and 1-st channels
+        std::vector<int> channels{0, 1};
+
+        calcHist( std::vector<decltype(hsv)>{hsv}, channels, Mat(), // do not use mask
+                     colorHistogram, histSize, ranges,
+                     true);
+        normalize( colorHistogram, colorHistogram, 0, 1, NORM_MINMAX, -1, Mat() );
+
+        Mat c, d;
+
+        colorHistogram.copyTo(c);
+        descriptors.copyTo(d);
+
+        Frame frame{keyPoints, d, Mat(), c};
 
         frames.push_back(frame);
 
@@ -277,7 +290,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
                 loadFrameDescriptor(frame, vocab->descriptors());
             }
         }
-        
+
     }
 
     if(!frames.empty()) {
@@ -416,13 +429,13 @@ std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
     return sceneCache;
 }
 
-std::vector<Frame>& DatabaseVideo::frames() & { 
+std::vector<Frame>& DatabaseVideo::frames() & {
     if(frameCache.empty()) {
         auto loader = db.getFileLoader();
         IVideo::size_type index = 0;
         while(auto frame = loader.readFrame(name, index++)) frameCache.push_back(frame.value());
     }
-    return frameCache; 
+    return frameCache;
 };
 
 std::optional<Frame> FileLoader::readFrame(const std::string& videoName, SIFTVideo::size_type index) const {
