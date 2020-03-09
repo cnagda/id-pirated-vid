@@ -15,9 +15,6 @@
 #define HBINS 32
 #define SBINS 30
 
-#define HBINS 32
-#define SBINS 30
-
 using namespace std;
 using namespace cv;
 namespace fs = std::experimental::filesystem;
@@ -245,8 +242,6 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
 
     while (cap.read(image))
     { // test only loading 2 frames
-        Mat colorHistogram;
-
         if(!(++index % 40)){
             std::cout << "Frame " << index << "/" << num_frames << std::endl;
         }
@@ -257,24 +252,27 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
 
         detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
 
-        int histSize[] = {HBINS, SBINS};
+        std::vector<int> histSize{HBINS, SBINS};
         // hue varies from 0 to 179, see cvtColor
         float hranges[] = { 0, 180 };
         // saturation varies from 0 (black-gray-white) to
         // 255 (pure spectrum color)
         float sranges[] = { 0, 256 };
-        const float* ranges[] = { hranges, sranges };
-        MatND hist;
+        std::vector<float> ranges{ 0, 180, 0, 256 };
         // we compute the histogram from the 0-th and 1-st channels
-        int channels[] = {0, 1};
+        std::vector<int> channels{0, 1};
 
-        calcHist( &hsv, 1, channels, Mat(), // do not use mask
-                     colorHistogram, 2, histSize, ranges,
-                     true, // the histogram is uniform
-                     false );
+        calcHist( std::vector<decltype(hsv)>{hsv}, channels, Mat(), // do not use mask
+                     colorHistogram, histSize, ranges,
+                     true);
         normalize( colorHistogram, colorHistogram, 0, 1, NORM_MINMAX, -1, Mat() );
 
-        Frame frame{keyPoints, descriptors, Mat(), colorHistogram};
+        Mat c, d;
+
+        colorHistogram.copyTo(c);
+        descriptors.copyTo(d);
+
+        Frame frame{keyPoints, d, Mat(), c};
 
         frames.push_back(frame);
 
@@ -515,8 +513,8 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
 
 double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
     if(f1.colorHistogram.rows != HBINS || f1.colorHistogram.cols != SBINS) {
-        std::cerr 
-            << "rows: " << f1.colorHistogram.rows 
+        std::cerr
+            << "rows: " << f1.colorHistogram.rows
             << " cols: " << f1.colorHistogram.cols << std::endl;
         throw std::runtime_error("color histogram is wrong size");
     }

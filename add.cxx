@@ -102,7 +102,7 @@ int main(int argc, char** argv )
 
         auto func = [fvocab = vocab->descriptors(), &sceneVocab](auto v, auto db) -> void {
             auto video = db->loadVideo(v);
-            // try {
+            try {
                 for(Frame& frame : video->frames()) {
                     frame.frameDescriptor = getFrameDescriptor(frame, fvocab);
                 }
