@@ -212,27 +212,31 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
 
         detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
 
-        std::vector<int> histSize{HBINS, SBINS};
-        // hue varies from 0 to 179, see cvtColor
-        float hranges[] = { 0, 180 };
-        // saturation varies from 0 (black-gray-white) to
-        // 255 (pure spectrum color)
-        float sranges[] = { 0, 256 };
-        std::vector<float> ranges{ 0, 180, 0, 256 };
-        // we compute the histogram from the 0-th and 1-st channels
-        std::vector<int> channels{0, 1};
 
-        calcHist( std::vector<decltype(hsv)>{hsv}, channels, Mat(), // do not use mask
-                     colorHistogram, histSize, ranges,
-                     true);
-        normalize( colorHistogram, colorHistogram, 0, 1, NORM_MINMAX, -1, Mat() );
-
-        Mat c, d;
-
-        colorHistogram.copyTo(c);
+        // std::vector<int> histSize{HBINS, SBINS};
+        // // hue varies from 0 to 179, see cvtColor
+        // float hranges[] = { 0, 180 };
+        // // saturation varies from 0 (black-gray-white) to
+        // // 255 (pure spectrum color)
+        // float sranges[] = { 0, 256 };
+        // std::vector<float> ranges{ 0, 180, 0, 256 };
+        // // we compute the histogram from the 0-th and 1-st channels
+        // std::vector<int> channels{0, 1};
+        //
+        // calcHist( std::vector<decltype(hsv)>{hsv}, channels, Mat(), // do not use mask
+        //              colorHistogram, histSize, ranges,
+        //              true);
+        // normalize( colorHistogram, colorHistogram, 0, 1, NORM_MINMAX, -1, Mat() );
+        //
+        // Mat c, d;
+        //
+        // colorHistogram.copyTo(c);
+        Mat d;
         descriptors.copyTo(d);
+        //
+        // Frame frame{keyPoints, d, Mat(), c};
 
-        Frame frame{keyPoints, d, Mat(), c};
+        Frame frame{keyPoints, d};
 
         frames.push_back(frame);
 
