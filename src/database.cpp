@@ -268,7 +268,6 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
         normalize( colorHistogram, colorHistogram, 0, 1, NORM_MINMAX, -1, Mat() );
 
         Mat c, d;
-        
         colorHistogram.copyTo(c);
         descriptors.copyTo(d);
 
@@ -513,8 +512,8 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
 
 double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
     if(f1.colorHistogram.rows != HBINS || f1.colorHistogram.cols != SBINS) {
-        std::cerr 
-            << "rows: " << f1.colorHistogram.rows 
+        std::cerr
+            << "rows: " << f1.colorHistogram.rows
             << " cols: " << f1.colorHistogram.cols << std::endl;
         throw std::runtime_error("color histogram is wrong size");
     }

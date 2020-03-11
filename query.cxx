@@ -38,7 +38,7 @@ int main(int argc, char** argv )
         std::cout << std::endl << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl<<std::endl;
         int count = 0;
         for (auto a : match->alignments) {
-            if (a.score >= match->matchConfidence / 4) {
+            if (a.score > (match->matchConfidence / 2.5)) {
                 count++;
                 std::cout << "Alignment " << count << ", Score: " << a.score << std::endl;
                 std::cout << "Scene range in " << match->video << ": [" << a.startKnown << ", " << a.endKnown << ")" << std::endl;
