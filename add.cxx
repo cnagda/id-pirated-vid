@@ -114,7 +114,6 @@ int main(int argc, char** argv )
                         scene.frameBag = getSceneDescriptor(scene, *video, *db);
                     }
                 }
-
                 db->saveVideo(*video);
             } catch(...) {
                 std::cerr << "not enough info to compute scenes" << std::endl;

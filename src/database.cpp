@@ -268,7 +268,6 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
         normalize( colorHistogram, colorHistogram, 0, 1, NORM_MINMAX, -1, Mat() );
 
         Mat c, d;
-
         colorHistogram.copyTo(c);
         descriptors.copyTo(d);
 
