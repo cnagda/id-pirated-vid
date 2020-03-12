@@ -14,34 +14,17 @@ enable_testing()
 
 option(BUILD_TESTING "Build tests" OFF)
 option(PRINT_DEBUG "Add debug messages" OFF)
-option(BUILD_OPTIONAL "Build testing binaries" OFF)
 
 if(PRINT_DEBUG)
     add_definitions(-DSW_COUT)
 endif(PRINT_DEBUG)
 
 add_subdirectory(src)
+add_subdirectory(bin)
 
-add_custom_target(sample_videos cp ${CMAKE_CURRENT_SOURCE_DIR}/sample.mp4 ${CMAKE_CURRENT_SOURCE_DIR}/coffee.mp4 ${CMAKE_CURRENT_SOURCE_DIR}/crab.mp4 ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY assets/ DESTINATION ${CMAKE_BINARY_DIR})
 add_custom_target(python_scripts cp -R ${CMAKE_CURRENT_SOURCE_DIR}/python ${CMAKE_CURRENT_BINARY_DIR})
 
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif(BUILD_TESTING)
-
-add_executable(add add.cxx)
-add_executable(query query.cxx)
-
-if(BUILD_OPTIONAL)
-    add_executable(bench bench.cxx)
-    add_executable(keyframes keyframes.cxx)
-    target_link_libraries( bench database )
-    target_link_libraries( keyframes database )
-endif()
-
-target_link_libraries( add database )
-target_link_libraries( query database )
-
-add_dependencies(add sample_videos)
-add_dependencies(query python_scripts)
-

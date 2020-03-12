@@ -9,10 +9,8 @@ add_executable(classifier_test classifier_test.cpp)
 add_executable(scene_test scene_test.cpp)
 
 target_link_libraries(database_test gtest_main database)
-add_dependencies(database_test sample_videos)
 
 target_link_libraries(query_test gtest_main database ${OpenCV_LIBS})
-add_dependencies(query_test sample_videos)
 
 target_link_libraries(classifier_test gtest_main)
 target_link_libraries(sw_benchmark benchmark_main database)
