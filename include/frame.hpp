@@ -23,6 +23,7 @@ class Frame {
 public:
     std::vector<cv::KeyPoint> keyPoints;
     cv::Mat descriptors, frameDescriptor, colorHistogram;
+    uint32_t frameNumber;
     bool operator==(const Frame& f2) const {
         return std::equal(keyPoints.begin(), keyPoints.end(), f2.keyPoints.begin(), keyPointEqual) &&
             descriptors.size == f2.descriptors.size &&
