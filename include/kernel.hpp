@@ -9,6 +9,7 @@
 #include "scene.hpp"
 #include <opencv2/videoio.hpp>
 #include <opencv2/features2d.hpp>
+#include "storage.hpp"
 #include <memory>
 
 typedef size_t size_type;
@@ -87,11 +88,75 @@ public:
 };
 
 class CollectFrame : public raft::kernel {
+    size_type frameCount;
 public:
-    CollectFrame(): raft::kernel() {
-        
+    CollectFrame(): raft::kernel(), frameCount(0) {
+        input.addPort<cv::Mat>("sift_descriptor");
+        input.addPort<cv::Mat>("frame_descriptor");
+        output.addPort<Frame>("frame");
     }
+
+    raft::kstatus run();
 };
+
+class SaveFrame : public raft::kernel {
+    FileLoader loader;
+    std::string video;
+public:
+    SaveFrame(const std::string& video, const FileLoader& loader) : raft::kernel(), 
+        loader(loader), video(video) {
+        input.addPort<Frame>("frame");
+
+        loader.initVideoDir(video);
+    }
+
+    raft::kstatus run();
+};
+
+class SaveScene : public raft::kernel {
+    FileLoader loader;
+    std::string video;
+
+public:
+    SaveFrame(const std::string& video, const FileLoader& loader) : raft::kernel(), 
+        loader(loader), video(video) {
+        input.addPort<Frame>("frame");
+
+        loader.initVideoDir(video);
+    }
+
+    raft::kstatus run();
+};
+
+class LoadScenes : public raft::kernel {
+    FileLoader loader;
+    std::string video;
+
+public:
+    LoadScenes(const std::string& video, const FileLoader& loader) : raft::kernel(), 
+        loader(loader), video(video) {
+        output.addPort<SerializableScene>("scene");
+
+        loader.initVideoDir(video);
+    }
+
+    raft::kstatus run();
+};
+
+class LoadFrames : public raft::kernel {
+    FileLoader loader;
+    std::string video;
+
+public:
+    LoadFrames(const std::string& video, const FileLoader& loader) : raft::kernel(), 
+        loader(loader), video(video) {
+        output.addPort<Frame>("frame");
+
+        loader.initVideoDir(video);
+    }
+
+    raft::kstatus run();
+}
 
 class DebugDisplay : public raft::kernel {
 public:

@@ -103,6 +103,40 @@ raft::kstatus ExtractScene::run() {
     return raft::proceed;
 }
 
+raft::kstatus CollectFrame::run() {
+    cv::Mat siftDescriptor, frameDescriptor;
+
+    input["sift_descriptor"].pop(siftDesciptor);
+    input["frame_descriptor"].pop(frameDescriptor);
+
+    output["frame"].allocate<Frame>({}, siftDescriptor, frameDescriptor, cv::Mat(), frameCount++);
+    output["frame"].send();
+
+    return raft::proceed;
+}
+
+raft::kstatus SaveFrame::run() {
+    auto frame = input["frame"].peek();
+
+    loader.saveFrame(video, frame);
+
+    input["frame"].unpeek();
+    input["frame"].recycle();
+
+    return raft::proceed;
+}
+
+raft::kstatus SaveScene::run() {
+    auto frame = input["scene"].peek();
+
+    loader.saveScene(video, scene);
+
+    input["scene"].unpeek();
+    input["scene"].recycle();
+
+    return raft::proceed;
+}
+
 raft::kstatus DetectScene::run() {
     typedef typename std::decay_t<Video>::size_type index_t;
     std::cout << "In flatScenes" << std::endl;

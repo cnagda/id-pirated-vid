@@ -8,6 +8,7 @@
 #include <optional>
 #include "database_iface.hpp"
 #include "vocab_type.hpp"
+#include "storage.hpp"
 #include <variant>
 
 namespace fs = std::experimental::filesystem;
@@ -47,56 +48,6 @@ public:
     size_type frameCount() override { return base.frameCount(); };
     std::vector<Frame>& frames() & override { return base.frames(); };
     std::vector<SerializableScene>& getScenes() & override { return emptyScenes; }
-};
-
-class FileLoader {
-private:
-    fs::path rootDir;
-public:
-    explicit FileLoader(fs::path dir) : rootDir(dir) {};
-
-    std::optional<Frame> readFrame(const std::string& videoName, SIFTVideo::size_type index) const;
-    std::optional<SerializableScene> readScene(const std::string& videoName, SIFTVideo::size_type index) const;
-};
-
-template<typename Base>
-InputVideoAdapter<Base> make_video_adapter(Base&& b, const std::string& name) {
-    return InputVideoAdapter<Base>(std::forward<Base>(b), name);
-}
-
-
-// TODO think of how to use these, templated
-/* Example strategies
-class IVideoLoadStrategy {
-public:
-    virtual std::unique_ptr<IVideo> operator()(const std::string& findKey) const = 0;
-    virtual ~IVideoLoadStrategy() = default;
-};
-
- */
-
-class AggressiveStorageStrategy : public IVideoStorageStrategy {
-public:
-    inline StrategyType getType() const { return Eager; };
-    inline bool shouldBaggifyFrames(IVideo& video) override { return true; };
-    inline bool shouldComputeScenes(IVideo& video) override { return true; };
-    inline bool shouldBaggifyScenes(IVideo& video) override { return true; };
-};
-
-class LazyStorageStrategy : public IVideoStorageStrategy {
-public:
-    inline StrategyType getType() const { return Lazy; };
-    inline bool shouldBaggifyFrames(IVideo& video) override { return false; };
-    inline bool shouldComputeScenes(IVideo& video) override { return false; };
-    inline bool shouldBaggifyScenes(IVideo& video) override { return false; };
-};
-
-struct AggressiveLoadStrategy {
-    constexpr operator StrategyType() { return Eager; };
-};
-
-struct LazyLoadStrategy {
-    constexpr operator StrategyType() { return Lazy; };
 };
 
 class FileDatabase {
@@ -170,6 +121,12 @@ template<typename Video>
 inline DatabaseVideo make_query_adapter(FileDatabase& db, Video&& video, const std::string& key) {
     auto frames = video.frames();
     return DatabaseVideo(db, key, frames);
+}
+
+
+template<typename Base>
+InputVideoAdapter<Base> make_video_adapter(Base&& b, const std::string& name) {
+    return InputVideoAdapter<Base>(std::forward<Base>(b), name);
 }
 
 #endif

@@ -37,7 +37,8 @@ string getAlphas(const string& input)
 }
 
 SerializableScene SceneRead(const std::string& filename) {
-    SIFTVideo::size_type startIdx = 0, endIdx = 0;
+    auto sceneNumber = std::stoi(fs::path(filename).filename());
+    v_size startIdx = 0, endIdx = 0;
 
     ifstream fs(filename, fstream::binary);
     fs.read((char*)&startIdx, sizeof(startIdx));
@@ -56,7 +57,7 @@ SerializableScene SceneRead(const std::string& filename) {
         fs.read((char *)(mat.data + r * cols * CV_ELEM_SIZE(type)), CV_ELEM_SIZE(type) * cols);
     }
 
-    return SerializableScene{mat, startIdx, endIdx};
+    return SerializableScene{mat, startIdx, endIdx, sceneNumber};
 }
 
 void SceneWrite(const std::string& filename, const SerializableScene& scene) {
@@ -173,6 +174,8 @@ void SIFTwrite(const string &filename, const Frame& frame)
 
 Frame SIFTread(const string &filename)
 {
+    auto frameNumber = std::stoi(fs::path(filename).filename());
+
     ifstream fs(filename, fstream::binary);
 
     // Header
@@ -223,7 +226,7 @@ Frame SIFTread(const string &filename)
         fs.read((char *)(colorHistogram.data + r * cols3 * CV_ELEM_SIZE(type3)), CV_ELEM_SIZE(type3) * cols3);
     }
 
-    return Frame{keyPoints, mat, frameMat, colorHistogram};
+    return Frame{keyPoints, mat, frameMat, colorHistogram, frameNumber};
 }
 
 SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Frame)> callback, std::pair<int, int> cropsize) {
@@ -242,7 +245,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
 
     while (cap.read(image))
     { // test only loading 2 frames
-        if(!(++index % 40)){
+        if(!(index % 40)){
             std::cout << "Frame " << index << "/" << num_frames << std::endl;
         }
         UMat descriptors, colorHistogram, hsv;
@@ -271,7 +274,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
         colorHistogram.copyTo(c);
         descriptors.copyTo(d);
 
-        Frame frame{keyPoints, d, Mat(), c};
+        Frame frame{keyPoints, d, Mat(), c, index++};
 
         frames.push_back(frame);
 
@@ -314,11 +317,10 @@ loader(databasePath) {
 };
 
 std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
-    fs::path video_dir(databaseRoot / video.name);
-    fs::create_directories(video_dir);
+    loader.initVideoDir(video.name);
 
     auto frames = video.frames();
-    SIFTVideo::size_type index = 0;
+    v_size index = 0;
     auto& scenes = video.getScenes();
     std::vector<SerializableScene> loadedScenes;
 
@@ -339,10 +341,9 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         fs::create_directories(video_dir / "frames");
     }
     for(auto& frame : frames) {
-        SIFTwrite(video_dir / "frames" / std::to_string(index++), frame);
+        loader.saveFrame(video.name, frame);
     }
 
-    index = 0;
 
     if(!scenes.empty()) {
         if(fs::exists(video_dir / "scenes")) {
@@ -354,7 +355,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
                 loadSceneDescriptor(scene, video, *this);
             }
 
-            SceneWrite(video_dir / "scenes" / std::to_string(index++), scene);
+            loader.saveScene(video.name, scene);
             loadedScenes.push_back(scene);
         }
     }
@@ -367,19 +368,17 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
                 fs::remove_all(video_dir / "scenes");
             }
             fs::create_directories(video_dir / "scenes");
-            SIFTVideo::size_type index = 0;
+
             for(auto& scene : flat) {
                 auto s = SerializableScene(scene.first, scene.second);
-                SceneWrite(video_dir / "scenes" / std::to_string(index++),
-                    s);
+                loader.saveScene(video.name, scene);
                 loadedScenes.push_back(s);
             }
 
             if(strategy->shouldBaggifyScenes(video)) {
-                SIFTVideo::size_type index = 0;
                 for(auto& scene : loadedScenes) {
                     loadSceneDescriptor(scene, video, *this);
-                    SceneWrite(video_dir / "scenes" / std::to_string(index++), scene);
+                    loader.saveScene(video.name, scene);
                 }
             }
         }
@@ -404,7 +403,7 @@ std::unique_ptr<IVideo> FileDatabase::loadVideo(const std::string& key) const {
     }
 
     std::vector<Frame> frames;
-    SIFTVideo::size_type index = 0;
+    v_size index = 0;
 
     if(loadStrategy == AggressiveLoadStrategy{}) {
         while(auto f = loader.readFrame(key, index++)) frames.push_back(f.value());
@@ -443,7 +442,7 @@ std::optional<ContainerVocab> FileDatabase::loadVocab(const std::string& key) co
 std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
     if(sceneCache.empty()) {
         auto loader = db.getFileLoader();
-        SIFTVideo::size_type index = 0;
+        v_size index = 0;
         while(auto scene = loader.readScene(name, index++))
             sceneCache.push_back(scene.value());
 
@@ -456,7 +455,7 @@ std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
             auto ss = convolutionalDetector(*this, comp, config.threshold);
             std::cout << "Found " << ss.size() << " scenes, serializing now" << std::endl;
             boost::push_back(sceneCache, ss
-            | boost::adaptors::transformed([](auto scene){
+            | boost::adaptors::transformed([index = 0](auto scene){
                 return SerializableScene{scene.first, scene.second};
             }));
         }
@@ -472,9 +471,9 @@ std::vector<Frame>& DatabaseVideo::frames() & {
         while(auto frame = loader.readFrame(name, index++)) frameCache.push_back(frame.value());
     }
     return frameCache;
-};
+}
 
-std::optional<Frame> FileLoader::readFrame(const std::string& videoName, SIFTVideo::size_type index) const {
+std::optional<Frame> FileLoader::readFrame(const std::string& videoName, v_size index) const {
     auto path = rootDir / videoName / "frames" / to_string(index);
     if(!fs::exists(path)) {
         return std::nullopt;
@@ -482,7 +481,8 @@ std::optional<Frame> FileLoader::readFrame(const std::string& videoName, SIFTVid
 
     return SIFTread(path);
 }
-std::optional<SerializableScene> FileLoader::readScene(const std::string& videoName, SIFTVideo::size_type index) const {
+
+std::optional<SerializableScene> FileLoader::readScene(const std::string& videoName, v_size index) const {
     auto path = rootDir / videoName / "scenes" / to_string(index);
     if(!fs::exists(path)) {
         return std::nullopt;
@@ -490,6 +490,21 @@ std::optional<SerializableScene> FileLoader::readScene(const std::string& videoN
 
     // unimplemented
     return SceneRead(path);
+}
+
+bool FileLoader::saveFrame(const std::string& video, const Frame& frame) {
+    SceneWrite(rootDir / video / "frames" / std::to_string(frame.frameNumber), frame);
+    return true;
+}
+
+bool FileLoader::saveScene(const std::string& video, const SerializableScene& scene) {
+    SceneWrite(rootDir / video / "scenes" / std::to_string(scene.sceneNumber), scene);
+    return true;
+}
+
+void FileLoader::initVideoDir(const std::string& video) {
+    fs::create_directories(rootDir / video / "frames");
+    fs::create_directories(rootDir / video / "scenes");
 }
 
 DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::string& key) {
@@ -506,7 +521,7 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     std::cout << "Found " << scenes.size() << " scenes, serializing now" << std::endl;
 
     if(!scenes.empty()) {
-        SIFTVideo::size_type index = 0;
+        v_size index = 0;
         for(auto& scene : scenes) {
             auto s = SerializableScene(scene.first, scene.second);
             loadedScenes.push_back(s);

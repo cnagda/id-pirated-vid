@@ -18,4 +18,6 @@ struct SIFTVideo {
 
 SIFTVideo getSIFTVideo(const std::string& filename, std::function<void(cv::UMat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
 
+typedef SIFTVideo::size_type v_size;
+
 #endif

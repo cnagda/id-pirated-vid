@@ -6,15 +6,15 @@
 
 struct SerializableScene {
     cv::Mat frameBag;
-    SIFTVideo::size_type startIdx, endIdx;
-    SIFTVideo::size_type sceneNumber;
+    v_size startIdx, endIdx;
+    v_size sceneNumber;
     const static std::string vocab_name;
 
-    explicit SerializableScene(): frameBag(), startIdx(), endIdx() {};
-    explicit SerializableScene(SIFTVideo::size_type startIdx, SIFTVideo::size_type endIdx) :
-        startIdx(startIdx), endIdx(endIdx), frameBag() {};
-    explicit SerializableScene(const cv::Mat& matrix, SIFTVideo::size_type startIdx, SIFTVideo::size_type endIdx) :
-        startIdx(startIdx), endIdx(endIdx), frameBag(matrix) {};
+    explicit SerializableScene(): frameBag(), startIdx(), endIdx(), sceneNumber(0) {};
+    explicit SerializableScene(v_size startIdx, v_size endIdx, v_size sceneNumber) :
+        startIdx(startIdx), endIdx(endIdx), sceneNumber(sceneNumber), frameBag() {};
+    explicit SerializableScene(const cv::Mat& matrix, v_size startIdx, v_size endIdx, v_size sceneNumber) :
+        startIdx(startIdx), endIdx(endIdx), sceneNumber(sceneNumber), frameBag(matrix) {};
 
     template<typename Video>
     inline auto getFrameRange(Video&& video) const {
