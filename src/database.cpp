@@ -37,7 +37,6 @@ string getAlphas(const string& input)
 }
 
 SerializableScene SceneRead(const std::string& filename) {
-    auto sceneNumber = std::stoi(fs::path(filename).filename());
     v_size startIdx = 0, endIdx = 0;
 
     ifstream fs(filename, fstream::binary);
@@ -57,7 +56,7 @@ SerializableScene SceneRead(const std::string& filename) {
         fs.read((char *)(mat.data + r * cols * CV_ELEM_SIZE(type)), CV_ELEM_SIZE(type) * cols);
     }
 
-    return SerializableScene{mat, startIdx, endIdx, sceneNumber};
+    return SerializableScene{mat, startIdx, endIdx};
 }
 
 void SceneWrite(const std::string& filename, const SerializableScene& scene) {
@@ -174,8 +173,6 @@ void SIFTwrite(const string &filename, const Frame& frame)
 
 Frame SIFTread(const string &filename)
 {
-    auto frameNumber = std::stoi(fs::path(filename).filename());
-
     ifstream fs(filename, fstream::binary);
 
     // Header
@@ -226,7 +223,7 @@ Frame SIFTread(const string &filename)
         fs.read((char *)(colorHistogram.data + r * cols3 * CV_ELEM_SIZE(type3)), CV_ELEM_SIZE(type3) * cols3);
     }
 
-    return Frame{keyPoints, mat, frameMat, colorHistogram, frameNumber};
+    return Frame{keyPoints, mat, frameMat, colorHistogram};
 }
 
 SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Frame)> callback, std::pair<int, int> cropsize) {
@@ -274,7 +271,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
         colorHistogram.copyTo(c);
         descriptors.copyTo(d);
 
-        Frame frame{keyPoints, d, Mat(), c, index++};
+        Frame frame{keyPoints, d, Mat(), c};
 
         frames.push_back(frame);
 
@@ -317,10 +314,10 @@ loader(databasePath) {
 };
 
 std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
+    fs::path video_dir{databaseRoot / video.name};
     loader.initVideoDir(video.name);
 
-    auto frames = video.frames();
-    v_size index = 0;
+    auto& frames = video.frames();
     auto& scenes = video.getScenes();
     std::vector<SerializableScene> loadedScenes;
 
@@ -340,28 +337,18 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         }
         fs::create_directories(video_dir / "frames");
     }
-    for(auto& frame : frames) {
-        loader.saveFrame(video.name, frame);
-    }
-
+    loader.saveRange(frames, video.name, 0);
 
     if(!scenes.empty()) {
         if(fs::exists(video_dir / "scenes")) {
             fs::remove_all(video_dir / "scenes");
         }
         fs::create_directories(video_dir / "scenes");
-        for(auto& scene : scenes) {
-            if(strategy->shouldBaggifyScenes(video)) {
-                loadSceneDescriptor(scene, video, *this);
-            }
-
-            loader.saveScene(video.name, scene);
-            loadedScenes.push_back(scene);
-        }
+        
+        boost::copy(scenes, std::back_inserter(loadedScenes));
     }
     else if(strategy->shouldComputeScenes(video)) {
-        ColorComparator comp;
-        auto flat = convolutionalDetector(video, comp, config.threshold);
+        auto flat = convolutionalDetector(video, ColorComparator{}, config.threshold);
 
         if(!flat.empty()) {
             if(fs::exists(video_dir / "scenes")) {
@@ -369,20 +356,19 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
             }
             fs::create_directories(video_dir / "scenes");
 
-            for(auto& scene : flat) {
-                auto s = SerializableScene(scene.first, scene.second);
-                loader.saveScene(video.name, scene);
-                loadedScenes.push_back(s);
-            }
-
-            if(strategy->shouldBaggifyScenes(video)) {
-                for(auto& scene : loadedScenes) {
-                    loadSceneDescriptor(scene, video, *this);
-                    loader.saveScene(video.name, scene);
-                }
-            }
+            boost::copy(flat | boost::adaptors::transformed([](auto pair){
+                return SerializableScene{pair.first, pair.second};
+            }), std::back_inserter(loadedScenes));
         }
     }
+
+    if(strategy->shouldBaggifyScenes(video)) {
+        for(auto& scene : loadedScenes) {
+            loadSceneDescriptor(scene, video, *this);
+        }
+    }
+
+    loader.saveRange(loadedScenes, video.name, 0);
 
     return std::make_unique<DatabaseVideo>(*this, video.name, frames, loadedScenes);
 }
@@ -492,17 +478,17 @@ std::optional<SerializableScene> FileLoader::readScene(const std::string& videoN
     return SceneRead(path);
 }
 
-bool FileLoader::saveFrame(const std::string& video, const Frame& frame) {
-    SceneWrite(rootDir / video / "frames" / std::to_string(frame.frameNumber), frame);
+bool FileLoader::saveFrame(const std::string& video, v_size index, const Frame& frame) const {
+    SIFTwrite(rootDir / video / "frames" / std::to_string(index), frame);
     return true;
 }
 
-bool FileLoader::saveScene(const std::string& video, const SerializableScene& scene) {
-    SceneWrite(rootDir / video / "scenes" / std::to_string(scene.sceneNumber), scene);
+bool FileLoader::saveScene(const std::string& video, v_size index, const SerializableScene& scene) const {
+    SceneWrite(rootDir / video / "scenes" / std::to_string(index), scene);
     return true;
 }
 
-void FileLoader::initVideoDir(const std::string& video) {
+void FileLoader::initVideoDir(const std::string& video) const {
     fs::create_directories(rootDir / video / "frames");
     fs::create_directories(rootDir / video / "scenes");
 }

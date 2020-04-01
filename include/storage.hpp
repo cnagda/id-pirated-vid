@@ -5,6 +5,17 @@
 #include <experimental/filesystem>
 #include "video.hpp"
 
+namespace fs = std::experimental::filesystem;
+
+
+template <class T, class RankType>
+struct ordered_adapter{
+    RankType rank;
+    T data;
+    bool operator<(const ordered_adapter& a) const {  return rank < a.rank; };
+};
+
+
 class FileLoader {
 private:
     fs::path rootDir;
@@ -13,10 +24,20 @@ public:
 
     std::optional<Frame> readFrame(const std::string& videoName, v_size index) const;
     std::optional<SerializableScene> readScene(const std::string& videoName, v_size index) const;
-    bool saveFrame(const std::string& videoName, v_size index, const Frame& frame);
-    bool saveScene(const std::string& videoName, v_size index, const SerializableScene& scene);
+    bool saveFrame(const std::string& videoName, v_size index, const Frame& frame) const;
+    bool saveScene(const std::string& videoName, v_size index, const SerializableScene& scene) const;
 
-    void initVideoDir(const std::string& videoName);
+    template <typename Range> bool saveRange(Range&& range, const std::string& video, v_size offset) const {
+        return std::all_of(std::begin(range), std::end(range), [this, &video, &offset](const auto& element) mutable {
+            if constexpr(std::is_convertible_v<decltype(element), SerializableScene>) {
+                return saveScene(video, offset++, element);
+            } else if constexpr(std::is_convertible_v<decltype(element), Frame>) {
+                return saveFrame(video, offset++, element);
+            }
+        });
+    }
+
+    void initVideoDir(const std::string& videoName) const;
 };
 
 

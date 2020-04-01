@@ -1,4 +1,6 @@
 #include "kernel.hpp"
+#include "database.hpp"
+#include <raft>
 
 #define THRESHOLD 3
 #define DBPATH 1
@@ -22,6 +24,7 @@ int main(int argc, char** argv )
     double threshold = stod(argv[THRESHOLD]);
 
     auto db = database_factory(argv[DBPATH], -1, -1, threshold);
+
 
     return 0;
 }

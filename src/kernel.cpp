@@ -92,8 +92,11 @@ raft::kstatus ExtractScene::run() {
     input["scene_range"].pop(range);
 
     auto length = range.second - range.first;
+    decltype(length) index = 0;
+
     std::vector<cv::Mat> descriptors(length);
-    input["sift_descriptor"].pop_range(descriptors, length);
+
+    while(index != length) input["frame_descriptor"].pop(descriptors[index++]);
 
     auto descriptor = baggify(descriptors, sceneVocab.descriptors());
 
@@ -106,19 +109,19 @@ raft::kstatus ExtractScene::run() {
 raft::kstatus CollectFrame::run() {
     cv::Mat siftDescriptor, frameDescriptor;
 
-    input["sift_descriptor"].pop(siftDesciptor);
+    input["sift_descriptor"].pop(siftDescriptor);
     input["frame_descriptor"].pop(frameDescriptor);
 
-    output["frame"].allocate<Frame>({}, siftDescriptor, frameDescriptor, cv::Mat(), frameCount++);
+    output["frame"].allocate<Frame>(std::vector<cv::KeyPoint>{}, siftDescriptor, frameDescriptor, cv::Mat());
     output["frame"].send();
 
     return raft::proceed;
 }
 
 raft::kstatus SaveFrame::run() {
-    auto frame = input["frame"].peek();
+    auto frame = input["frame"].peek<ordered_frame>();
 
-    loader.saveFrame(video, frame);
+    loader.saveFrame(video, frame.rank, frame.data);
 
     input["frame"].unpeek();
     input["frame"].recycle();
@@ -127,9 +130,9 @@ raft::kstatus SaveFrame::run() {
 }
 
 raft::kstatus SaveScene::run() {
-    auto frame = input["scene"].peek();
+    auto scene = input["scene"].peek<ordered_scene>();
 
-    loader.saveScene(video, scene);
+    loader.saveScene(video, scene.rank, scene.data);
 
     input["scene"].unpeek();
     input["scene"].recycle();
@@ -138,7 +141,7 @@ raft::kstatus SaveScene::run() {
 }
 
 raft::kstatus DetectScene::run() {
-    typedef typename std::decay_t<Video>::size_type index_t;
+    /*typedef typename std::decay_t<Video>::size_type index_t;
     std::cout << "In flatScenes" << std::endl;
 
     std::vector<std::pair<index_t, index_t>> retval;
@@ -177,7 +180,7 @@ raft::kstatus DetectScene::run() {
         }
     }
 
-    retval.push_back({last, frames.size()});
+    retval.push_back({last, frames.size()});*/
     
-    return retval;
+    return raft::proceed;
 }

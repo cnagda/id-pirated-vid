@@ -18,13 +18,6 @@ class FileDatabase;
 
 #define FRAMES_PER_SCENE  45
 
-template <class T, class RankType>
-struct sortable{
-    RankType rank;
-    T data;
-    bool operator<(const sortable& a) const {  return rank < a.rank; };
-};
-
 
 template<typename Matrix>
 cv::Mat constructVocabulary(Matrix&& descriptors, unsigned int K, cv::Mat labels = cv::Mat()) {

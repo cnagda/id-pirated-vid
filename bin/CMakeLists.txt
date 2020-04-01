@@ -11,7 +11,7 @@ if(BUILD_OPTIONAL)
     add_executable(keyframes keyframes.cxx)
     target_link_libraries( bench database )
     target_link_libraries( keyframes database )
-    target_link_libraries( dataflow kernel )
+    target_link_libraries( dataflow kernel database )
 endif()
 
 target_link_libraries( add database )

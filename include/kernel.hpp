@@ -11,9 +11,10 @@
 #include <opencv2/features2d.hpp>
 #include "storage.hpp"
 #include <memory>
+#include <string>
 
 typedef size_t size_type;
-typedef scene_range scene_range;
+typedef std::pair<size_type, size_type> scene_range;
 
 class VideoFrameSource : public raft::kernel {
     cv::VideoCapture cap;
@@ -79,7 +80,7 @@ class ExtractScene : public raft::kernel {
     Vocab<SerializableScene> sceneVocab;
 public:
     ExtractScene(const Vocab<SerializableScene>& sceneVocab): raft::kernel(), sceneVocab(sceneVocab) {
-        input.addPort<cv::Mat>("sift_descriptor");
+        input.addPort<cv::Mat>("frame_descriptor");
         input.addPort<scene_range>("scene_range");
         output.addPort<SerializableScene>("scene");
     };
@@ -102,10 +103,12 @@ public:
 class SaveFrame : public raft::kernel {
     FileLoader loader;
     std::string video;
+
+    typedef ordered_adapter<Frame, v_size> ordered_frame;
 public:
     SaveFrame(const std::string& video, const FileLoader& loader) : raft::kernel(), 
         loader(loader), video(video) {
-        input.addPort<Frame>("frame");
+        input.addPort<ordered_frame>("frame");
 
         loader.initVideoDir(video);
     }
@@ -117,10 +120,11 @@ class SaveScene : public raft::kernel {
     FileLoader loader;
     std::string video;
 
+    typedef ordered_adapter<SerializableScene, v_size> ordered_scene;
 public:
-    SaveFrame(const std::string& video, const FileLoader& loader) : raft::kernel(), 
+    SaveScene(const std::string& video, const FileLoader& loader) : raft::kernel(), 
         loader(loader), video(video) {
-        input.addPort<Frame>("frame");
+        input.addPort<ordered_scene>("scene");
 
         loader.initVideoDir(video);
     }
@@ -156,7 +160,7 @@ public:
     }
 
     raft::kstatus run();
-}
+};
 
 class DebugDisplay : public raft::kernel {
 public:

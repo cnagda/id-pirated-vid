@@ -56,7 +56,7 @@ TEST(FileRW, SIFTrwTest) {
     vector<KeyPoint> k1{KeyPoint(0.1f, 0.2f, 0.3f), KeyPoint(0.15f, 0.25f, 0.35f)};
     vector<KeyPoint> k2{KeyPoint(0.2f, 0.3f, 0.4f), KeyPoint(0.25f, 0.35f, 0.45f), KeyPoint(0.4f, 0.5f, 0.6f)};
 
-    vector<Frame>result {Frame{k1, mat1, mat3, A, 0}, Frame{k2, mat2, mat4, A, 0}};
+    vector<Frame>result {Frame{k1, mat1, mat3, A}, Frame{k2, mat2, mat4, A}};
 
     SIFTwrite("test_frame1", result[0]);
     SIFTwrite("test_frame2", result[1]);
