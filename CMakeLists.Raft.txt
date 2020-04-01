@@ -6,8 +6,8 @@ ExternalProject_Add(Raft
   GIT_TAG           master
   SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/Raft-src"
   BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/Raft-build"
-  CONFIGURE_COMMAND ""
   BUILD_COMMAND     ""
   INSTALL_COMMAND   ""
   TEST_COMMAND      ""
+  CMAKE_ARGS        "-DBUILD_TESTS=OFF"
 )
