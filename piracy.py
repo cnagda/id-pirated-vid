@@ -67,6 +67,7 @@ def main():
     '''
 
     subparsers = parser.add_subparsers(title='type', dest='type')
+    subparsers.required = True
 
     parser_add = subparsers.add_parser('ADD')
     parser_add.add_argument(
