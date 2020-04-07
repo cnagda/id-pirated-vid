@@ -2,7 +2,12 @@
 
 # id-pirated-vid
 
-# Install
+# Description
+
+Users create a database of known videos and can compare query videos against the
+database to find piracy.
+
+# Installation
 
 ## Using Vagrant
 
@@ -60,3 +65,75 @@ cmake .. -DBUILD_TESTING=ON
 make
 make test
 ```
+
+# Usage
+
+After building the project, run the command line interface from the root project
+folder by executing `piracy.py`
+
+```
+usage: piracy.py [-h] {ADD,QUERY} ...
+
+Check videos for pirated content
+
+optional arguments:
+  -h, --help   show this help message and exit
+
+type:
+  {ADD,QUERY}
+```
+
+## ADD
+
+Add video(s) to the database or recalculate the database frame/scene vocabulary.
+When adding multiple videos with optional arguments, frame/scene vocabulary
+will only be recalculated after the last video is added to save time.
+
+```
+usage: piracy.py ADD [-h] [-kFrame KF] [-kScene KS] [-thresholdScene TS]
+                     dbPath [paths [paths ...]]
+
+positional arguments:
+  dbPath              path to database of known videos
+  paths               path(s) to directories/files to add
+
+optional arguments:
+  -h, --help          show this help message and exit
+  -kFrame KF          k value for frame kmeans
+  -kScene KS          k value for scene kmeans
+  -thresholdScene TS  threshold for inter-scene similarity
+```
+
+## QUERY
+
+Query the database for each video at `paths` to check for piracy.
+
+```
+usage: piracy.py QUERY [-h] dbPath paths [paths ...]
+
+positional arguments:
+  dbPath      path to database of known videos
+  paths       path(s) to directories/files to add
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
+
+## Examples
+
+Create a database from videos in directory `/data/videos/` and compute frame/scene
+descriptors and scenes:
+```
+piracy.py ADD ./build/database ./data/videos/ -kFrame 2000 -kScene 200 -thresholdScene 0.15
+```
+
+Check to see if video `/data/pirated.mp4` matches any videos in the database:
+```
+piracy.py QUERY ./build/database ./data/pirated.mp4
+```
+
+# Contributing
+
+# Credits
+
+# License
