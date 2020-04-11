@@ -46,6 +46,71 @@ Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase& database, 
     return Vocab<SerializableScene>(constructVocabulary(copy, K));
 }
 
+void overflow(std::vector<cv::Mat>& descriptor_levels, unsigned int K, unsigned int N, unsigned int level){
+    // FIXME: better solution to not having enough points, maybe throw away?
+    //while(descriptor_levels[level].rows < K){
+    //    descriptor_levels[level].push_back();
+    //}
+
+    // throw away leftovers
+    if(descriptor_levels[level].rows < K){
+        descriptor_levels[level] = cv::Mat();
+        return;
+    }
+
+
+    // make next level if none
+    if(level == descriptor_levels.size() - 1){
+        descriptor_levels.push_back(cv::Mat());
+    }
+    cv::UMat copy;
+    descriptor_levels[level].copyTo(copy);
+
+    descriptor_levels[level + 1].push_back(constructVocabulary(copy, K));
+    descriptor_levels[level] = cv::Mat();
+
+    // if next level is too large, reduce with kmeans
+    if(descriptor_levels[level + 1].rows >= N){
+        overflow(descriptor_levels, K, N, level + 1);
+    }
+}
+
+// N is maximum size on which to perform clustering
+Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase& database, unsigned int K, unsigned int N, unsigned int speedinator) {
+    if(K > N){
+        throw std::runtime_error("constructFrameVocabularyHierarchical: error, K > N");
+    }
+
+    //cv::Mat descriptors;
+
+    std::vector<cv::Mat> descriptor_levels(1);
+
+    // collect features and reduce with kmeans as needed
+    for(auto video : database.listVideos()) {
+        auto v = database.loadVideo(video);
+        auto &frames = v->frames();
+        for(auto i = frames.begin(); i < frames.end(); i += speedinator){
+            descriptor_levels[0].push_back(i->descriptors);
+            // limit largest kmeans run
+            if(descriptor_levels[0].rows >= N){
+                overflow(descriptor_levels, K, N, 0);
+            }
+        }
+    }
+
+    // flush all remaining features to lowest level
+    for(int i = 0; i < descriptor_levels.size(); i++){
+        // if K == 2000 and at lowest level this is the vocabulary
+        if(descriptor_levels[i].rows != K || i != descriptor_levels.size() - 1){
+            overflow(descriptor_levels, K, N, i);
+        }
+    }
+
+    // can return empty matrix if data has fewer than K descriptors
+    return Vocab<Frame>(descriptor_levels.back());
+}
+
+
 double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter){
     auto frames1 = v1.frames();
     auto frames2 = v2.frames();
