@@ -52,9 +52,16 @@ void overflow(std::vector<cv::Mat>& descriptor_levels, unsigned int K, unsigned 
     //    descriptor_levels[level].push_back();
     //}
 
+    std::cout << "Enter overflow at level " << level << ", shape is: ";
+    for(auto& a : descriptor_levels){
+        std::cout << a.rows << ">";
+    }
+    std::cout << std::endl;
+
     // throw away leftovers
     if(descriptor_levels[level].rows < K){
         descriptor_levels[level] = cv::Mat();
+        std::cout << "Early return" << std::endl
         return;
     }
 
@@ -73,6 +80,12 @@ void overflow(std::vector<cv::Mat>& descriptor_levels, unsigned int K, unsigned 
     if(descriptor_levels[level + 1].rows >= N){
         overflow(descriptor_levels, K, N, level + 1);
     }
+
+    std::cout << "Exit overflow at level " << level << ", shape is: ";
+    for(auto& a : descriptor_levels){
+        std::cout << a.rows << ">";
+    }
+    std::cout << std::endl;
 }
 
 // N is maximum size on which to perform clustering
