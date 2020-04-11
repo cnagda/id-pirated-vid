@@ -71,7 +71,9 @@ int main(int argc, char** argv )
     bool shouldRecalculateFrames = false;
 
     if(!isUnspecified(argv[KFRAME])) {
-        auto v = constructFrameVocabulary(*db, kFrame, 10);
+        //auto v = constructFrameVocabulary(*db, kFrame, 10);
+        // construct frame vocabulary running kmeans with max size 50000 to handle huge databases
+        auto v = constructFrameVocabularyHierarchical(*db, kFrame, 50000, 10);
         saveVocabulary(v, *db);
         shouldRecalculateFrames = true;
     }
