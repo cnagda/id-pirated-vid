@@ -61,7 +61,7 @@ void overflow(std::vector<cv::Mat>& descriptor_levels, unsigned int K, unsigned 
     // throw away leftovers
     if(descriptor_levels[level].rows < K){
         descriptor_levels[level] = cv::Mat();
-        std::cout << "Early return" << std::endl
+        std::cout << "Early return" << std::endl;
         return;
     }
 
