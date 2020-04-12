@@ -5,31 +5,102 @@ import os
 from moviepy.editor import *
 import glob
 import argparse
+import numpy as np
+from skimage import transform as tf
+import math
+
+up_multiplier = 1.2
+down_multiplier = 0.8
 
 class Attack:
     def frame(self, up):
         print(f"frame up={up}")
-        return self.vid
+        newvid = self.speed(up)
+        if up is True:
+            frame_rate_multiplier = up_multiplier
+        else:
+            frame_rate_multiplier = down_multiplier
+        print(newvid.fps)
+        old_fps = newvid.fps
+        newvid = newvid.set_fps(30 / frame_rate_multiplier)
+
+        return newvid
 
     def scale(self, up, noise=False):
         print(f"scale in={up}, noise={noise}")
-        return self.vid
+
+        current_w = self.vid.w
+        current_h = self.vid.h
+
+        if up is True:
+            newvid = self.vid.resize(up_multiplier)
+            x1 = math.ceil(abs(current_w - newvid.w) / 2)
+            y1 = math.ceil(abs(current_h - newvid.h) / 2)
+            newvid = newvid.crop(x1=x1,y1=y1,x2=current_w+x1,y2=current_h)
+        else:
+            newvid = self.vid.resize(down_multiplier)
+            if noise is True:
+                # TODO: chandni
+                print("oops not done")
+            else:
+                newvid = newvid.margin(
+                    left = math.ceil(abs(current_w - newvid.w) / 2),
+                    right = math.floor(abs(current_w - newvid.w) / 2),
+                    top = math.ceil(abs(current_h - newvid.h) / 2),
+                    bottom = math.floor(abs(current_h - newvid.h) / 2)
+                )
+
+        return newvid
 
     def recolor(self, grey=False, dark=False):
         print(f"recolor grey={grey} dark={dark}")
-        return self.vid
+        if grey is True:
+            newvid = self.vid.blackwhite()
+        else:
+            newvid = self.vid.colorx(down_multiplier)
+
+        return newvid
 
     def rotate(self, deg):
         print(f"rotate deg={deg}")
-        return self.vid
+        current_h = self.vid.h
+        current_w = self.vid.w
+        newvid = self.vid.rotate(deg)
+        if deg == 90:
+            newvid = newvid.resize(self.vid.h / newvid.h)
+            newvid = newvid.margin(
+                left = math.ceil(abs(current_w - newvid.w) / 2),
+                right = math.floor(abs(current_w - newvid.w) / 2),
+                top = math.ceil(abs(current_h - newvid.h) / 2),
+                bottom = math.floor(abs(current_h - newvid.h) / 2)
+            )
+        return newvid
 
     def speed(self, up):
         print(f"speed up={up}")
-        return self.vid
+        if up == True:
+            multiplier = up_multiplier
+        else:
+            multiplier = down_multiplier
+        return self.vid.speedx(factor=multiplier)
+
+    # https://zulko.github.io/moviepy/examples/star_worms.html
+    def bottomWarp(self, pic):
+        Y,X = pic.shape[:2]
+        scale_factor = 0.1
+        src = np.array([[0,0],[X,0],[X,Y],[0,Y]])
+        dst = np.array([[0,0],[X,0],[X - scale_factor * X,Y],[0 + scale_factor * X,Y]])
+        tform = tf.ProjectiveTransform()
+        tform.estimate(src ,dst)
+        im = tf.warp(pic, tform)
+        return im
 
     def projection(self):
+        warp_im = lambda pic : self.bottomWarp(pic)
+        modified_clip= self.vid.fl_image(warp_im)
         print("projection")
-        return self.vid
+
+        return modified_clip
 
     def exact_match(self):
         print("exact_match")
@@ -68,7 +139,7 @@ class Attack:
 
     def mirror(self):
         print("mirror")
-        return self.vid
+        return self.vid.mirror_y()
 
     def pic_in_pic(self):
         print("pic_in_pic")
@@ -103,22 +174,22 @@ class Attack:
         self.destdir = destdir
         self.base_video = VideoFileClip(basepath)
         self.attack_functions = [
-            self.projection,
-            self.exact_match,
-            self.snowflakes,
-            self.scale_up,
-            self.scale_down_black,
-            self.scale_down_noise,
+            # self.projection,
+            # self.exact_match,
+            # self.snowflakes,
+            # self.scale_up,
+            # self.scale_down_black,
+            # self.scale_down_noise,
             self.frame_rate_up,
             self.frame_rate_down,
-            self.recolor_grey,
-            self.recolor_dark,
-            self.rotate_90,
-            self.rotate_180,
-            self.mirror,
-            self.pic_in_pic,
-            self.speed_up,
-            self.speed_down
+            # self.recolor_grey,
+            # self.recolor_dark,
+            # self.rotate_90,
+            # self.rotate_180,
+            # self.mirror,
+            # self.pic_in_pic,
+            # self.speed_up,
+            # self.speed_down
         ]
 
 
