@@ -3,7 +3,6 @@
 
 #include "instrumentation.hpp"
 #include "database_iface.hpp"
-#include <opencv2/opencv.hpp>
 #include "sw.hpp"
 #include <optional>
 
@@ -31,9 +30,14 @@ double frameSimilarity(Frame& f1, Frame& f2, Extractor&& extractor){
     return cosineSimilarity(b1, b2);
 }
 
+namespace cv {
+    class Mat;
+}
+
 class ColorComparator {
 public:
     double operator()(const Frame& f1, const Frame& f2) const;
+    double operator()(const cv::Mat&, const cv::Mat&) const;
 };
 
 double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter);

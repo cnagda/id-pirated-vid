@@ -4,6 +4,7 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <vector>
 #include "vocabulary.hpp"
+#include "matcher.hpp"
 
 #define HBINS 32
 #define SBINS 30
@@ -141,46 +142,42 @@ raft::kstatus SaveScene::run() {
 }
 
 raft::kstatus DetectScene::run() {
-    /*typedef typename std::decay_t<Video>::size_type index_t;
-    std::cout << "In flatScenes" << std::endl;
+    ColorComparator comp;
+    cv::Mat mat;
 
-    std::vector<std::pair<index_t, index_t>> retval;
+    if(responses.size() != windowSize) {
+        input["color_histogram"].pop(prev);
 
-    auto& frames = video.frames();
-    if(!frames.size()){
-        return retval;
-    }
+        while(responses.size() != windowSize) {
+            input["color_histogram"].pop(mat);
+            double response = comp(mat, prev);
 
-    std::vector<double> responses;
-    std::vector<double> conv;
-
-    for(int i = 1; i < frames.size(); i++) {
-        responses.push_back(comp(frames[i], frames[i - 1]));
-    }
-
-    double sum = 0;
-    for(int i = 0; i < windowSize; i++) sum += responses[i];
-    conv.push_back(sum / windowSize);
-
-    for(int i = windowSize; i < responses.size(); i++) {
-        sum += responses[i];
-        sum -= responses[i - windowSize];
-
-        conv.push_back(sum / windowSize);
-    }
-
-    index_t last = 0;
-
-    for(int i = 1; i < conv.size(); ++i) {
-        auto dif = std::abs(conv[i] - conv[i - 1]);
-        if(dif > threshold) {
-            auto end = i + windowSize;
-            retval.push_back({last, end});
-            last = end;
+            accumulatedResponse += response;
+            responses.push(response);
+            prev = mat;
+            currentScene++;
         }
+
+        previousAverage = accumulatedResponse / windowSize;
     }
 
-    retval.push_back({last, frames.size()});*/
+    input["color_histogram"].pop(mat);
+    double response = comp(mat, prev);
+    accumulatedResponse += response;
+    accumulatedResponse -= responses.front();
+
+    if(std::abs(accumulatedResponse / windowSize - previousAverage) > threshold) {
+        auto range = output["scene_range"].allocate<scene_range>(lastMarker, currentScene);
+        output["scene_range"].send();
+        lastMarker = currentScene;
+    }
+
+    previousAverage = accumulatedResponse / windowSize;
+
+    responses.push(response);
+    responses.pop();
+    prev = mat;
+    currentScene++;
     
     return raft::proceed;
 }

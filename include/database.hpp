@@ -3,7 +3,6 @@
 #include "frame.hpp"
 #include <vector>
 #include <memory>
-#include <opencv2/core/mat.hpp>
 #include <experimental/filesystem>
 #include <optional>
 #include "database_iface.hpp"

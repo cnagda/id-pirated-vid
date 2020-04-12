@@ -11,6 +11,8 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include "imgproc.hpp"
+#include <opencv2/core/mat.hpp>
+#include <fstream>
 
 #define HBINS 32
 #define SBINS 30
@@ -515,21 +517,4 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     }
 
     return DatabaseVideo(db, key, frames, loadedScenes);
-}
-
-double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
-    if(f1.colorHistogram.rows != HBINS || f1.colorHistogram.cols != SBINS) {
-        std::cerr
-            << "rows: " << f1.colorHistogram.rows
-            << " cols: " << f1.colorHistogram.cols << std::endl;
-        throw std::runtime_error("color histogram is wrong size");
-    }
-
-    if(f1.colorHistogram.size() != f2.colorHistogram.size()) {
-        throw std::runtime_error("colorhistograms not matching");
-    }
-
-    auto subbed = f1.colorHistogram - f2.colorHistogram;
-    auto val = cv::sum(subbed)[0];
-    return std::abs(val);
 }
