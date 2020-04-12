@@ -333,7 +333,9 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     }
 
     if(!frames.empty()) {
-        fs::remove_all(video_dir / "frames");
+        if(fs::exists(video_dir / "frames")) {
+            fs::remove_all(video_dir / "frames");
+        }
         fs::create_directories(video_dir / "frames");
     }
     for(auto& frame : frames) {
@@ -343,7 +345,9 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
     index = 0;
 
     if(!scenes.empty()) {
-        fs::remove_all(video_dir / "scenes");
+        if(fs::exists(video_dir / "scenes")) {
+            fs::remove_all(video_dir / "scenes");
+        }
         fs::create_directories(video_dir / "scenes");
         for(auto& scene : scenes) {
             if(strategy->shouldBaggifyScenes(video)) {
@@ -359,7 +363,9 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         auto flat = convolutionalDetector(video, comp, config.threshold);
 
         if(!flat.empty()) {
-            fs::remove_all(video_dir / "scenes");
+            if(fs::exists(video_dir / "scenes")) {
+                fs::remove_all(video_dir / "scenes");
+            }
             fs::create_directories(video_dir / "scenes");
             SIFTVideo::size_type index = 0;
             for(auto& scene : flat) {
