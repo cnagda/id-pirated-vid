@@ -12,6 +12,7 @@
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include "imgproc.hpp"
 #include <opencv2/core/mat.hpp>
+#include <opencv2/videoio.hpp>
 #include <fstream>
 
 #define HBINS 32
@@ -38,14 +39,7 @@ string getAlphas(const string& input)
 #endif
 }
 
-SerializableScene SceneRead(const std::string& filename) {
-    v_size startIdx = 0, endIdx = 0;
-
-    ifstream fs(filename, fstream::binary);
-    fs.read((char*)&startIdx, sizeof(startIdx));
-    fs.read((char*)&endIdx, sizeof(endIdx));
-
-    // Header
+cv::Mat readMat(ifstream& fs) {
     int rows, cols, type, channels;
     fs.read((char *)&rows, sizeof(int));     // rows
     fs.read((char *)&cols, sizeof(int));     // cols
@@ -58,16 +52,10 @@ SerializableScene SceneRead(const std::string& filename) {
         fs.read((char *)(mat.data + r * cols * CV_ELEM_SIZE(type)), CV_ELEM_SIZE(type) * cols);
     }
 
-    return SerializableScene{mat, startIdx, endIdx};
+    return mat;
 }
 
-void SceneWrite(const std::string& filename, const SerializableScene& scene) {
-    ofstream fs(filename, fstream::binary);
-    fs.write((char*)&scene.startIdx, sizeof(scene.startIdx));
-    fs.write((char*)&scene.endIdx, sizeof(scene.endIdx));
-
-    const auto& mat = scene.frameBag;
-    // Header
+void writeMat(const cv::Mat& mat, ofstream& fs) {
     int type = mat.type();
     int channels = mat.channels();
     fs.write((char *)&mat.rows, sizeof(int)); // rows
@@ -90,87 +78,35 @@ void SceneWrite(const std::string& filename, const SerializableScene& scene) {
     }
 }
 
+SerializableScene SceneRead(const std::string& filename) {
+    v_size startIdx = 0, endIdx = 0;
+
+    ifstream fs(filename, fstream::binary);
+    fs.read((char*)&startIdx, sizeof(startIdx));
+    fs.read((char*)&endIdx, sizeof(endIdx));
+
+    return SerializableScene{readMat(fs), startIdx, endIdx};
+}
+
+void SceneWrite(const std::string& filename, const SerializableScene& scene) {
+    ofstream fs(filename, fstream::binary);
+    fs.write((char*)&scene.startIdx, sizeof(scene.startIdx));
+    fs.write((char*)&scene.endIdx, sizeof(scene.endIdx));
+
+    writeMat(scene.frameBag, fs);
+}
+
 void SIFTwrite(const string &filename, const Frame& frame)
 {
     const auto& keyPoints = frame.keyPoints;
     ofstream fs(filename, fstream::binary);
 
-    {
-        const auto& mat = frame.descriptors;
-        // Header
-        int type = mat.type();
-        int channels = mat.channels();
-        fs.write((char *)&mat.rows, sizeof(int)); // rows
-        fs.write((char *)&mat.cols, sizeof(int)); // cols
-        fs.write((char *)&type, sizeof(int));     // type
-        fs.write((char *)&channels, sizeof(int)); // channels
-
-        // Data
-        if (mat.isContinuous())
-        {
-            fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
-        }
-        else
-        {
-            int rowsz = CV_ELEM_SIZE(type) * mat.cols;
-            for (int r = 0; r < mat.rows; ++r)
-            {
-                fs.write(mat.ptr<char>(r), rowsz);
-            }
-        }
-    }
+    writeMat(frame.descriptors, fs);
 
     fs.write((char *)&keyPoints[0], keyPoints.size() * sizeof(KeyPoint));
 
-    {
-        const auto& mat = frame.frameDescriptor;
-        // Header
-        int type = mat.type();
-        int channels = mat.channels();
-        fs.write((char *)&mat.rows, sizeof(int)); // rows
-        fs.write((char *)&mat.cols, sizeof(int)); // cols
-        fs.write((char *)&type, sizeof(int));     // type
-        fs.write((char *)&channels, sizeof(int)); // channels
-
-        // Data
-        if (mat.isContinuous())
-        {
-            fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
-        }
-        else
-        {
-            int rowsz = CV_ELEM_SIZE(type) * mat.cols;
-            for (int r = 0; r < mat.rows; ++r)
-            {
-                fs.write(mat.ptr<char>(r), rowsz);
-            }
-        }
-    }
-
-    {
-        const auto& mat = frame.colorHistogram;
-        // Header
-        int type = mat.type();
-        int channels = mat.channels();
-        fs.write((char *)&mat.rows, sizeof(int)); // rows
-        fs.write((char *)&mat.cols, sizeof(int)); // cols
-        fs.write((char *)&type, sizeof(int));     // type
-        fs.write((char *)&channels, sizeof(int)); // channels
-
-        // Data
-        if (mat.isContinuous())
-        {
-            fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
-        }
-        else
-        {
-            int rowsz = CV_ELEM_SIZE(type) * mat.cols * channels;
-            for (int r = 0; r < mat.rows; ++r)
-            {
-                fs.write(mat.ptr<char>(r), rowsz);
-            }
-        }
-    }
+    writeMat(frame.frameDescriptor, fs);
+    writeMat(frame.colorHistogram, fs);
 }
 
 Frame SIFTread(const string &filename)
@@ -199,31 +135,8 @@ Frame SIFTread(const string &filename)
         keyPoints.push_back(k);
     }
 
-    // Header
-    int rows2 = 0, cols2 = 0, type2 = 0, channels2 = 0;
-    fs.read((char *)&rows2, sizeof(int));     // rows2
-    fs.read((char *)&cols2, sizeof(int));     // cols2
-    fs.read((char *)&type2, sizeof(int));     // type2
-    fs.read((char *)&channels2, sizeof(int)); // channels
-    Mat frameMat(rows2, cols2, type2);
-
-    for (int r = 0; r < rows2; r++)
-    {
-        fs.read((char *)(frameMat.data + r * cols2 * CV_ELEM_SIZE(type2)), CV_ELEM_SIZE(type2) * cols2);
-    }
-
-    // Header
-    int rows3 = 0, cols3 = 0, type3 = 0, channels3 = 0;
-    fs.read((char *)&rows3, sizeof(int));     // rows3
-    fs.read((char *)&cols3, sizeof(int));     // cols3
-    fs.read((char *)&type3, sizeof(int));     // type3
-    fs.read((char *)&channels3, sizeof(int)); // channels
-    Mat colorHistogram(rows3, cols3, type3);
-
-    for (int r = 0; r < rows3; r++)
-    {
-        fs.read((char *)(colorHistogram.data + r * cols3 * CV_ELEM_SIZE(type3)), CV_ELEM_SIZE(type3) * cols3);
-    }
+    auto frameMat = readMat(fs);
+    auto colorHistogram = readMat(fs);
 
     return Frame{keyPoints, mat, frameMat, colorHistogram};
 }
@@ -244,7 +157,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
 
     while (cap.read(image))
     { // test only loading 2 frames
-        if(!(index % 40)){
+        if(!(++index % 40)){
             std::cout << "Frame " << index << "/" << num_frames << std::endl;
         }
         UMat descriptors, colorHistogram, hsv;
@@ -517,4 +430,24 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     }
 
     return DatabaseVideo(db, key, frames, loadedScenes);
+}
+
+double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
+    return operator()(f1.colorHistogram, f2.colorHistogram);
+}
+double ColorComparator::operator()(const cv::Mat& f1, const cv::Mat& f2) const {
+    if(f1.rows != HBINS || f1.cols != SBINS) {
+        std::cerr
+            << "rows: " << f1.rows
+            << " cols: " << f1.cols << std::endl;
+        throw std::runtime_error("color histogram is wrong size");
+    }
+
+    if(f1.size() != f2.size()) {
+        throw std::runtime_error("colorHistograms not matching");
+    }
+
+    auto subbed = f1 - f2;
+    auto val = cv::sum(subbed)[0];
+    return std::abs(val);
 }

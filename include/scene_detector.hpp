@@ -2,7 +2,6 @@
 #define SCENE_DETECT_HPP
 
 #include <vector>
-#include <numeric>
 
 template<class Video, typename Cmp>
 auto convolutionalDetector(Video& video, Cmp&& comp, double threshold, int windowSize = 10){

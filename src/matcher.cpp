@@ -180,23 +180,3 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
 
     return std::nullopt;
 }
-
-double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
-    return this(f1.colorHistogram, f2.colorHistogram);
-
-double ColorComparator::operator()(const cv::Mat& f1, const cv::Mat& f2) const {
-    if(f1.rows != HBINS || f1.cols != SBINS) {
-        std::cerr
-            << "rows: " << f1.rows
-            << " cols: " << f1.cols << std::endl;
-        throw std::runtime_error("color histogram is wrong size");
-    }
-
-    if(f1.size() != f2.size()) {
-        throw std::runtime_error("colorHistograms not matching");
-    }
-
-    auto subbed = f1 - f2;
-    auto val = cv::sum(subbed)[0];
-    return std::abs(val);
-}

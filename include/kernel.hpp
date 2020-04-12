@@ -70,7 +70,7 @@ class DetectScene : public raft::kernel {
     cv::Mat prev;
 
 public:
-    DetectScene(size_type windowSize, double threshold): raft::kernel(), windowSize(windowSize), 
+    DetectScene(double threshold, size_type windowSize = 10): raft::kernel(), windowSize(windowSize), 
     previousAverage(0), lastMarker(0), currentScene(0), threshold(threshold) {
         input.addPort<ordered_mat>("color_histogram");
         output.addPort<scene_range>("scene_range");
@@ -167,7 +167,7 @@ class LoadFrames : public raft::kernel {
 public:
     LoadFrames(const std::string& video, const FileLoader& loader) : raft::kernel(), 
         loader(loader), video(video) {
-        output.addPort<Frame>("frame");
+        output.addPort<ordered_frame>("frame");
 
         loader.initVideoDir(video);
     }
