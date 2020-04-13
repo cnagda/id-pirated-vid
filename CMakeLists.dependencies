@@ -20,6 +20,26 @@ endif()
 find_package( Boost 1.32.0 )
 include_directories(${Boost_INCLUDE_DIR})
 
+if(BUILD_OPTIONAL)
+    configure_file(CMakeLists.Raft.txt Raft/CMakeLists.txt)
+    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Raft)
+    if(result)
+    message(FATAL_ERROR "CMake step for Raft failed: ${result}")
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} --build .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Raft)
+    if(result)
+    message(FATAL_ERROR "Build step for Raft failed: ${result}")
+    endif()
+
+    add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/Raft-src
+                    ${CMAKE_CURRENT_BINARY_DIR}/Raft-build
+                    EXCLUDE_FROM_ALL)
+endif()
+
 #[[
 
 configure_file(CMakeLists.fmt.txt fmt/CMakeLists.txt)

@@ -41,8 +41,10 @@ int main(int argc, char** argv )
     int kScene = stoi(argv[KSCENE]);
     double threshold = stod(argv[THRESHOLD]);
 
-    namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
-
+    if(DEBUG) {
+        namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
+    }
+    
     auto db = database_factory(argv[DBPATH], kFrame, kScene, threshold);
 
     if (!isUnspecified(argv[VIDPATH])) {

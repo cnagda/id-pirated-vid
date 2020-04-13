@@ -11,6 +11,9 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include "imgproc.hpp"
+#include <opencv2/core/mat.hpp>
+#include <opencv2/videoio.hpp>
+#include <fstream>
 
 #define HBINS 32
 #define SBINS 30
@@ -36,14 +39,7 @@ string getAlphas(const string& input)
 #endif
 }
 
-SerializableScene SceneRead(const std::string& filename) {
-    SIFTVideo::size_type startIdx = 0, endIdx = 0;
-
-    ifstream fs(filename, fstream::binary);
-    fs.read((char*)&startIdx, sizeof(startIdx));
-    fs.read((char*)&endIdx, sizeof(endIdx));
-
-    // Header
+cv::Mat readMat(ifstream& fs) {
     int rows, cols, type, channels;
     fs.read((char *)&rows, sizeof(int));     // rows
     fs.read((char *)&cols, sizeof(int));     // cols
@@ -56,16 +52,10 @@ SerializableScene SceneRead(const std::string& filename) {
         fs.read((char *)(mat.data + r * cols * CV_ELEM_SIZE(type)), CV_ELEM_SIZE(type) * cols);
     }
 
-    return SerializableScene{mat, startIdx, endIdx};
+    return mat;
 }
 
-void SceneWrite(const std::string& filename, const SerializableScene& scene) {
-    ofstream fs(filename, fstream::binary);
-    fs.write((char*)&scene.startIdx, sizeof(scene.startIdx));
-    fs.write((char*)&scene.endIdx, sizeof(scene.endIdx));
-
-    const auto& mat = scene.frameBag;
-    // Header
+void writeMat(const cv::Mat& mat, ofstream& fs) {
     int type = mat.type();
     int channels = mat.channels();
     fs.write((char *)&mat.rows, sizeof(int)); // rows
@@ -88,142 +78,60 @@ void SceneWrite(const std::string& filename, const SerializableScene& scene) {
     }
 }
 
+SerializableScene SceneRead(const std::string& filename) {
+    v_size startIdx = 0, endIdx = 0;
+
+    ifstream fs(filename, fstream::binary);
+    fs.read((char*)&startIdx, sizeof(startIdx));
+    fs.read((char*)&endIdx, sizeof(endIdx));
+
+    return {readMat(fs), startIdx, endIdx};
+}
+
+void SceneWrite(const std::string& filename, const SerializableScene& scene) {
+    ofstream fs(filename, fstream::binary);
+    fs.write((char*)&scene.startIdx, sizeof(scene.startIdx));
+    fs.write((char*)&scene.endIdx, sizeof(scene.endIdx));
+
+    writeMat(scene.frameBag, fs);
+}
+
 void SIFTwrite(const string &filename, const Frame& frame)
 {
     const auto& keyPoints = frame.keyPoints;
     ofstream fs(filename, fstream::binary);
 
-    {
-        const auto& mat = frame.descriptors;
-        // Header
-        int type = mat.type();
-        int channels = mat.channels();
-        fs.write((char *)&mat.rows, sizeof(int)); // rows
-        fs.write((char *)&mat.cols, sizeof(int)); // cols
-        fs.write((char *)&type, sizeof(int));     // type
-        fs.write((char *)&channels, sizeof(int)); // channels
+    writeMat(frame.descriptors, fs);
 
-        // Data
-        if (mat.isContinuous())
-        {
-            fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
-        }
-        else
-        {
-            int rowsz = CV_ELEM_SIZE(type) * mat.cols;
-            for (int r = 0; r < mat.rows; ++r)
-            {
-                fs.write(mat.ptr<char>(r), rowsz);
-            }
-        }
-    }
+    auto s = keyPoints.size();
+    fs.write((char*)&s, sizeof(s));
+    fs.write((char *)&keyPoints[0], s * sizeof(KeyPoint));
 
-    fs.write((char *)&keyPoints[0], keyPoints.size() * sizeof(KeyPoint));
-
-    {
-        const auto& mat = frame.frameDescriptor;
-        // Header
-        int type = mat.type();
-        int channels = mat.channels();
-        fs.write((char *)&mat.rows, sizeof(int)); // rows
-        fs.write((char *)&mat.cols, sizeof(int)); // cols
-        fs.write((char *)&type, sizeof(int));     // type
-        fs.write((char *)&channels, sizeof(int)); // channels
-
-        // Data
-        if (mat.isContinuous())
-        {
-            fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
-        }
-        else
-        {
-            int rowsz = CV_ELEM_SIZE(type) * mat.cols;
-            for (int r = 0; r < mat.rows; ++r)
-            {
-                fs.write(mat.ptr<char>(r), rowsz);
-            }
-        }
-    }
-
-    {
-        const auto& mat = frame.colorHistogram;
-        // Header
-        int type = mat.type();
-        int channels = mat.channels();
-        fs.write((char *)&mat.rows, sizeof(int)); // rows
-        fs.write((char *)&mat.cols, sizeof(int)); // cols
-        fs.write((char *)&type, sizeof(int));     // type
-        fs.write((char *)&channels, sizeof(int)); // channels
-
-        // Data
-        if (mat.isContinuous())
-        {
-            fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
-        }
-        else
-        {
-            int rowsz = CV_ELEM_SIZE(type) * mat.cols * channels;
-            for (int r = 0; r < mat.rows; ++r)
-            {
-                fs.write(mat.ptr<char>(r), rowsz);
-            }
-        }
-    }
+    writeMat(frame.frameDescriptor, fs);
+    writeMat(frame.colorHistogram, fs);
 }
 
 Frame SIFTread(const string &filename)
 {
     ifstream fs(filename, fstream::binary);
 
-    // Header
-    int rows = 0, cols = 0, type = 0, channels = 0;
-    fs.read((char *)&rows, sizeof(int));     // rows
-    fs.read((char *)&cols, sizeof(int));     // cols
-    fs.read((char *)&type, sizeof(int));     // type
-    fs.read((char *)&channels, sizeof(int)); // channels
+    auto mat = readMat(fs);
 
-    // Data
-    Mat mat(rows, cols, type);
     vector<KeyPoint> keyPoints;
-    for (int r = 0; r < rows; r++)
-    {
-        fs.read((char *)(mat.data + r * cols * CV_ELEM_SIZE(type)), CV_ELEM_SIZE(type) * cols);
-    }
+    decltype(keyPoints)::size_type rows;
+    fs.read((char*)&rows, sizeof(rows));
 
-    for (int r = 0; r < rows; r++)
+    for (decltype(rows) r = 0; r < rows; r++)
     {
         KeyPoint k;
         fs.read((char *)&k, sizeof(KeyPoint));
         keyPoints.push_back(k);
     }
 
-    // Header
-    int rows2 = 0, cols2 = 0, type2 = 0, channels2 = 0;
-    fs.read((char *)&rows2, sizeof(int));     // rows2
-    fs.read((char *)&cols2, sizeof(int));     // cols2
-    fs.read((char *)&type2, sizeof(int));     // type2
-    fs.read((char *)&channels2, sizeof(int)); // channels
-    Mat frameMat(rows2, cols2, type2);
+    auto frameMat = readMat(fs);
+    auto colorHistogram = readMat(fs);
 
-    for (int r = 0; r < rows2; r++)
-    {
-        fs.read((char *)(frameMat.data + r * cols2 * CV_ELEM_SIZE(type2)), CV_ELEM_SIZE(type2) * cols2);
-    }
-
-    // Header
-    int rows3 = 0, cols3 = 0, type3 = 0, channels3 = 0;
-    fs.read((char *)&rows3, sizeof(int));     // rows3
-    fs.read((char *)&cols3, sizeof(int));     // cols3
-    fs.read((char *)&type3, sizeof(int));     // type3
-    fs.read((char *)&channels3, sizeof(int)); // channels
-    Mat colorHistogram(rows3, cols3, type3);
-
-    for (int r = 0; r < rows3; r++)
-    {
-        fs.read((char *)(colorHistogram.data + r * cols3 * CV_ELEM_SIZE(type3)), CV_ELEM_SIZE(type3) * cols3);
-    }
-
-    return Frame{keyPoints, mat, frameMat, colorHistogram};
+    return {keyPoints, mat, frameMat, colorHistogram};
 }
 
 SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Frame)> callback, std::pair<int, int> cropsize) {
@@ -313,12 +221,11 @@ loader(databasePath) {
     writer.write((char*)&config, sizeof(config));
 };
 
-std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
-    fs::path video_dir(databaseRoot / video.name);
-    fs::create_directories(video_dir);
+std::optional<DatabaseVideo> FileDatabase::saveVideo(IVideo& video) {
+    fs::path video_dir{databaseRoot / video.name};
+    loader.initVideoDir(video.name);
 
-    auto frames = video.frames();
-    SIFTVideo::size_type index = 0;
+    auto& frames = video.frames();
     auto& scenes = video.getScenes();
     std::vector<SerializableScene> loadedScenes;
 
@@ -338,54 +245,40 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
         }
         fs::create_directories(video_dir / "frames");
     }
-    for(auto& frame : frames) {
-        SIFTwrite(video_dir / "frames" / std::to_string(index++), frame);
-    }
-
-    index = 0;
+    loader.saveRange(frames, video.name, 0);
 
     if(!scenes.empty()) {
         if(fs::exists(video_dir / "scenes")) {
             fs::remove_all(video_dir / "scenes");
         }
         fs::create_directories(video_dir / "scenes");
-        for(auto& scene : scenes) {
-            if(strategy->shouldBaggifyScenes(video)) {
-                loadSceneDescriptor(scene, video, *this);
-            }
-
-            SceneWrite(video_dir / "scenes" / std::to_string(index++), scene);
-            loadedScenes.push_back(scene);
-        }
+        
+        boost::copy(scenes, std::back_inserter(loadedScenes));
     }
     else if(strategy->shouldComputeScenes(video)) {
-        ColorComparator comp;
-        auto flat = convolutionalDetector(video, comp, config.threshold);
+        auto flat = convolutionalDetector(video, ColorComparator{}, config.threshold);
 
         if(!flat.empty()) {
             if(fs::exists(video_dir / "scenes")) {
                 fs::remove_all(video_dir / "scenes");
             }
             fs::create_directories(video_dir / "scenes");
-            SIFTVideo::size_type index = 0;
-            for(auto& scene : flat) {
-                auto s = SerializableScene(scene.first, scene.second);
-                SceneWrite(video_dir / "scenes" / std::to_string(index++),
-                    s);
-                loadedScenes.push_back(s);
-            }
 
-            if(strategy->shouldBaggifyScenes(video)) {
-                SIFTVideo::size_type index = 0;
-                for(auto& scene : loadedScenes) {
-                    loadSceneDescriptor(scene, video, *this);
-                    SceneWrite(video_dir / "scenes" / std::to_string(index++), scene);
-                }
-            }
+            boost::copy(flat | boost::adaptors::transformed([](auto pair){
+                return SerializableScene{pair.first, pair.second};
+            }), std::back_inserter(loadedScenes));
         }
     }
 
-    return std::make_unique<DatabaseVideo>(*this, video.name, frames, loadedScenes);
+    if(strategy->shouldBaggifyScenes(video)) {
+        for(auto& scene : loadedScenes) {
+            loadSceneDescriptor(scene, video, *this);
+        }
+    }
+
+    loader.saveRange(loadedScenes, video.name, 0);
+
+    return DatabaseVideo{*this, video.name, frames, loadedScenes};
 }
 
 std::vector<std::string> FileDatabase::listVideos() const {
@@ -398,20 +291,20 @@ std::vector<std::string> FileDatabase::listVideos() const {
     return videos;
 }
 
-std::unique_ptr<IVideo> FileDatabase::loadVideo(const std::string& key) const {
+std::optional<DatabaseVideo> FileDatabase::loadVideo(const std::string& key) const {
     if(!fs::exists(databaseRoot / key / "frames")) {
-        return nullptr;
+        return std::nullopt;
     }
 
     std::vector<Frame> frames;
-    SIFTVideo::size_type index = 0;
+    v_size index = 0;
 
     if(loadStrategy == AggressiveLoadStrategy{}) {
         while(auto f = loader.readFrame(key, index++)) frames.push_back(f.value());
     }
 
     if(!fs::exists(databaseRoot / key / "scenes")) {
-        return std::make_unique<DatabaseVideo>(*this, key, frames);
+        return DatabaseVideo{*this, key, frames};
     }
 
     std::vector<SerializableScene> scenes;
@@ -420,7 +313,7 @@ std::unique_ptr<IVideo> FileDatabase::loadVideo(const std::string& key) const {
         while(auto f = loader.readScene(key, index++)) scenes.push_back(f.value());
     }
 
-    return std::make_unique<DatabaseVideo>(*this, key, frames, scenes);
+    return DatabaseVideo{*this, key, frames, scenes};
 }
 
 bool FileDatabase::saveVocab(const ContainerVocab& vocab, const std::string& key) {
@@ -443,7 +336,7 @@ std::optional<ContainerVocab> FileDatabase::loadVocab(const std::string& key) co
 std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
     if(sceneCache.empty()) {
         auto loader = db.getFileLoader();
-        SIFTVideo::size_type index = 0;
+        v_size index = 0;
         while(auto scene = loader.readScene(name, index++))
             sceneCache.push_back(scene.value());
 
@@ -456,7 +349,7 @@ std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
             auto ss = convolutionalDetector(*this, comp, config.threshold);
             std::cout << "Found " << ss.size() << " scenes, serializing now" << std::endl;
             boost::push_back(sceneCache, ss
-            | boost::adaptors::transformed([](auto scene){
+            | boost::adaptors::transformed([index = 0](auto scene){
                 return SerializableScene{scene.first, scene.second};
             }));
         }
@@ -472,9 +365,9 @@ std::vector<Frame>& DatabaseVideo::frames() & {
         while(auto frame = loader.readFrame(name, index++)) frameCache.push_back(frame.value());
     }
     return frameCache;
-};
+}
 
-std::optional<Frame> FileLoader::readFrame(const std::string& videoName, SIFTVideo::size_type index) const {
+std::optional<Frame> FileLoader::readFrame(const std::string& videoName, v_size index) const {
     auto path = rootDir / videoName / "frames" / to_string(index);
     if(!fs::exists(path)) {
         return std::nullopt;
@@ -482,7 +375,8 @@ std::optional<Frame> FileLoader::readFrame(const std::string& videoName, SIFTVid
 
     return SIFTread(path);
 }
-std::optional<SerializableScene> FileLoader::readScene(const std::string& videoName, SIFTVideo::size_type index) const {
+
+std::optional<SerializableScene> FileLoader::readScene(const std::string& videoName, v_size index) const {
     auto path = rootDir / videoName / "scenes" / to_string(index);
     if(!fs::exists(path)) {
         return std::nullopt;
@@ -490,6 +384,21 @@ std::optional<SerializableScene> FileLoader::readScene(const std::string& videoN
 
     // unimplemented
     return SceneRead(path);
+}
+
+bool FileLoader::saveFrame(const std::string& video, v_size index, const Frame& frame) const {
+    SIFTwrite(rootDir / video / "frames" / std::to_string(index), frame);
+    return true;
+}
+
+bool FileLoader::saveScene(const std::string& video, v_size index, const SerializableScene& scene) const {
+    SceneWrite(rootDir / video / "scenes" / std::to_string(index), scene);
+    return true;
+}
+
+void FileLoader::initVideoDir(const std::string& video) const {
+    fs::create_directories(rootDir / video / "frames");
+    fs::create_directories(rootDir / video / "scenes");
 }
 
 DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::string& key) {
@@ -506,29 +415,32 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     std::cout << "Found " << scenes.size() << " scenes, serializing now" << std::endl;
 
     if(!scenes.empty()) {
-        SIFTVideo::size_type index = 0;
+        v_size index = 0;
         for(auto& scene : scenes) {
             auto s = SerializableScene(scene.first, scene.second);
             loadedScenes.push_back(s);
         }
     }
 
-    return DatabaseVideo(db, key, frames, loadedScenes);
+    return {db, key, frames, loadedScenes};
 }
 
 double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
-    if(f1.colorHistogram.rows != HBINS || f1.colorHistogram.cols != SBINS) {
+    return operator()(f1.colorHistogram, f2.colorHistogram);
+}
+double ColorComparator::operator()(const cv::Mat& f1, const cv::Mat& f2) const {
+    if(f1.rows != HBINS || f1.cols != SBINS) {
         std::cerr
-            << "rows: " << f1.colorHistogram.rows
-            << " cols: " << f1.colorHistogram.cols << std::endl;
+            << "rows: " << f1.rows
+            << " cols: " << f1.cols << std::endl;
         throw std::runtime_error("color histogram is wrong size");
     }
 
-    if(f1.colorHistogram.size() != f2.colorHistogram.size()) {
-        throw std::runtime_error("colorhistograms not matching");
+    if(f1.size() != f2.size()) {
+        throw std::runtime_error("colorHistograms not matching");
     }
 
-    auto subbed = f1.colorHistogram - f2.colorHistogram;
+    auto subbed = f1 - f2;
     auto val = cv::sum(subbed)[0];
     return std::abs(val);
 }
