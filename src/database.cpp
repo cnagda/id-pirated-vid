@@ -85,7 +85,7 @@ SerializableScene SceneRead(const std::string& filename) {
     fs.read((char*)&startIdx, sizeof(startIdx));
     fs.read((char*)&endIdx, sizeof(endIdx));
 
-    return SerializableScene{readMat(fs), startIdx, endIdx};
+    return {readMat(fs), startIdx, endIdx};
 }
 
 void SceneWrite(const std::string& filename, const SerializableScene& scene) {
@@ -131,7 +131,7 @@ Frame SIFTread(const string &filename)
     auto frameMat = readMat(fs);
     auto colorHistogram = readMat(fs);
 
-    return Frame{keyPoints, mat, frameMat, colorHistogram};
+    return {keyPoints, mat, frameMat, colorHistogram};
 }
 
 SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Frame)> callback, std::pair<int, int> cropsize) {
@@ -422,7 +422,7 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
         }
     }
 
-    return DatabaseVideo(db, key, frames, loadedScenes);
+    return {db, key, frames, loadedScenes};
 }
 
 double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {

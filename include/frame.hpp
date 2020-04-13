@@ -17,7 +17,7 @@ inline bool keyPointEqual(const cv::KeyPoint& a, const cv::KeyPoint& b) {
 }
 
 inline bool matEqual(const cv::Mat& a, const cv::Mat& b) {
-    return (a.empty() && b.empty()) || std::equal(a.begin<float>(), a.end<float>(), b.begin<float>());
+    return (a.size() == b.size()) && std::equal(a.begin<float>(), a.end<float>(), b.begin<float>());
 }
 
 class Frame {
@@ -38,7 +38,6 @@ public:
 
     bool operator==(const Frame& f2) const {
         return std::equal(keyPoints.begin(), keyPoints.end(), f2.keyPoints.begin(), keyPointEqual) &&
-            descriptors.size == f2.descriptors.size &&
             matEqual(descriptors, f2.descriptors) &&
             matEqual(frameDescriptor, f2.frameDescriptor) &&
             matEqual(colorHistogram, f2.colorHistogram);

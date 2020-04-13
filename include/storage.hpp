@@ -22,7 +22,7 @@ class FileLoader {
 private:
     fs::path rootDir;
 public:
-    explicit FileLoader(fs::path dir) : rootDir(dir) {};
+    FileLoader(fs::path dir) : rootDir(dir) {};
 
     std::optional<Frame> readFrame(const std::string& videoName, v_size index) const;
     std::optional<SerializableScene> readScene(const std::string& videoName, v_size index) const;

@@ -117,7 +117,7 @@ std::vector<Alignment> calculateAlignment(Range&& known, Range&& unknown, Cmp&& 
     std::vector<Alignment> ret;
     ret.reserve(alignments.size());
 
-    std::transform(alignments.begin(), alignments.end(), std::back_inserter(ret), [&known, &unknown](auto val) -> Alignment {
+    std::transform(alignments.begin(), alignments.end(), std::back_inserter(ret), [&known, &unknown](auto val) {
         return Alignment{
             static_cast<unsigned int>(std::distance(known.begin(), val.startKnown)),
             static_cast<unsigned int>(std::distance(unknown.begin(), val.startUnknown)),

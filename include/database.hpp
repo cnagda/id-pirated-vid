@@ -41,7 +41,7 @@ private:
 public:
     using size_type = typename std::decay_t<Base>::size_type;
 
-    explicit InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
+    InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
     InputVideoAdapter(IVideo&& vid) : IVideo(vid), base(vid.frames()) {};
     InputVideoAdapter(IVideo& vid) : IVideo(vid), base(vid.frames()) {};
     size_type frameCount() override { return base.frameCount(); };
@@ -60,10 +60,10 @@ private:
     typedef StrategyType LoadStrategy;
     LoadStrategy loadStrategy;
 public:
-    explicit FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args) :
+    FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args) :
     FileDatabase(fs::current_path() / "database", std::move(strat), l, args) {};
 
-    explicit FileDatabase(const std::string& databasePath,
+    FileDatabase(const std::string& databasePath,
         std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args);
 
     std::unique_ptr<IVideo> saveVideo(IVideo& video);
@@ -83,14 +83,14 @@ class DatabaseVideo : public IVideo {
     std::vector<Frame> frameCache;
 public:
     DatabaseVideo() = delete;
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key) : 
-    DatabaseVideo(database, key, {}, {}) {};
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) :
-    DatabaseVideo(database, key, frames, {}) {};
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<SerializableScene> scenes) :
-    DatabaseVideo(database, key, {}, scenes) {};
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key),
-    db(database), frameCache(frames), sceneCache(scenes) {};
+    DatabaseVideo(const FileDatabase& database, const std::string& key) : 
+        DatabaseVideo(database, key, {}, {}) {};
+    DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) :
+        DatabaseVideo(database, key, frames, {}) {};
+    DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<SerializableScene> scenes) :
+        DatabaseVideo(database, key, {}, scenes) {};
+    DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key),
+        db(database), frameCache(frames), sceneCache(scenes) {};
 
 
     inline size_type frameCount() override { return frameCache.size(); };
@@ -119,13 +119,13 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
 template<typename Video>
 inline DatabaseVideo make_query_adapter(FileDatabase& db, Video&& video, const std::string& key) {
     auto frames = video.frames();
-    return DatabaseVideo(db, key, frames);
+    return {db, key, frames};
 }
 
 
 template<typename Base>
 InputVideoAdapter<Base> make_video_adapter(Base&& b, const std::string& name) {
-    return InputVideoAdapter<Base>(std::forward<Base>(b), name);
+    return {std::forward<Base>(b), name};
 }
 
 #endif

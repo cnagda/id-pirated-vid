@@ -9,10 +9,10 @@ struct SerializableScene {
     v_size startIdx, endIdx;
     const static std::string vocab_name;
 
-    explicit SerializableScene(): frameBag(), startIdx(), endIdx() {};
-    explicit SerializableScene(v_size startIdx, v_size endIdx) :
+    SerializableScene(): frameBag(), startIdx(), endIdx() {};
+    SerializableScene(v_size startIdx, v_size endIdx) :
         startIdx(startIdx), endIdx(endIdx), frameBag() {};
-    explicit SerializableScene(const cv::Mat& matrix, v_size startIdx, v_size endIdx) :
+    SerializableScene(const cv::Mat& matrix, v_size startIdx, v_size endIdx) :
         startIdx(startIdx), endIdx(endIdx), frameBag(matrix) {};
 
     template<typename Video>
