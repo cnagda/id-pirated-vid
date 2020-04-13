@@ -30,12 +30,6 @@ public:
         keyPoints(), descriptors(descriptors), frameDescriptor(frameDescriptor),
         colorHistogram(colorHistogram) {};
 
-    template<typename Range> Frame(Range&& range, const cv::Mat& descriptors,
-        const cv::Mat& frameDescriptor, const cv::Mat& colorHistogram) :
-        Frame(descriptors, frameDescriptor, colorHistogram) {
-        std::move(std::begin(range), std::end(range), std::back_inserter(keyPoints));
-    }
-
     template<typename Range> Frame(const Range& range, const cv::Mat& descriptors,
         const cv::Mat& frameDescriptor, const cv::Mat& colorHistogram) :
         Frame(descriptors, frameDescriptor, colorHistogram) {
