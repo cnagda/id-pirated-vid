@@ -14,6 +14,7 @@ namespace fs = std::experimental::filesystem;
 
 std::string getAlphas(const std::string& input);
 void createFolder(const std::string& folder_name);
+std::string to_string(const fs::path&);
 
 struct RuntimeArguments {
     int KScenes;
@@ -63,7 +64,7 @@ private:
     LoadStrategy loadStrategy;
 public:
     FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args) :
-    FileDatabase(fs::current_path() / "database", std::move(strat), l, args) {};
+    FileDatabase(to_string(fs::current_path() / "database"), std::move(strat), l, args) {};
 
     FileDatabase(const std::string& databasePath,
         std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args);

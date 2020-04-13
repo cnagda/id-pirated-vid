@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <optional>
 #include "database_iface.hpp"
 #include "frame.hpp"
 #include <experimental/filesystem>
@@ -12,7 +13,6 @@ namespace fs = std::experimental::filesystem;
 template <typename T> using optional_ref = std::optional<std::reference_wrapper<T>>;
 
 struct FrameSimilarityInfo {
-public:
     double similarity;
     Frame f1, f2;
     IVideo::size_type f1Idx, f2Idx;

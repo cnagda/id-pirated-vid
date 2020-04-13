@@ -71,7 +71,7 @@ TEST(FileRW, SIFTrwTest) {
 }
 
 TEST_F(DatabaseSuite, FileDatabase) {
-    FileDatabase db(fs::current_path() / "database_test_dir",
+    FileDatabase db(to_string(fs::current_path() / "database_test_dir"),
         std::make_unique<LazyStorageStrategy>(),
         LazyLoadStrategy{},
         RuntimeArguments{200, 20, 0.2});
@@ -91,7 +91,7 @@ TEST_F(DatabaseSuite, FileDatabase) {
 }
 
 TEST_F(DatabaseSuite, EagerDatabase) {
-    FileDatabase db(fs::current_path() / "database_test_dir",
+    FileDatabase db(to_string(fs::current_path() / "database_test_dir"),
         std::make_unique<AggressiveStorageStrategy>(),
         AggressiveLoadStrategy{},
         RuntimeArguments{200, 20, 0.2});

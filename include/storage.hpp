@@ -7,6 +7,7 @@
 
 namespace fs = std::experimental::filesystem;
 
+void clearDir(fs::path path);
 
 template <class T, class RankType>
 struct ordered_adapter{
@@ -40,6 +41,8 @@ public:
     }
 
     void initVideoDir(const std::string& videoName) const;
+    void clearFrames(const std::string& videoName) const;
+    void clearScenes(const std::string& videoName) const;
 };
 
 

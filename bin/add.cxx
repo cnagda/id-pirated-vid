@@ -65,7 +65,7 @@ int main(int argc, char** argv )
 
                 waitKey(0);
             }
-        }), fs::path(argv[VIDPATH]).filename());
+        }), fs::path(argv[VIDPATH]).filename().string());
 
         db->saveVideo(video);
     }

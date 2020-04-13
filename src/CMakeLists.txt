@@ -12,4 +12,6 @@ if(BUILD_OPTIONAL)
     target_link_libraries(kernel PUBLIC raft ${OpenCV_LIBS} )
 endif()
 
-target_link_libraries(database PUBLIC ${OpenCV_LIBS} stdc++fs PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(database PUBLIC ${OpenCV_LIBS} 
+    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs> 
+    PRIVATE OpenMP::OpenMP_CXX ${Boost_LIBRARIES})

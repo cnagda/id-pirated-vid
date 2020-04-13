@@ -39,6 +39,10 @@ string getAlphas(const string& input)
 #endif
 }
 
+std::string to_string(const fs::path& path) {
+    return path.string();
+}
+
 cv::Mat readMat(ifstream& fs) {
     int rows, cols, type, channels;
     fs.read((char *)&rows, sizeof(int));     // rows
@@ -146,7 +150,7 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
 
     size_t index = 0;
 
-    int num_frames = cap.get(CAP_PROP_FRAME_COUNT);
+    auto num_frames = cap.get(CAP_PROP_FRAME_COUNT);
 
     while (cap.read(image))
     { // test only loading 2 frames
@@ -162,10 +166,6 @@ SIFTVideo getSIFTVideo(const std::string& filepath, std::function<void(UMat, Fra
 
         std::vector<int> histSize{HBINS, SBINS};
         // hue varies from 0 to 179, see cvtColor
-        float hranges[] = { 0, 180 };
-        // saturation varies from 0 (black-gray-white) to
-        // 255 (pure spectrum color)
-        float sranges[] = { 0, 256 };
         std::vector<float> ranges{ 0, 180, 0, 256 };
         // we compute the histogram from the 0-th and 1-st channels
         std::vector<int> channels{0, 1};
@@ -230,40 +230,28 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(IVideo& video) {
     std::vector<SerializableScene> loadedScenes;
 
     if(strategy->shouldBaggifyFrames(video)) {
-        auto vocab = loadVocabulary<Vocab<Frame>>(*this);
-        if(vocab) {
+        if(auto vocab = loadVocabulary<Vocab<Frame>>(*this); vocab) {
             for(auto& frame : frames) {
                 loadFrameDescriptor(frame, vocab->descriptors());
             }
         }
-
     }
 
     if(!frames.empty()) {
-        if(fs::exists(video_dir / "frames")) {
-            fs::remove_all(video_dir / "frames");
-        }
-        fs::create_directories(video_dir / "frames");
+        loader.clearFrames(video.name);
     }
+
     loader.saveRange(frames, video.name, 0);
 
     if(!scenes.empty()) {
-        if(fs::exists(video_dir / "scenes")) {
-            fs::remove_all(video_dir / "scenes");
-        }
-        fs::create_directories(video_dir / "scenes");
-        
+        loader.clearScenes(video.name);
         boost::copy(scenes, std::back_inserter(loadedScenes));
     }
     else if(strategy->shouldComputeScenes(video)) {
         auto flat = convolutionalDetector(video, ColorComparator{}, config.threshold);
 
         if(!flat.empty()) {
-            if(fs::exists(video_dir / "scenes")) {
-                fs::remove_all(video_dir / "scenes");
-            }
-            fs::create_directories(video_dir / "scenes");
-
+            loader.clearScenes(video.name);
             boost::copy(flat | boost::adaptors::transformed([](auto pair){
                 return SerializableScene{pair.first, pair.second};
             }), std::back_inserter(loadedScenes));
@@ -285,7 +273,7 @@ std::vector<std::string> FileDatabase::listVideos() const {
     std::vector<std::string> videos;
     for(auto i : fs::directory_iterator(databaseRoot)) {
         if(fs::is_directory(i.path())) {
-            videos.push_back(i.path().filename());
+            videos.push_back(i.path().filename().string());
         }
     }
     return videos;
@@ -318,7 +306,7 @@ std::optional<DatabaseVideo> FileDatabase::loadVideo(const std::string& key) con
 
 bool FileDatabase::saveVocab(const ContainerVocab& vocab, const std::string& key) {
     cv::Mat myvocab;
-    cv::FileStorage fs(databaseRoot / key, cv::FileStorage::WRITE);
+    cv::FileStorage fs(to_string(databaseRoot / key), cv::FileStorage::WRITE);
     fs << "Vocabulary" << vocab.descriptors();
     return true;
 }
@@ -328,25 +316,24 @@ std::optional<ContainerVocab> FileDatabase::loadVocab(const std::string& key) co
         return std::nullopt;
     }
     cv::Mat myvocab;
-    cv::FileStorage fs(databaseRoot / key, cv::FileStorage::READ);
+    cv::FileStorage fs(to_string(databaseRoot / key), cv::FileStorage::READ);
     fs["Vocabulary"] >> myvocab;
-    return std::make_optional<ContainerVocab>(myvocab);
+    return ContainerVocab{myvocab};
 }
 
 std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
     if(sceneCache.empty()) {
         auto loader = db.getFileLoader();
         v_size index = 0;
-        while(auto scene = loader.readScene(name, index++))
-            sceneCache.push_back(scene.value());
+        while(auto scene = loader.readScene(name, index++)) sceneCache.push_back(scene.value());
 
         if(sceneCache.empty()) {
             auto config = db.getConfig();
             if(config.threshold == -1) {
                 throw std::runtime_error("no threshold was provided to calculate scenes");
             }
-            ColorComparator comp;
-            auto ss = convolutionalDetector(*this, comp, config.threshold);
+
+            auto ss = convolutionalDetector(*this, ColorComparator{}, config.threshold);
             std::cout << "Found " << ss.size() << " scenes, serializing now" << std::endl;
             boost::push_back(sceneCache, ss
             | boost::adaptors::transformed([index = 0](auto scene){
@@ -373,7 +360,7 @@ std::optional<Frame> FileLoader::readFrame(const std::string& videoName, v_size 
         return std::nullopt;
     }
 
-    return SIFTread(path);
+    return SIFTread(path.string());
 }
 
 std::optional<SerializableScene> FileLoader::readScene(const std::string& videoName, v_size index) const {
@@ -382,17 +369,16 @@ std::optional<SerializableScene> FileLoader::readScene(const std::string& videoN
         return std::nullopt;
     }
 
-    // unimplemented
-    return SceneRead(path);
+    return SceneRead(path.string());
 }
 
 bool FileLoader::saveFrame(const std::string& video, v_size index, const Frame& frame) const {
-    SIFTwrite(rootDir / video / "frames" / std::to_string(index), frame);
+    SIFTwrite(to_string(rootDir / video / "frames" / std::to_string(index)), frame);
     return true;
 }
 
 bool FileLoader::saveScene(const std::string& video, v_size index, const SerializableScene& scene) const {
-    SceneWrite(rootDir / video / "scenes" / std::to_string(index), scene);
+    SceneWrite(to_string(rootDir / video / "scenes" / std::to_string(index)), scene);
     return true;
 }
 
@@ -401,28 +387,37 @@ void FileLoader::initVideoDir(const std::string& video) const {
     fs::create_directories(rootDir / video / "scenes");
 }
 
+void FileLoader::clearFrames(const std::string& video) const {
+    clearDir(rootDir / video / "frames");
+}
+
+void FileLoader::clearScenes(const std::string& video) const {
+    clearDir(rootDir / video / "scenes");
+}
+
+void clearDir(fs::path path) {
+    if(fs::exists(path)) {
+        fs::remove_all(path);
+    }
+
+    fs::create_directories(path);
+}
+
 DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::string& key) {
     std::vector<SerializableScene> loadedScenes;
 
     auto config = db.getConfig();
-
-    auto frames = video.frames();
-    auto vocab = loadOrComputeVocab<Vocab<Frame>>(db, config.KFrames);
-
-    auto comp = BOWComparator(vocab->descriptors());
-    auto scenes = convolutionalDetector(video, comp, config.threshold);
+    auto scenes = convolutionalDetector(video, ColorComparator{}, config.threshold);
 
     std::cout << "Found " << scenes.size() << " scenes, serializing now" << std::endl;
 
     if(!scenes.empty()) {
-        v_size index = 0;
         for(auto& scene : scenes) {
-            auto s = SerializableScene(scene.first, scene.second);
-            loadedScenes.push_back(s);
+            loadedScenes.emplace_back(scene.first, scene.second);
         }
     }
 
-    return {db, key, frames, loadedScenes};
+    return {db, key, video.frames(), loadedScenes};
 }
 
 double ColorComparator::operator()(const Frame& f1, const Frame& f2) const {
