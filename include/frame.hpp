@@ -17,7 +17,7 @@ inline bool keyPointEqual(const cv::KeyPoint& a, const cv::KeyPoint& b) {
 }
 
 inline bool matEqual(const cv::Mat& a, const cv::Mat& b) {
-    return (a.size() == b.size()) && std::equal(a.begin<float>(), a.end<float>(), b.begin<float>());
+    return (a.size() == b.size()) && (a.empty() || std::equal(a.begin<float>(), a.end<float>(), b.begin<float>()));
 }
 
 class Frame {

@@ -49,6 +49,8 @@ public:
     std::vector<SerializableScene>& getScenes() & override { return emptyScenes; }
 };
 
+class DatabaseVideo;
+
 class FileDatabase {
 private:
     fs::path databaseRoot;
@@ -66,8 +68,8 @@ public:
     FileDatabase(const std::string& databasePath,
         std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args);
 
-    std::unique_ptr<IVideo> saveVideo(IVideo& video);
-    std::unique_ptr<IVideo> loadVideo(const std::string& key = "") const;
+    std::optional<DatabaseVideo> saveVideo(IVideo& video);
+    std::optional<DatabaseVideo> loadVideo(const std::string& key = "") const;
     std::vector<std::string> listVideos() const;
 
     const FileLoader& getFileLoader() const & { return loader; };

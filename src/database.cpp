@@ -221,7 +221,7 @@ loader(databasePath) {
     writer.write((char*)&config, sizeof(config));
 };
 
-std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
+std::optional<DatabaseVideo> FileDatabase::saveVideo(IVideo& video) {
     fs::path video_dir{databaseRoot / video.name};
     loader.initVideoDir(video.name);
 
@@ -278,7 +278,7 @@ std::unique_ptr<IVideo> FileDatabase::saveVideo(IVideo& video) {
 
     loader.saveRange(loadedScenes, video.name, 0);
 
-    return std::make_unique<DatabaseVideo>(*this, video.name, frames, loadedScenes);
+    return DatabaseVideo{*this, video.name, frames, loadedScenes};
 }
 
 std::vector<std::string> FileDatabase::listVideos() const {
@@ -291,9 +291,9 @@ std::vector<std::string> FileDatabase::listVideos() const {
     return videos;
 }
 
-std::unique_ptr<IVideo> FileDatabase::loadVideo(const std::string& key) const {
+std::optional<DatabaseVideo> FileDatabase::loadVideo(const std::string& key) const {
     if(!fs::exists(databaseRoot / key / "frames")) {
-        return nullptr;
+        return std::nullopt;
     }
 
     std::vector<Frame> frames;
@@ -304,7 +304,7 @@ std::unique_ptr<IVideo> FileDatabase::loadVideo(const std::string& key) const {
     }
 
     if(!fs::exists(databaseRoot / key / "scenes")) {
-        return std::make_unique<DatabaseVideo>(*this, key, frames);
+        return DatabaseVideo{*this, key, frames};
     }
 
     std::vector<SerializableScene> scenes;
@@ -313,7 +313,7 @@ std::unique_ptr<IVideo> FileDatabase::loadVideo(const std::string& key) const {
         while(auto f = loader.readScene(key, index++)) scenes.push_back(f.value());
     }
 
-    return std::make_unique<DatabaseVideo>(*this, key, frames, scenes);
+    return DatabaseVideo{*this, key, frames, scenes};
 }
 
 bool FileDatabase::saveVocab(const ContainerVocab& vocab, const std::string& key) {
