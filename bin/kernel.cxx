@@ -36,6 +36,8 @@ int main(int argc, char** argv )
     raft::map m;
     VideoFrameSource source(argv[VIDPATH]);
     ScaleImage scale({600, 700});
+    Duplicate<ordered_mat> scaledup, framedup, siftdup;
+    Null<ordered_mat> siftDescriptor;
     ExtractSIFT sift;
     ExtractColorHistogram color;
     DetectScene detect(threshold);
@@ -45,20 +47,23 @@ int main(int argc, char** argv )
     SaveFrame saveFrame(videoName, db->getFileLoader());
     SaveScene saveScene(videoName, db->getFileLoader());
 
-    m += source >> scale;
-    m += scale >> color;
-    m += scale >> sift;
+    m += source >> scale >> scaledup;
+    m += scaledup["first"] >> color;
+    m += scaledup["second"] >> sift;
     if(frame) {
-        m += sift >> *frame >> collect["frame_descriptor"];
-        m += sift >> collect["sift_descriptor"];
+        m += sift["sift_descriptor"] >> siftdup;
+        m += siftdup["first"] >> *frame >> framedup["in"]["first"] >> collect["frame_descriptor"];
+        m += siftdup["second"] >> collect["sift_descriptor"];
         m += collect >> saveFrame;
         if(scene) {
             m += color >> detect >> (*scene)["scene_range"];
-            m += *frame >> (*scene)["frame_descriptor"];
+            m += framedup["second"] >> (*scene)["frame_descriptor"];
             m += *scene >> saveScene;
         }
+    } else {
+        m += sift["sift_descriptor"] >> siftDescriptor;
     }
-
+    
     m.exe();
 
     return 0;

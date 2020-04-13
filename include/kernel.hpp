@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <queue>
+#include <type_traits>
 
 typedef size_t size_type;
 typedef std::pair<size_type, size_type> scene_range;
@@ -20,8 +21,46 @@ typedef ordered_adapter<SerializableScene, v_size> ordered_scene;
 typedef ordered_adapter<cv::Mat, v_size> ordered_mat;
 typedef ordered_adapter<Frame, v_size> ordered_frame;
 
+template<typename T>
+class Duplicate : public raft::kernel {
+public:
+    Duplicate(): raft::kernel() {
+        input.addPort<T>("in");
+        output.addPort<T>("first");
+        output.addPort<T>("second");
+    }
+
+    raft::kstatus run() {
+        auto thing = input["in"].peek<T>();
+
+        output["first"].allocate<T>(thing);
+        output["second"].allocate<T>(thing);
+        output["first"].send();
+        output["second"].send();
+
+        input["in"].unpeek();
+        input["in"].recycle();
+        return raft::proceed;
+    }
+};
+
+
+template<typename T>
+class Null : public raft::kernel {
+public:
+    Null(): raft::kernel() {
+        input.addPort<T>("in");
+    }
+
+    raft::kstatus run() {
+        input["in"].recycle();
+        return raft::proceed;
+    }
+};
+
 class VideoFrameSource : public raft::kernel {
     cv::VideoCapture cap;
+    size_type counter = 0;
 public: 
     VideoFrameSource(const std::string& path) : raft::kernel(), cap(path, cv::CAP_ANY) {
         output.addPort<ordered_mat>("image");
@@ -42,7 +81,7 @@ public:
 };
 
 class ExtractSIFT : public raft::kernel {
-    std::unique_ptr<cv::FeatureDetector> detector;
+    cv::Ptr<cv::FeatureDetector> detector;
 public:
     ExtractSIFT();
 
@@ -61,17 +100,17 @@ public:
 
 class DetectScene : public raft::kernel {
     size_type windowSize;
-    size_type lastMarker;
-    size_type currentScene;
+    size_type lastMarker = 0;
+    size_type currentScene = 0;
     std::queue<double> responses;
-    double previousAverage;
-    double accumulatedResponse;
+    double previousAverage = 0;
+    double accumulatedResponse = 0;
     double threshold;
-    cv::Mat prev;
+    ordered_mat prev;
 
 public:
     DetectScene(double threshold, size_type windowSize = 10): raft::kernel(), windowSize(windowSize), 
-    previousAverage(0), lastMarker(0), currentScene(0), threshold(threshold) {
+    threshold(threshold) {
         input.addPort<ordered_mat>("color_histogram");
         output.addPort<scene_range>("scene_range");
     }
@@ -92,6 +131,7 @@ public:
 
 class ExtractScene : public raft::kernel {
     Vocab<SerializableScene> sceneVocab;
+    size_type counter = 0;
 public:
     ExtractScene(const Vocab<SerializableScene>& sceneVocab): raft::kernel(), sceneVocab(sceneVocab) {
         input.addPort<ordered_mat>("frame_descriptor");
@@ -103,9 +143,8 @@ public:
 };
 
 class CollectFrame : public raft::kernel {
-    size_type frameCount;
 public:
-    CollectFrame(): raft::kernel(), frameCount(0) {
+    CollectFrame(): raft::kernel() {
         input.addPort<ordered_mat>("sift_descriptor");
         input.addPort<ordered_mat>("frame_descriptor");
         output.addPort<ordered_frame>("frame");
@@ -152,7 +191,7 @@ class LoadScenes : public raft::kernel {
 public:
     LoadScenes(const std::string& video, const FileLoader& loader) : raft::kernel(), 
         loader(loader), video(video) {
-        output.addPort<SerializableScene>("scene");
+        output.addPort<ordered_scene>("scene");
 
         loader.initVideoDir(video);
     }

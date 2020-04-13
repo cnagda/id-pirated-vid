@@ -103,7 +103,9 @@ void SIFTwrite(const string &filename, const Frame& frame)
 
     writeMat(frame.descriptors, fs);
 
-    fs.write((char *)&keyPoints[0], keyPoints.size() * sizeof(KeyPoint));
+    auto s = keyPoints.size();
+    fs.write((char*)&s, sizeof(s));
+    fs.write((char *)&keyPoints[0], s * sizeof(KeyPoint));
 
     writeMat(frame.frameDescriptor, fs);
     writeMat(frame.colorHistogram, fs);
@@ -113,22 +115,13 @@ Frame SIFTread(const string &filename)
 {
     ifstream fs(filename, fstream::binary);
 
-    // Header
-    int rows = 0, cols = 0, type = 0, channels = 0;
-    fs.read((char *)&rows, sizeof(int));     // rows
-    fs.read((char *)&cols, sizeof(int));     // cols
-    fs.read((char *)&type, sizeof(int));     // type
-    fs.read((char *)&channels, sizeof(int)); // channels
+    auto mat = readMat(fs);
 
-    // Data
-    Mat mat(rows, cols, type);
     vector<KeyPoint> keyPoints;
-    for (int r = 0; r < rows; r++)
-    {
-        fs.read((char *)(mat.data + r * cols * CV_ELEM_SIZE(type)), CV_ELEM_SIZE(type) * cols);
-    }
+    decltype(keyPoints)::size_type rows;
+    fs.read((char*)&rows, sizeof(rows));
 
-    for (int r = 0; r < rows; r++)
+    for (decltype(rows) r = 0; r < rows; r++)
     {
         KeyPoint k;
         fs.read((char *)&k, sizeof(KeyPoint));

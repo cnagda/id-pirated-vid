@@ -5,62 +5,68 @@
 #include <vector>
 #include "vocabulary.hpp"
 #include "matcher.hpp"
+#include <cassert>
 
 #define HBINS 32
 #define SBINS 30
 
 raft::kstatus VideoFrameSource::run() {
-    cv::Mat image;
+    ordered_mat image;
 
-    if(cap.read(image)) {
+    if(cap.read(image.data)) {
+        image.rank = counter++;
         output["image"].push(image);
         return raft::proceed;
     }
 
+    std::cout << "stopping" << std::endl;
     return raft::stop;
 }
 
 raft::kstatus ScaleImage::run() {
-    auto image = output["scaled_image"].allocate<cv::Mat>();
-    input["image"].pop(image);
-    image = scaleToTarget(image, cropsize.first, cropsize.second);
-    output["scaled_image"].send();
+    auto image = input["image"].peek<ordered_mat>();
+    image.data = scaleToTarget(image.data, cropsize.first, cropsize.second);
+    output["scaled_image"].push(image);
 
+    input["image"].unpeek();
+    input["image"].recycle();
     return raft::proceed;
 }
 
 ExtractSIFT::ExtractSIFT() : raft::kernel(), detector(cv::xfeatures2d::SiftFeatureDetector::create(500)) {
-    input.addPort<cv::Mat>("image");
-    output.addPort<cv::Mat>("sift_descriptor");
-    output.addPort<size_type>("keypoints_size");
-    output.addPort<cv::KeyPoint>("keypoints");
+    input.addPort<ordered_mat>("image");
+    output.addPort<ordered_mat>("sift_descriptor");
+    // output.addPort<size_type>("keypoints_size");
+    // output.addPort<cv::KeyPoint>("keypoints");
 }
 
 raft::kstatus ExtractSIFT::run() {
-    auto image = input["image"].peek<cv::Mat>();
+    auto image = input["image"].peek<ordered_mat>();
     std::vector<cv::KeyPoint> keyPoints;
-    auto descriptors = output["sift_descriptor"].allocate<cv::Mat>();
-    
-    detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
+    ordered_mat descriptors;
+    descriptors.rank = image.rank;
+
+    detector->detectAndCompute(image.data, cv::noArray(), keyPoints, descriptors.data);
     input["image"].unpeek();
     input["image"].recycle();
 
-    output["sift_descriptor"].send();
-    output["keypoints_size"].push(keyPoints.size());
-    output["keypoints"].insert(keyPoints.begin(), keyPoints.end());
+    output["sift_descriptor"].push(descriptors);
+    //output["keypoints_size"].push(keyPoints.size());
+    //output["keypoints"].insert(keyPoints.begin(), keyPoints.end());
 
     return raft::proceed;
 }
 
 raft::kstatus ExtractColorHistogram::run() {
-    auto image = input["image"].peek<cv::Mat>();
+    auto image = input["image"].peek<ordered_mat>();
     cv::UMat hsv;
-    cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
+    cv::cvtColor(image.data, hsv, cv::COLOR_BGR2HSV);
 
     input["image"].unpeek();
     input["image"].recycle();
 
-    auto colorHistogram = output["color_histogram"].allocate<cv::Mat>();
+    ordered_mat colorHistogram;
+    colorHistogram.rank = image.rank;
 
     std::vector<int> histSize{HBINS, SBINS};
     // hue varies from 0 to 179, see cvtColor
@@ -69,22 +75,24 @@ raft::kstatus ExtractColorHistogram::run() {
     std::vector<int> channels{0, 1};
 
     cv::calcHist( std::vector<decltype(hsv)>{hsv}, channels, cv::Mat(), // do not use mask
-                    colorHistogram, histSize, ranges,
+                    colorHistogram.data, histSize, ranges,
                     true);
-    cv::normalize( colorHistogram, colorHistogram, 0, 1, cv::NORM_MINMAX, -1, cv::Mat() );
+    cv::normalize( colorHistogram.data, colorHistogram.data, 0, 1, cv::NORM_MINMAX, -1, cv::Mat() );
 
-    output["color_histogram"].send();
+    output["color_histogram"].push(colorHistogram);
 
     return raft::proceed;
 }
 
 raft::kstatus ExtractFrame::run() {
-    auto sift = input["sift_descriptor"].peek<cv::Mat>();
-    auto descriptor = baggify(sift, frameVocab.descriptors());
+    auto sift = input["sift_descriptor"].peek<ordered_mat>();
+    auto rank = sift.rank;
+    auto descriptor = baggify(sift.data, frameVocab.descriptors());
     input["sift_descriptor"].unpeek();
     input["sift_descriptor"].recycle();
 
-    output["frame_descriptor"].push(descriptor);
+    output["frame_descriptor"].allocate<ordered_mat>(rank, descriptor);
+    output["frame_descriptor"].send();
     return raft::proceed;
 }
 
@@ -93,27 +101,35 @@ raft::kstatus ExtractScene::run() {
     input["scene_range"].pop(range);
 
     auto length = range.second - range.first;
+    std::cout << "length " << length << std::endl;
     decltype(length) index = 0;
 
     std::vector<cv::Mat> descriptors(length);
 
-    while(index != length) input["frame_descriptor"].pop(descriptors[index++]);
+    while(index != length) {
+        auto frame = input["frame_descriptor"].peek<ordered_mat>();
+        std::cout << "index " << index << std::endl;
+        descriptors[index++] = frame.data;
+        input["frame_descriptor"].unpeek();
+        input["frame_descriptor"].recycle();
+    }
 
-    auto descriptor = baggify(descriptors, sceneVocab.descriptors());
+    auto descriptor = baggify(descriptors.begin(), descriptors.end(), sceneVocab.descriptors());
 
-    output["scene"].allocate<SerializableScene>(descriptor, range.first, range.second);
+    output["scene"].allocate<ordered_scene>(counter++, SerializableScene{descriptor, range.first, range.second});
     output["scene"].send();
 
     return raft::proceed;
 }
 
 raft::kstatus CollectFrame::run() {
-    cv::Mat siftDescriptor, frameDescriptor;
+    ordered_mat siftDescriptor, frameDescriptor;
 
     input["sift_descriptor"].pop(siftDescriptor);
     input["frame_descriptor"].pop(frameDescriptor);
+    assert(siftDescriptor.rank == frameDescriptor.rank);
 
-    output["frame"].allocate<Frame>(std::vector<cv::KeyPoint>{}, siftDescriptor, frameDescriptor, cv::Mat());
+    output["frame"].allocate<ordered_frame>(frameDescriptor.rank, Frame{siftDescriptor.data, frameDescriptor.data, cv::Mat()});
     output["frame"].send();
 
     return raft::proceed;
@@ -132,6 +148,7 @@ raft::kstatus SaveFrame::run() {
 
 raft::kstatus SaveScene::run() {
     auto scene = input["scene"].peek<ordered_scene>();
+    std::cout << "scene rank " << scene.rank << std::endl;
 
     loader.saveScene(video, scene.rank, scene.data);
 
@@ -143,14 +160,14 @@ raft::kstatus SaveScene::run() {
 
 raft::kstatus DetectScene::run() {
     ColorComparator comp;
-    cv::Mat mat;
+    ordered_mat mat;
 
     if(responses.size() != windowSize) {
         input["color_histogram"].pop(prev);
 
         while(responses.size() != windowSize) {
             input["color_histogram"].pop(mat);
-            double response = comp(mat, prev);
+            double response = comp(mat.data, prev.data);
 
             accumulatedResponse += response;
             responses.push(response);
@@ -162,12 +179,12 @@ raft::kstatus DetectScene::run() {
     }
 
     input["color_histogram"].pop(mat);
-    double response = comp(mat, prev);
+    double response = comp(mat.data, prev.data);
     accumulatedResponse += response;
     accumulatedResponse -= responses.front();
 
     if(std::abs(accumulatedResponse / windowSize - previousAverage) > threshold) {
-        auto range = output["scene_range"].allocate<scene_range>(lastMarker, currentScene);
+        output["scene_range"].allocate<scene_range>(lastMarker, currentScene);
         output["scene_range"].send();
         lastMarker = currentScene;
     }
@@ -177,7 +194,16 @@ raft::kstatus DetectScene::run() {
     responses.push(response);
     responses.pop();
     prev = mat;
+
+    std::cout << "scene " << currentScene << std::endl;
     currentScene++;
+
+    if(input["color_histogram"].is_invalid() && input["color_histogram"].size() == 0) {
+        std::cout << "done" << std::endl;
+        output["scene_range"].allocate<scene_range>(lastMarker, currentScene);
+        output["scene_range"].send();
+        lastMarker = currentScene;
+    }
     
     return raft::proceed;
 }

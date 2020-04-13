@@ -12,6 +12,8 @@ template <class T, class RankType>
 struct ordered_adapter{
     RankType rank;
     T data;
+    ordered_adapter() = default;
+    ordered_adapter(const RankType& rank, const T& data) : rank(rank), data(data) {};
     bool operator<(const ordered_adapter& a) const {  return rank < a.rank; };
 };
 
