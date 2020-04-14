@@ -5,8 +5,8 @@
 #include <memory>
 #include <optional>
 #include "database_iface.hpp"
-#include "frame.hpp"
 #include <experimental/filesystem>
+#include <functional>
 
 namespace fs = std::experimental::filesystem;
 
@@ -14,13 +14,12 @@ template <typename T> using optional_ref = std::optional<std::reference_wrapper<
 
 struct FrameSimilarityInfo {
     double similarity;
-    Frame f1, f2;
     IVideo::size_type f1Idx, f2Idx;
     const optional_ref<IVideo> v1;
     const optional_ref<IVideo> v2;
 };
 
-typedef const std::string& Label;
+typedef std::string Label;
 typedef std::function<void(FrameSimilarityInfo)> SimilarityReporter;
 
 struct Point2f {
@@ -34,7 +33,7 @@ struct TimeSeries {
 
 class IExporter {
 public:
-    virtual void exportTimeseries(Label title, Label xaxis, Label yaxis, const std::vector<TimeSeries>& data) {};
+    virtual void exportTimeseries(const Label& title, const Label& xaxis, const Label& yaxis, const std::vector<TimeSeries>& data) const = 0;
 };
 
 template<class Video>
@@ -82,12 +81,12 @@ public:
 class CSVExporter : public FSExporter {
 public:
     const std::string delimiter = ",";
-    void exportTimeseries(Label title, Label xaxis, Label yaxis, const std::vector<TimeSeries>& series) override;
+    void exportTimeseries(const Label& title, const Label& xaxis, const Label& yaxis, const std::vector<TimeSeries>& data) const override;
 };
 
 class EmmaExporter : public FSExporter {
 public:
-    void exportTimeseries(Label title, Label xaxis, Label yaxis, const std::vector<TimeSeries>& series) override; 
+    void exportTimeseries(const Label& title, const Label& xaxis, const Label& yaxis, const std::vector<TimeSeries>& data) const override; 
 };
 
 #endif

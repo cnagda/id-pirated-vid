@@ -84,44 +84,6 @@ inline cv::Mat baggify(std::pair<It, It> pair, Vocab&& vocab) {
     return baggify(pair.first, pair.second, std::forward<Vocab>(vocab));
 }
 
-template<class Video, typename Cmp>
-auto flatScenes(Video& video, Cmp&& comp, double threshold){
-    typedef typename std::decay_t<Video>::size_type index_t;
-    std::cout << "In flatScenes" << std::endl;
-
-    std::vector<std::pair<index_t, index_t>> retval;
-
-    auto& frames = video.frames();
-    if(!frames.size()){
-        return retval;
-    }
-
-    index_t last = 0;
-
-    // for(int i = 1; i < frames.size(); i++) {
-    //     if(double fs = comp(frames[i], frames[i - 1]); fs < threshold){
-    //         if(!frames[i].descriptors.empty()){ // do not include black frames
-    //             retval.push_back({last, i});
-    //             last = i;
-    //         }
-    //     } else {
-    //         // std::cout << "i: " << i << "sim: " << fs << std::endl;
-    //     }
-    // }
-
-    for(int i = FRAMES_PER_SCENE - 1; i < frames.size() - FRAMES_PER_SCENE; i+=FRAMES_PER_SCENE) {
-        while (frames[i].descriptors.empty() && i < frames.size() - FRAMES_PER_SCENE) { i++; }
-        if (i == frames.size()) { break; }
-        retval.push_back({last, i});
-        last = i;
-    }
-    if(!frames.back().descriptors.empty()){ // do not include black frames
-        retval.push_back({last, frames.size()});
-    }
-
-    return retval;
-}
-
 template<typename V, typename Db>
 bool saveVocabulary(V&& vocab, Db&& db) {
     return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name);

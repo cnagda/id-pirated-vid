@@ -2,9 +2,9 @@
 #define DATABASE_ERASURE_HPP
 #include <string>
 #include <vector>
-#include "frame.hpp"
-#include "scene.hpp"
 
+struct Frame;
+struct SerializableScene;
 class IVideo {
 public:
     IVideo(const std::string& name) : name(name) {};

@@ -20,6 +20,27 @@ endif()
 find_package( Boost 1.32.0 )
 include_directories(${Boost_INCLUDE_DIRS})
 
+find_package (Eigen3 3.3 NO_MODULE)
+if(NOT TARGET Eigen3::Eigen)
+    configure_file(CMakeLists.Eigen.txt Eigen/CMakeLists.txt)
+    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Eigen)
+    if(result)
+    message(FATAL_ERROR "CMake step for Eigen failed: ${result}")
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} --build .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Eigen)
+    if(result)
+    message(FATAL_ERROR "Build step for Eigen failed: ${result}")
+    endif()
+
+    add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/Eigen-src
+                    ${CMAKE_CURRENT_BINARY_DIR}/Eigen-build
+                    EXCLUDE_FROM_ALL)
+endif()
+
 if(BUILD_OPTIONAL)
     configure_file(CMakeLists.Raft.txt Raft/CMakeLists.txt)
     execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .

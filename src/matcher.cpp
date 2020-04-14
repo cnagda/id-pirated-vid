@@ -3,7 +3,6 @@
 #include "database.hpp"
 #include "instrumentation.hpp"
 #include "matcher.hpp"
-#include "kmeans2.hpp"
 #include "sw.hpp"
 #include "vocabulary.hpp"
 #include <boost/range/adaptors.hpp>
@@ -134,8 +133,8 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 
     for(decltype(len) i = 0; i < len; i++){
         auto t = comparator(frames1[i], frames2[i]);
-        if(reporter) reporter(FrameSimilarityInfo{t, frames1[i], frames2[i], i, i,
-            std::make_optional(std::ref(v1)), std::make_optional(std::ref(v2))});
+        if(reporter) reporter(FrameSimilarityInfo{t, i, i,
+            std::ref(v1), std::ref(v2)});
 
         total += (t != -1)? t : 0;
     }
@@ -144,8 +143,6 @@ double boneheadedSimilarity(IVideo& v1, IVideo& v2, std::function<double(Frame, 
 }
 
 std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
-    auto videopaths = db.listVideos();
-
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
     auto deref = [&target, &db](auto i) { return loadSceneDescriptor(i, target, db); };
 
@@ -154,7 +151,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
     boost::push_back(targetScenes, target.getScenes() 
         | boost::adaptors::transformed(deref));
 
-    for(auto v2 : videopaths) {
+    for(auto v2 : db.listVideos()) {
         std::cout << "Calculating match for " << v2 << std::endl;
         std::vector<cv::Mat> knownScenes;
         auto v = db.loadVideo(v2);
@@ -171,7 +168,6 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
                 match = MatchInfo{static_cast<double>(a.score), a.startKnown, a.endKnown, v2, alignments};
             }
         }
-
     }
 
     if(match.matchConfidence > 0.5) {

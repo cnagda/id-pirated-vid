@@ -14,4 +14,4 @@ endif()
 
 target_link_libraries(database PUBLIC ${OpenCV_LIBS} 
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs> 
-    PRIVATE OpenMP::OpenMP_CXX ${Boost_LIBRARIES})
+    PRIVATE OpenMP::OpenMP_CXX ${Boost_LIBRARIES} Eigen3::Eigen)

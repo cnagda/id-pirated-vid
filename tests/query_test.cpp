@@ -35,6 +35,11 @@ protected:
 
         saveVocabulary(constructFrameVocabulary(*db, 200), *db);
         saveVocabulary(constructSceneVocabulary(*db, 20), *db);
+
+        for(auto video : db->listVideos()) {
+            auto vid = db->loadVideo(video);
+            db->saveVideo(*vid);
+        }
         
         std::cout << "Setup done" << std::endl;
     }

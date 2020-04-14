@@ -1,6 +1,7 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 #include "frame.hpp"
+#include "scene.hpp"
 #include <vector>
 #include <memory>
 #include <experimental/filesystem>
@@ -70,7 +71,7 @@ public:
         std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args);
 
     std::optional<DatabaseVideo> saveVideo(IVideo& video);
-    std::optional<DatabaseVideo> loadVideo(const std::string& key = "") const;
+    std::optional<DatabaseVideo> loadVideo(const std::string& key) const;
     std::vector<std::string> listVideos() const;
 
     const FileLoader& getFileLoader() const & { return loader; };
