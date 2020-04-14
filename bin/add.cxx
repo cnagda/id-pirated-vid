@@ -41,8 +41,10 @@ int main(int argc, char** argv )
     int kScene = stoi(argv[KSCENE]);
     double threshold = stod(argv[THRESHOLD]);
 
-    namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
-
+    if(DEBUG) {
+        namedWindow("Display window", WINDOW_AUTOSIZE );// Create a window for display.
+    }
+    
     auto db = database_factory(argv[DBPATH], kFrame, kScene, threshold);
 
     if (!isUnspecified(argv[VIDPATH])) {
@@ -63,7 +65,8 @@ int main(int argc, char** argv )
 
                 waitKey(0);
             }
-        }), fs::path(argv[VIDPATH]).filename());
+
+        }), fs::path(argv[VIDPATH]).filename().string());
 
         db->saveVideo(video);
     }
@@ -116,7 +119,6 @@ int main(int argc, char** argv )
                         scene.frameBag = getSceneDescriptor(scene, *video, *db);
                     }
                 }
-                
                 db->saveVideo(*video);
             } catch(...) {
                 std::cerr << "not enough info to compute scenes" << std::endl;

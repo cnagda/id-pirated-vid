@@ -16,7 +16,7 @@ protected:
             std::cout << "could not remove test dir" << e.what() << std::endl;
         }
 
-        db = std::make_unique<FileDatabase>(fs::current_path() / "database_test_dir", 
+        db = std::make_unique<FileDatabase>(to_string(fs::current_path() / "database_test_dir"), 
             std::make_unique<AggressiveStorageStrategy>(),
             LazyLoadStrategy{},
             RuntimeArguments{200, 20, 2});

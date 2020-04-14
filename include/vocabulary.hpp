@@ -3,6 +3,7 @@
 
 #include "concepts.hpp"
 #include <iostream>
+#include <optional>
 #include <opencv2/core.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/features2d.hpp>
@@ -13,17 +14,10 @@
 #include "vocab_type.hpp"
 #include "scene.hpp"
 
-class SerializableScene;
+struct SerializableScene;
 class FileDatabase;
 
 #define FRAMES_PER_SCENE  45
-
-template <class T, class RankType>
-struct sortable{
-    RankType rank;
-    T data;
-    bool operator<(const sortable& a) const {  return rank < a.rank; };
-};
 
 
 template<typename Matrix>

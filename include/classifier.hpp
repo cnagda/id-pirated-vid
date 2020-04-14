@@ -43,7 +43,7 @@ public:
             results.push_back(
                 std::make_pair(i->first, std::invoke(c, std::forward<decltype(i->second)>(i->second))));
 
-        return BinaryResults{results};
+        return {results};
     }
 };
 

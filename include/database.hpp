@@ -3,17 +3,18 @@
 #include "frame.hpp"
 #include <vector>
 #include <memory>
-#include <opencv2/core/mat.hpp>
 #include <experimental/filesystem>
 #include <optional>
 #include "database_iface.hpp"
 #include "vocab_type.hpp"
+#include "storage.hpp"
 #include <variant>
 
 namespace fs = std::experimental::filesystem;
 
 std::string getAlphas(const std::string& input);
 void createFolder(const std::string& folder_name);
+std::string to_string(const fs::path&);
 
 struct RuntimeArguments {
     int KScenes;
@@ -41,7 +42,7 @@ private:
 public:
     using size_type = typename std::decay_t<Base>::size_type;
 
-    explicit InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
+    InputVideoAdapter(Base&& b, const std::string& name) : IVideo(name), base(std::forward<Base>(b)) {};
     InputVideoAdapter(IVideo&& vid) : IVideo(vid), base(vid.frames()) {};
     InputVideoAdapter(IVideo& vid) : IVideo(vid), base(vid.frames()) {};
     size_type frameCount() override { return base.frameCount(); };
@@ -49,55 +50,7 @@ public:
     std::vector<SerializableScene>& getScenes() & override { return emptyScenes; }
 };
 
-class FileLoader {
-private:
-    fs::path rootDir;
-public:
-    explicit FileLoader(fs::path dir) : rootDir(dir) {};
-
-    std::optional<Frame> readFrame(const std::string& videoName, SIFTVideo::size_type index) const;
-    std::optional<SerializableScene> readScene(const std::string& videoName, SIFTVideo::size_type index) const;
-};
-
-template<typename Base>
-InputVideoAdapter<Base> make_video_adapter(Base&& b, const std::string& name) {
-    return InputVideoAdapter<Base>(std::forward<Base>(b), name);
-}
-
-
-// TODO think of how to use these, templated
-/* Example strategies
-class IVideoLoadStrategy {
-public:
-    virtual std::unique_ptr<IVideo> operator()(const std::string& findKey) const = 0;
-    virtual ~IVideoLoadStrategy() = default;
-};
-
- */
-
-class AggressiveStorageStrategy : public IVideoStorageStrategy {
-public:
-    inline StrategyType getType() const { return Eager; };
-    inline bool shouldBaggifyFrames(IVideo& video) override { return true; };
-    inline bool shouldComputeScenes(IVideo& video) override { return true; };
-    inline bool shouldBaggifyScenes(IVideo& video) override { return true; };
-};
-
-class LazyStorageStrategy : public IVideoStorageStrategy {
-public:
-    inline StrategyType getType() const { return Lazy; };
-    inline bool shouldBaggifyFrames(IVideo& video) override { return false; };
-    inline bool shouldComputeScenes(IVideo& video) override { return false; };
-    inline bool shouldBaggifyScenes(IVideo& video) override { return false; };
-};
-
-struct AggressiveLoadStrategy {
-    constexpr operator StrategyType() { return Eager; };
-};
-
-struct LazyLoadStrategy {
-    constexpr operator StrategyType() { return Lazy; };
-};
+class DatabaseVideo;
 
 class FileDatabase {
 private:
@@ -110,14 +63,14 @@ private:
     typedef StrategyType LoadStrategy;
     LoadStrategy loadStrategy;
 public:
-    explicit FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args) :
-    FileDatabase(fs::current_path() / "database", std::move(strat), l, args) {};
+    FileDatabase(std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args) :
+    FileDatabase(to_string(fs::current_path() / "database"), std::move(strat), l, args) {};
 
-    explicit FileDatabase(const std::string& databasePath,
+    FileDatabase(const std::string& databasePath,
         std::unique_ptr<IVideoStorageStrategy>&& strat, LoadStrategy l, RuntimeArguments args);
 
-    std::unique_ptr<IVideo> saveVideo(IVideo& video);
-    std::unique_ptr<IVideo> loadVideo(const std::string& key = "") const;
+    std::optional<DatabaseVideo> saveVideo(IVideo& video);
+    std::optional<DatabaseVideo> loadVideo(const std::string& key = "") const;
     std::vector<std::string> listVideos() const;
 
     const FileLoader& getFileLoader() const & { return loader; };
@@ -133,14 +86,14 @@ class DatabaseVideo : public IVideo {
     std::vector<Frame> frameCache;
 public:
     DatabaseVideo() = delete;
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key) : 
-    DatabaseVideo(database, key, {}, {}) {};
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) :
-    DatabaseVideo(database, key, frames, {}) {};
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<SerializableScene> scenes) :
-    DatabaseVideo(database, key, {}, scenes) {};
-    explicit DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key),
-    db(database), frameCache(frames), sceneCache(scenes) {};
+    DatabaseVideo(const FileDatabase& database, const std::string& key) : 
+        DatabaseVideo(database, key, {}, {}) {};
+    DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames) :
+        DatabaseVideo(database, key, frames, {}) {};
+    DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<SerializableScene> scenes) :
+        DatabaseVideo(database, key, {}, scenes) {};
+    DatabaseVideo(const FileDatabase& database, const std::string& key, const std::vector<Frame>& frames, const std::vector<SerializableScene>& scenes) : IVideo(key),
+        db(database), frameCache(frames), sceneCache(scenes) {};
 
 
     inline size_type frameCount() override { return frameCache.size(); };
@@ -169,7 +122,13 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
 template<typename Video>
 inline DatabaseVideo make_query_adapter(FileDatabase& db, Video&& video, const std::string& key) {
     auto frames = video.frames();
-    return DatabaseVideo(db, key, frames);
+    return {db, key, frames};
+}
+
+
+template<typename Base>
+InputVideoAdapter<Base> make_video_adapter(Base&& b, const std::string& name) {
+    return {std::forward<Base>(b), name};
 }
 
 #endif

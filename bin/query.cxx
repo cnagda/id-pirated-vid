@@ -29,6 +29,7 @@ int main(int argc, char** argv )
         return -1;
     }
 
+
     FILE *f = fopen("resultcache.txt", "w");
     if (f == NULL)
     {
@@ -37,7 +38,7 @@ int main(int argc, char** argv )
     }
 
     auto& fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
-    std::string videoname = fs::path(argv[VIDPATH]).filename();
+    std::string videoname = fs::path(argv[VIDPATH]).filename().string();
     auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo(argv[VIDPATH]), videoname);
     auto video2 = make_query_adapter(fd, video, "totallydifferenttestvid.mp4");
     auto match = findMatch(video2, fd);
@@ -55,8 +56,6 @@ int main(int argc, char** argv )
             }
         }
     }
-
-    /* print some text */
 
     fprintf(f, "%s", bestmatch.c_str());
 

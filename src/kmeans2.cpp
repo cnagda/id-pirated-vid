@@ -440,5 +440,6 @@ cv::Mat fastkmeans2(cv::Mat input, int K, int epochs){
 }
 
 cv::Mat kmeans2(cv::Mat input, int K, int attempts, cv::Mat centers){
-    
+    // unimplemented
+    return {};
 }
