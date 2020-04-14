@@ -29,6 +29,8 @@ AV_LABELS = {
     "CNAU0235000H_speed_down_inserted.mp4" : "CNAU0235000H.mpg",
     "CNAU0235000H_speed_up.mp4" : "CNAU0235000H.mpg",
     "CNAU0235000H_speed_up_inserted.mp4" : "CNAU0235000H.mpg",
+    "CNAU0235000H_projection.mp4" : "CNAU0235000H.mpg",
+    "CNAU0235000H_projection_inserted.mp4" : "CNAU0235000H.mpg",
 
 
 
@@ -62,6 +64,8 @@ AV_LABELS = {
     "CNBU0069000H_speed_down_inserted.mp4" : "CNBU0069000H.mpg",
     "CNBU0069000H_speed_up.mp4" : "CNBU0069000H.mpg",
     "CNBU0069000H_speed_up_inserted.mp4" : "CNBU0069000H.mpg",
+    "CNBU0069000H_projection.mp4" : "CNBU0069000H.mpg",
+    "CNBU0069000H_projection_inserted.mp4" : "CNBU0069000H.mpg",
 
 
 
@@ -95,6 +99,8 @@ AV_LABELS = {
     "CNCM0046000H_speed_down_inserted.mp4" : "CNCM0046000H.mpg",
     "CNCM0046000H_speed_up.mp4" : "CNCM0046000H.mpg",
     "CNCM0046000H_speed_up_inserted.mp4" : "CNCM0046000H.mpg",
+    "CNCM0046000H_projection.mp4" : "CNCM0046000H.mpg",
+    "CNCM0046000H_projection_inserted.mp4" : "CNCM0046000H.mpg",
 
 
 
@@ -128,6 +134,8 @@ AV_LABELS = {
     "CNEH0045000H_speed_down_inserted.mp4" : "CNEH0045000H.mpg",
     "CNEH0045000H_speed_up.mp4" : "CNEH0045000H.mpg",
     "CNEH0045000H_speed_up_inserted.mp4" : "CNEH0045000H.mpg",
+    "CNEH0045000H_projection.mp4" : "CNEH0045000H.mpg",
+    "CNEH0045000H_projection_inserted.mp4" : "CNEH0045000H.mpg",
 
 
 
@@ -161,6 +169,8 @@ AV_LABELS = {
     "CNFN0021000H_speed_down_inserted.mp4" : "CNFN0021000H.mpg",
     "CNFN0021000H_speed_up.mp4" : "CNFN0021000H.mpg",
     "CNFN0021000H_speed_up_inserted.mp4" : "CNFN0021000H.mpg",
+    "CNFN0021000H_projection.mp4" : "CNFN0021000H.mpg",
+    "CNFN0021000H_projection_inserted.mp4" : "CNFN0021000H.mpg",
 
 
 
@@ -194,6 +204,8 @@ AV_LABELS = {
     "CNGA0055000H_speed_down_inserted.mp4" : "CNGA0055000H.mpg",
     "CNGA0055000H_speed_up.mp4" : "CNGA0055000H.mpg",
     "CNGA0055000H_speed_up_inserted.mp4" : "CNGA0055000H.mpg",
+    "CNGA0055000H_projection.mp4" : "CNGA0055000H.mpg",
+    "CNGA0055000H_projection_inserted.mp4" : "CNGA0055000H.mpg",
 
 
 
@@ -227,6 +239,8 @@ AV_LABELS = {
     "CNHL0336000H_speed_down_inserted.mp4" : "CNHL0336000H.mpg",
     "CNHL0336000H_speed_up.mp4" : "CNHL0336000H.mpg",
     "CNHL0336000H_speed_up_inserted.mp4" : "CNHL0336000H.mpg",
+    "CNHL0336000H_projection.mp4" : "CNHL0336000H.mpg",
+    "CNHL0336000H_projection_inserted.mp4" : "CNHL0336000H.mpg",
 
 
 
@@ -260,6 +274,8 @@ AV_LABELS = {
     "CNNH0131000H_speed_down_inserted.mp4" : "CNNH0131000H.mpg",
     "CNNH0131000H_speed_up.mp4" : "CNNH0131000H.mpg",
     "CNNH0131000H_speed_up_inserted.mp4" : "CNNH0131000H.mpg",
+    "CNNH0131000H_projection.mp4" : "CNNH0131000H.mpg",
+    "CNNH0131000H_projection_inserted.mp4" : "CNNH0131000H.mpg",
 
 
 
@@ -293,6 +309,8 @@ AV_LABELS = {
     "CNRD0036000H_speed_down_inserted.mp4" : "CNRD0036000H.mpg",
     "CNRD0036000H_speed_up.mp4" : "CNRD0036000H.mpg",
     "CNRD0036000H_speed_up_inserted.mp4" : "CNRD0036000H.mpg",
+    "CNRD0036000H_projection.mp4" : "CNRD0036000H.mpg",
+    "CNRD0036000H_projection_inserted.mp4" : "CNRD0036000H.mpg",
 
 
 
@@ -326,5 +344,7 @@ AV_LABELS = {
     "CNUL0179000H_speed_down_inserted.mp4" : "CNUL0179000H.mpg",
     "CNUL0179000H_speed_up.mp4" : "CNUL0179000H.mpg",
     "CNUL0179000H_speed_up_inserted.mp4" : "CNUL0179000H.mpg",
+    "CNUL0179000H_projection.mp4" : "CNUL0179000H.mpg",
+    "CNUL0179000H_projection_inserted.mp4" : "CNUL0179000H.mpg",
 
 }
