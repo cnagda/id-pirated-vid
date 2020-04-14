@@ -16,3 +16,4 @@ main
 data/**/*
 main
 */__pycache__
+results/**/*

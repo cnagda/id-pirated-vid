@@ -179,8 +179,7 @@ class Attack:
 
     def mirror(self):
         print("mirror")
-        return
-        self.vid.fx(vfx.mirror_x)
+        return self.vid.fx(vfx.mirror_x)
 
     def pic_in_pic(self):
         print("pic_in_pic")

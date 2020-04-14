@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include "database.hpp"
 #include "matcher.hpp"
@@ -30,12 +31,8 @@ int main(int argc, char** argv )
     }
 
 
-    FILE *f = fopen("resultcache.txt", "w");
-    if (f == NULL)
-    {
-        printf("Error opening resultcache\n");
-        exit(1);
-    }
+    std::ofstream f("./results/resultcache.txt", ios::out | ios::trunc);
+    if (!f.is_open()) { std::cerr << "Could not open ./results/resultcache.txt" << std::endl;}
 
     auto& fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
     std::string videoname = fs::path(argv[VIDPATH]).filename().string();
@@ -57,7 +54,8 @@ int main(int argc, char** argv )
         }
     }
 
-    fprintf(f, "%s", bestmatch.c_str());
+    f << bestmatch;
+    f.close();
 
     // namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
     //
