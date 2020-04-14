@@ -3,6 +3,7 @@ import subprocess
 import argparse
 import glob
 import os
+import pickle
 from attack_vid_labels import *
 
 # NOTE: MUST BE RUN FROM ROOT FOLDER
@@ -30,7 +31,7 @@ def main():
     if os.path.isfile(args.srcdir):
         vidpaths.append(args.srcdir)
     elif os.path.isdir(args.srcdir):
-        vidpaths = (glob.glob(args.srcdir + "*")[:4])
+        vidpaths = (glob.glob(args.srcdir + "*")[:2])
 
     # Results in dictionary
     results = dict()
@@ -59,6 +60,9 @@ def main():
 
     with open('allresults.txt','w') as f:
         f.write(str(results))
+
+    with open("allresults.pkl", 'wb') as f:
+        pickle.dump(results, f, pickle.HIGHEST_PROTOCOL)
 
 if __name__ == '__main__':
     main()
