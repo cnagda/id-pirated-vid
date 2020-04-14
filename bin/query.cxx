@@ -29,12 +29,21 @@ int main(int argc, char** argv )
         return -1;
     }
 
+    FILE *f = fopen("resultcache.txt", "w");
+    if (f == NULL)
+    {
+        printf("Error opening resultcache\n");
+        exit(1);
+    }
+
     auto& fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
     std::string videoname = fs::path(argv[VIDPATH]).filename();
     auto video = InputVideoAdapter<SIFTVideo>(getSIFTVideo(argv[VIDPATH]), videoname);
     auto video2 = make_query_adapter(fd, video, "totallydifferenttestvid.mp4");
     auto match = findMatch(video2, fd);
+    std::string bestmatch = "";
     if(match) {
+        bestmatch = match->video;
         std::cout << std::endl << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl<<std::endl;
         int count = 0;
         for (auto a : match->alignments) {
@@ -46,6 +55,10 @@ int main(int argc, char** argv )
             }
         }
     }
+
+    /* print some text */
+
+    fprintf(f, "%s", bestmatch.c_str());
 
     // namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
     //

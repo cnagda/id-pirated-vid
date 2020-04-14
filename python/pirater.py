@@ -215,21 +215,21 @@ class Attack:
 
         self.attack_functions = [
             # self.projection,
-            self.exact_match,
-            self.snowflakes,
-            self.scale_up,
-            self.scale_down_black,
+            # self.exact_match,
+            # self.snowflakes,
+            # self.scale_up,
+            # self.scale_down_black,
             self.scale_down_noise,
-            self.frame_rate_up,
-            self.frame_rate_down,
-            self.recolor_grey,
-            self.recolor_dark,
-            self.rotate_90,
-            self.rotate_180,
-            self.mirror,
-            self.pic_in_pic,
-            self.speed_up,
-            self.speed_down
+            # self.frame_rate_up,
+            # self.frame_rate_down,
+            # self.recolor_grey,
+            # self.recolor_dark,
+            # self.rotate_90,
+            # self.rotate_180,
+            # self.mirror,
+            # self.pic_in_pic,
+            # self.speed_up,
+            # self.speed_down
         ]
 
 

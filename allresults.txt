@@ -1,0 +1,1 @@
+{'CNAU0235000H_exact_match.mp4': 1, 'CNAU0235000H_exact_match_inserted.mp4': 1, 'CNAU0235000H_frame_rate_down.mp4': 1, 'CNAU0235000H_frame_rate_down_inserted.mp4': 0}
