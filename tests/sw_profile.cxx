@@ -13,10 +13,10 @@ int main()
         const size_t max_index = (sizeof(charset) - 1);
         return charset[rand() % max_index];
     };
-    std::string s1(4096, 0);
-    std::string s2(4096, 0);
-    std::generate_n(s1.begin(), 4096, randchar);
-    std::generate_n(s2.begin(), 4096, randchar);
+    std::string s1(8192, 0);
+    std::string s2(8192, 0);
+    std::generate_n(s1.begin(), 8192, randchar);
+    std::generate_n(s2.begin(), 8192, randchar);
 
     auto alignments = calculateAlignment(
         s1.begin(), s1.end(), s2.begin(), s2.end(), [](auto a, auto b) { return a == b ? 3 : -3; }, 10, 2);
