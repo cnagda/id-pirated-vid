@@ -4,6 +4,7 @@ apt-get install -y build-essential cmake \
     libavcodec-dev libavresample-dev libavformat-dev libswscale-dev libgtk-3-dev \
     libboost-dev
     libeigen3-dev
+    libtbb-dev
     
 mkdir /OpenCV
 cd /OpenCV
