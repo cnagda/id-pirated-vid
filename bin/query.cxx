@@ -29,8 +29,9 @@ int main(int argc, char** argv )
         return -1;
     }
 
+    if(!fs::create_directories(fs::current_path() / "results")) { std::cerr << "Could not create ./results" << std::endl; }
 
-    std::ofstream f("./results/resultcache.txt", ios::out | ios::trunc);
+    std::ofstream f(fs::current_path() / "results" / "resultcache.txt", ios::out | ios::trunc);
     if (!f.is_open()) { std::cerr << "Could not open ./results/resultcache.txt" << std::endl;}
 
     auto& fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();

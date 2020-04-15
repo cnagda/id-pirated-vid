@@ -26,6 +26,9 @@ std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix& m
 
     while(1){
         auto [i, j] = slowMatrixMax(matrix);
+        if(i <= 0 || j <= 0) {
+            return alignments;
+        }
         if(matrix(i, j) < threshold){
             return alignments;
         }
