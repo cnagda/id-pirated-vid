@@ -17,8 +17,11 @@
 #define BLOCK_SIZE 64
 #define BLOCK_MAX_DIM(max) (((max) + BLOCK_SIZE - 1) / BLOCK_SIZE)
 
+typedef VectorMatrix<uint8_t> SourceMatrix;
+typedef Eigen::MatrixXi ScoreMatrix;
+
 template<typename It>
-std::vector<ItAlignment<It>> findAlignments(It known, It unknown, Eigen::MatrixXi& matrix, Eigen::MatrixXi& sources, unsigned int threshold) {
+std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix& matrix, const SourceMatrix& sources, unsigned int threshold) {
     std::vector<ItAlignment<It>> alignments;
 
     while(1){
@@ -51,7 +54,7 @@ std::vector<ItAlignment<It>> findAlignments(It known, It unknown, Eigen::MatrixX
 
 
 template<typename It, typename Cmp>
-void populateSearchSpaceWavefront(It known, It unknown, int m, int n, unsigned int gapScore, Cmp comp, Eigen::MatrixXi& matrix, Eigen::MatrixXi& sources) {
+void populateSearchSpaceWavefront(It known, It unknown, int m, int n, unsigned int gapScore, Cmp comp, ScoreMatrix& matrix, SourceMatrix& sources) {
     // populate matrix
     typedef std::pair<int, int> block;
     auto block_max_cols = BLOCK_MAX_DIM(n);
@@ -114,7 +117,7 @@ void populateSearchSpaceWavefront(It known, It unknown, int m, int n, unsigned i
 }
 
 template<typename It, typename Cmp>
-void populateSearchSpace(It known, It unknown, int m, int n, unsigned int gapScore, Cmp comp, Eigen::MatrixXi& matrix, Eigen::MatrixXi& sources) {
+void populateSearchSpace(It known, It unknown, int m, int n, unsigned int gapScore, Cmp comp, ScoreMatrix& matrix, SourceMatrix& sources) {
     // populate matrix
     for(int i = 1; i < m; i++){
         for(int j = 1; j < n; j++){
@@ -152,11 +155,11 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
     int m = std::distance(unknown, unknownEnd) + 1;
     int n = std::distance(known, knownEnd) + 1;
 
-    Eigen::MatrixXi matrix(m, n);
+    ScoreMatrix matrix(m, n);
     matrix.col(0).fill(0);
     matrix.row(0).fill(0);
     // 0 for left, 1 for diagonal, 2 for up
-    Eigen::MatrixXi sources(m, n);
+    SourceMatrix sources(m, n);
 
     populateSearchSpaceWavefront(known, unknown, m, n, gapScore, comp, matrix, sources);
     //FIXME
