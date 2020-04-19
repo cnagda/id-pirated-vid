@@ -43,6 +43,25 @@ std::string to_string(const fs::path& path) {
     return path.string();
 }
 
+template<typename Range> void writeSequential(ofstream& fs, const Range& range) {
+    size_t length = range.size();
+    fs.write((char*)&length, sizeof(length));
+    for(const auto& val : range) {
+        fs.write((char*)&val, sizeof(val));
+    }
+}
+
+template<typename T>
+std::vector<T> readSequence(ifstream& fs) {
+    size_t length = 0;
+    fs.read((char*)&length, sizeof(length));
+    
+    std::vector<T> items(length);
+    fs.read((char*)&items[0], sizeof(T) * length);
+
+    return items;
+}
+
 cv::Mat readMat(ifstream& fs) {
     int rows, cols, type, channels;
     fs.read((char *)&rows, sizeof(int));     // rows
@@ -92,27 +111,32 @@ SerializableScene SceneRead(const std::string& filename) {
     return {readMat(fs), startIdx, endIdx};
 }
 
-void SceneWrite(const std::string& filename, const SerializableScene& scene) {
+bool SceneWrite(const std::string& filename, const SerializableScene& scene) {
     ofstream fs(filename, fstream::binary);
+    if(!fs.is_open()) {
+        return false;
+    }
+
     fs.write((char*)&scene.startIdx, sizeof(scene.startIdx));
     fs.write((char*)&scene.endIdx, sizeof(scene.endIdx));
 
     writeMat(scene.frameBag, fs);
+    return true;
 }
 
-void SIFTwrite(const string &filename, const Frame& frame)
+bool SIFTwrite(const string &filename, const Frame& frame)
 {
-    const auto& keyPoints = frame.keyPoints;
     ofstream fs(filename, fstream::binary);
+    if(!fs.is_open()) {
+        return false;
+    }
 
     writeMat(frame.descriptors, fs);
-
-    auto s = keyPoints.size();
-    fs.write((char*)&s, sizeof(s));
-    fs.write((char *)&keyPoints[0], s * sizeof(KeyPoint));
-
+    writeSequential(fs, frame.keyPoints);
     writeMat(frame.frameDescriptor, fs);
     writeMat(frame.colorHistogram, fs);
+
+    return true;
 }
 
 Frame SIFTread(const string &filename)
@@ -121,16 +145,7 @@ Frame SIFTread(const string &filename)
 
     auto mat = readMat(fs);
 
-    vector<KeyPoint> keyPoints;
-    decltype(keyPoints)::size_type rows;
-    fs.read((char*)&rows, sizeof(rows));
-
-    for (decltype(rows) r = 0; r < rows; r++)
-    {
-        KeyPoint k;
-        fs.read((char *)&k, sizeof(KeyPoint));
-        keyPoints.push_back(k);
-    }
+    auto keyPoints = readSequence<KeyPoint>(fs);
 
     auto frameMat = readMat(fs);
     auto colorHistogram = readMat(fs);
@@ -355,12 +370,41 @@ std::vector<Frame>& DatabaseVideo::frames() & {
 }
 
 std::optional<Frame> FileLoader::readFrame(const std::string& videoName, v_size index) const {
-    auto path = rootDir / videoName / "frames" / to_string(index);
-    if(!fs::exists(path)) {
+    auto def = cv::Mat();
+    ifstream stream(rootDir / videoName / "frames" / (to_string(index) + ".keypoints"), fstream::binary);
+    auto keyPoints = readSequence<KeyPoint>(stream);
+
+    return Frame{
+        keyPoints,
+        readFrameFeatures(videoName, index).value_or(def),
+        readFrameBag(videoName, index).value_or(def),
+        readFrameColorHistogram(videoName, index).value_or(def)
+    };
+}
+
+std::optional<cv::Mat> FileLoader::readFrameFeatures(const std::string& videoName, v_size index) const {
+    ifstream stream(rootDir / videoName / "frames" / (to_string(index) + ".sift"), fstream::binary);
+    if(!stream.is_open()) {
+        return nullopt;
+    }
+
+    return readMat(stream);
+}
+std::optional<cv::Mat> FileLoader::readFrameColorHistogram(const std::string& videoName, v_size index) const {
+    ifstream stream(rootDir / videoName / "frames" / (to_string(index) + ".color"), fstream::binary);
+    if(!stream.is_open()) {
         return std::nullopt;
     }
 
-    return SIFTread(path.string());
+    return readMat(stream);
+}
+std::optional<cv::Mat> FileLoader::readFrameBag(const std::string& videoName, v_size index) const {
+    ifstream stream(rootDir / videoName / "frames" / (to_string(index) + ".bag"), fstream::binary);
+    if(!stream.is_open()) {
+        return std::nullopt;
+    }
+
+    return readMat(stream);
 }
 
 std::optional<SerializableScene> FileLoader::readScene(const std::string& videoName, v_size index) const {
@@ -373,7 +417,44 @@ std::optional<SerializableScene> FileLoader::readScene(const std::string& videoN
 }
 
 bool FileLoader::saveFrame(const std::string& video, v_size index, const Frame& frame) const {
-    SIFTwrite(to_string(rootDir / video / "frames" / std::to_string(index)), frame);
+    ofstream stream(rootDir / video / "frames" / (to_string(index) + ".keypoints"), fstream::binary);
+    if(!stream.is_open()) {
+        return false;
+    }
+    writeSequential(stream, frame.keyPoints);
+    
+    return saveFrameFeatures(video, index, frame.descriptors) &&
+        saveFrameColorHistogram(video, index, frame.colorHistogram) &&
+        saveFrameBag(video, index, frame.frameDescriptor);
+}
+
+bool FileLoader::saveFrameFeatures(const std::string& videoName, v_size index, const cv::Mat& mat) const {
+    ofstream stream(rootDir / videoName / "frames" / (to_string(index) + ".sift"), fstream::binary);
+    if(!stream.is_open()) {
+        return false;
+    }
+
+    writeMat(mat, stream);
+    return true;
+}
+
+bool FileLoader::saveFrameColorHistogram(const std::string& videoName, v_size index, const cv::Mat& mat) const {
+    ofstream stream(rootDir / videoName / "frames" / (to_string(index) + ".color"), fstream::binary);
+    if(!stream.is_open()) {
+        return false;
+    }
+
+    writeMat(mat, stream);
+    return true;
+}
+
+bool FileLoader::saveFrameBag(const std::string& videoName, v_size index, const cv::Mat& mat) const {
+    ofstream stream(rootDir / videoName / "frames" / (to_string(index) + ".bag"), fstream::binary);
+    if(!stream.is_open()) {
+        return false;
+    }
+
+    writeMat(mat, stream);
     return true;
 }
 

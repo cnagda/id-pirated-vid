@@ -1,7 +1,5 @@
 #ifndef DATABASE_H
 #define DATABASE_H
-#include "frame.hpp"
-#include "scene.hpp"
 #include <vector>
 #include <memory>
 #include <experimental/filesystem>

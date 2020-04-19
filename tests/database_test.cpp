@@ -67,7 +67,46 @@ TEST(FileRW, SIFTrwTest) {
 
     EXPECT_TRUE(result.size() > 0);
     EXPECT_TRUE(result.size() == loaded.size());
-    EXPECT_TRUE(equal(result.begin(), result.end(), loaded.begin()));
+    EXPECT_TRUE(equal(result.begin(), result.end(), loaded.begin(), loaded.end()));
+}
+
+TEST(FileRW, FileLoaderRWTest) {
+    Mat mat1({2, 4}, {1, 2, 3, 4, 5, 6, 7, 8});
+    Mat mat2({3, 2}, {10, 11, 12, 13, 14, 15});
+    Mat mat3({1, 2}, {5, 4});
+    Mat mat4({2, 2}, {4, 4, 4, 4});
+    const int levels = 20;
+    const cv::Size size = cv::Size(123, 234);
+
+    const cv::Mat proto = cv::Mat(size, CV_16SC1, 1000);
+
+    std::vector<cv::Mat> channels;
+    for (int i = 0; i < levels; i++)
+        channels.push_back(proto);
+
+    cv::Mat A;
+    cv::merge(channels, A);
+
+    vector<KeyPoint> k1{KeyPoint(0.1f, 0.2f, 0.3f), KeyPoint(0.15f, 0.25f, 0.35f)};
+    vector<KeyPoint> k2{KeyPoint(0.2f, 0.3f, 0.4f), KeyPoint(0.25f, 0.35f, 0.45f), KeyPoint(0.4f, 0.5f, 0.6f)};
+
+    vector<Frame>result {Frame{k1, mat1, mat3, A}, Frame{k2, mat2, mat4, A}};
+
+    if(fs::exists("loader_test"))
+        fs::remove_all("loader_test");
+
+    FileLoader loader("loader_test");
+    loader.initVideoDir("test_video");
+    loader.saveFrame("test_video", 0, result[0]);
+    loader.saveFrame("test_video", 1, result[1]);
+
+    auto f1 = loader.readFrame("test_video", 0);
+    auto f2 = loader.readFrame("test_video", 1);
+    vector<Frame> loaded{*f1, *f2};
+
+    EXPECT_TRUE(result.size() > 0);
+    EXPECT_TRUE(result.size() == loaded.size());
+    EXPECT_TRUE(equal(result.begin(), result.end(), loaded.begin(), loaded.end()));
 }
 
 TEST_F(DatabaseSuite, FileDatabase) {

@@ -10,9 +10,8 @@
 #include <string>
 #include <boost/iterator/transform_iterator.hpp>
 #include <type_traits>
-#include "frame.hpp"
 #include "vocab_type.hpp"
-#include "scene.hpp"
+#include "video.hpp"
 
 struct SerializableScene;
 class FileDatabase;

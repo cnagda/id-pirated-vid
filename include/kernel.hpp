@@ -5,8 +5,7 @@
 #include <utility>
 #include <opencv2/core/mat.hpp>
 #include "vocab_type.hpp"
-#include "frame.hpp"
-#include "scene.hpp"
+#include "video.hpp"
 #include <opencv2/videoio.hpp>
 #include <opencv2/features2d.hpp>
 #include "storage.hpp"

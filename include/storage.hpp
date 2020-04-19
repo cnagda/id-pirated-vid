@@ -26,8 +26,17 @@ public:
     FileLoader(fs::path dir) : rootDir(dir) {};
 
     std::optional<Frame> readFrame(const std::string& videoName, v_size index) const;
+    std::optional<cv::Mat> readFrameFeatures(const std::string& videoName, v_size index) const;
+    std::optional<cv::Mat> readFrameColorHistogram(const std::string& videoName, v_size index) const;
+    std::optional<cv::Mat> readFrameBag(const std::string& videoName, v_size index) const;
+
     std::optional<SerializableScene> readScene(const std::string& videoName, v_size index) const;
+
     bool saveFrame(const std::string& videoName, v_size index, const Frame& frame) const;
+    bool saveFrameFeatures(const std::string& videoName, v_size index, const cv::Mat& mat) const;
+    bool saveFrameColorHistogram(const std::string& videoName, v_size index, const cv::Mat& mat) const;
+    bool saveFrameBag(const std::string& videoName, v_size index, const cv::Mat& mat) const;
+
     bool saveScene(const std::string& videoName, v_size index, const SerializableScene& scene) const;
 
     template <typename Range> bool saveRange(Range&& range, const std::string& video, v_size offset) const {
