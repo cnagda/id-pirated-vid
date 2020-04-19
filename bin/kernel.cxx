@@ -5,21 +5,22 @@
 #include <optional>
 #include <memory>
 
-#define DBPATH      1
-#define VIDPATH     2
-#define THRESHOLD   3       // TODO: do something with this??????
+#define DBPATH 1
+#define VIDPATH 2
+#define THRESHOLD 3 // TODO: do something with this??????
 
 using namespace std;
 
 namespace fs = std::experimental::filesystem;
 
-int isUnspecified(std::string arg) {
+int isUnspecified(std::string arg)
+{
     return (arg == "-1");
 }
 
-int main(int argc, char** argv )
+int main(int argc, char **argv)
 {
-    if ( argc < 4 )
+    if (argc < 4)
     {
         printf("usage: ./add dbPath vidPath threshScene\n");
         return -1;
@@ -50,20 +51,24 @@ int main(int argc, char** argv )
     m += source >> scale >> scaledup;
     m += scaledup["first"] >> color;
     m += scaledup["second"] >> sift;
-    if(frame) {
+    if (frame)
+    {
         m += sift["sift_descriptor"] >> siftdup;
         m += siftdup["first"] >> *frame >> framedup["in"]["first"] >> collect["frame_descriptor"];
         m += siftdup["second"] >> collect["sift_descriptor"];
         m += collect >> saveFrame;
-        if(scene) {
+        if (scene)
+        {
             m += color >> detect >> (*scene)["scene_range"];
             m += framedup["second"] >> (*scene)["frame_descriptor"];
             m += *scene >> saveScene;
         }
-    } else {
+    }
+    else
+    {
         m += sift["sift_descriptor"] >> siftDescriptor;
     }
-    
+
     m.exe();
 
     return 0;

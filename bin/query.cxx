@@ -5,50 +5,60 @@
 #include "matcher.hpp"
 #include <experimental/filesystem>
 
-#define DBPATH      1
-#define VIDPATH     2
+#define DBPATH 1
+#define VIDPATH 2
 
 namespace fs = std::experimental::filesystem;
 using namespace std;
 
-bool file_exists(const string& fname){
-  return fs::exists(fname);
+bool file_exists(const string &fname)
+{
+    return fs::exists(fname);
 }
 
-
-
-
-int main(int argc, char** argv )
+int main(int argc, char **argv)
 {
 
     bool DEBUG = false;
-    if ( argc < 3 )
+    if (argc < 3)
     {
         // TODO: better args parsing
         printf("usage: ./query <Database_Path> <test_video>\n");
         return -1;
     }
 
-    if(!fs::create_directories(fs::current_path() / "results")) { std::cerr << "Could not create ./results" << std::endl; }
+    if (!fs::create_directories(fs::current_path() / "results"))
+    {
+        std::cerr << "Could not create ./results" << std::endl;
+    }
 
     std::ofstream f(fs::current_path() / "results" / "resultcache.txt", ios::out | ios::trunc);
-    if (!f.is_open()) { std::cerr << "Could not open ./results/resultcache.txt" << std::endl;}
+    if (!f.is_open())
+    {
+        std::cerr << "Could not open ./results/resultcache.txt" << std::endl;
+    }
 
-    auto& fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
+    auto &fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
     std::string videoname = fs::path(argv[VIDPATH]).filename().string();
     auto video2 = make_query_adapter(fd, getSIFTVideo(argv[VIDPATH]), "totallydifferenttestvid.mp4");
     auto match = findMatch(video2, fd);
     std::string bestmatch = "";
-    if(match) {
+    if (match)
+    {
         bestmatch = match->video;
-        std::cout << std::endl << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl<<std::endl;
+        std::cout << std::endl
+                  << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl
+                  << std::endl;
         int count = 0;
-        for (auto a : match->alignments) {
-            if (a.score > (match->matchConfidence / 2.5)) {
+        for (auto a : match->alignments)
+        {
+            if (a.score > (match->matchConfidence / 2.5))
+            {
                 count++;
                 std::cout << "Alignment " << count << ", Score: " << a.score << std::endl;
                 std::cout << "Scene range in " << match->video << ": [" << a.startKnown << ", " << a.endKnown << ")" << std::endl;
-                std::cout << "Scene range in " << videoname << ": [" << a.startUnknown << ", " << a.endUnknown << ")" << std::endl<<std::endl;
+                std::cout << "Scene range in " << videoname << ": [" << a.startUnknown << ", " << a.endUnknown << ")" << std::endl
+                          << std::endl;
             }
         }
     }

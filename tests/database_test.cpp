@@ -9,22 +9,28 @@ using namespace cv;
 namespace fs = experimental::filesystem;
 
 #ifdef CLEAN_NAMES
-TEST(DatabaseSuite, getAlphas) {
+TEST(DatabaseSuite, getAlphas)
+{
     string input = "this is a{} good";
     EXPECT_TRUE(getAlphas(input) == "thisisagood");
 }
 #endif
 
-
-class DatabaseSuite : public ::testing::Test {
+class DatabaseSuite : public ::testing::Test
+{
 protected:
-    static void SetUpTestSuite() {
+    static void SetUpTestSuite()
+    {
         input = getSIFTVideo("../sample.mp4");
     }
-    void SetUp() override {
-        try {
+    void SetUp() override
+    {
+        try
+        {
             fs::remove_all(fs::current_path() / "database_test_dir");
-        } catch(std::exception e) {
+        }
+        catch (std::exception e)
+        {
             std::cout << "could not remove test dir" << e.what() << std::endl;
         }
 
@@ -36,7 +42,8 @@ protected:
 
 SIFTVideo DatabaseSuite::input;
 
-TEST(FileRW, SIFTrwTest) {
+TEST(FileRW, SIFTrwTest)
+{
     Mat mat1({2, 4}, {1, 2, 3, 4, 5, 6, 7, 8});
     Mat mat2({3, 2}, {10, 11, 12, 13, 14, 15});
     Mat mat3({1, 2}, {5, 4});
@@ -56,7 +63,7 @@ TEST(FileRW, SIFTrwTest) {
     vector<KeyPoint> k1{KeyPoint(0.1f, 0.2f, 0.3f), KeyPoint(0.15f, 0.25f, 0.35f)};
     vector<KeyPoint> k2{KeyPoint(0.2f, 0.3f, 0.4f), KeyPoint(0.25f, 0.35f, 0.45f), KeyPoint(0.4f, 0.5f, 0.6f)};
 
-    vector<Frame>result {Frame{k1, mat1, mat3, A}, Frame{k2, mat2, mat4, A}};
+    vector<Frame> result{Frame{k1, mat1, mat3, A}, Frame{k2, mat2, mat4, A}};
 
     SIFTwrite("test_frame1", result[0]);
     SIFTwrite("test_frame2", result[1]);
@@ -70,7 +77,8 @@ TEST(FileRW, SIFTrwTest) {
     EXPECT_TRUE(equal(result.begin(), result.end(), loaded.begin(), loaded.end()));
 }
 
-TEST(FileRW, FileLoaderRWTest) {
+TEST(FileRW, FileLoaderRWTest)
+{
     Mat mat1({2, 4}, {1, 2, 3, 4, 5, 6, 7, 8});
     Mat mat2({3, 2}, {10, 11, 12, 13, 14, 15});
     Mat mat3({1, 2}, {5, 4});
@@ -90,9 +98,9 @@ TEST(FileRW, FileLoaderRWTest) {
     vector<KeyPoint> k1{KeyPoint(0.1f, 0.2f, 0.3f), KeyPoint(0.15f, 0.25f, 0.35f)};
     vector<KeyPoint> k2{KeyPoint(0.2f, 0.3f, 0.4f), KeyPoint(0.25f, 0.35f, 0.45f), KeyPoint(0.4f, 0.5f, 0.6f)};
 
-    vector<Frame>result {Frame{k1, mat1, mat3, A}, Frame{k2, mat2, mat4, A}};
+    vector<Frame> result{Frame{k1, mat1, mat3, A}, Frame{k2, mat2, mat4, A}};
 
-    if(fs::exists("loader_test"))
+    if (fs::exists("loader_test"))
         fs::remove_all("loader_test");
 
     FileLoader loader("loader_test");
@@ -109,11 +117,12 @@ TEST(FileRW, FileLoaderRWTest) {
     EXPECT_TRUE(equal(result.begin(), result.end(), loaded.begin(), loaded.end()));
 }
 
-TEST_F(DatabaseSuite, FileDatabase) {
+TEST_F(DatabaseSuite, FileDatabase)
+{
     FileDatabase db(to_string(fs::current_path() / "database_test_dir"),
-        std::make_unique<LazyStorageStrategy>(),
-        LazyLoadStrategy{},
-        RuntimeArguments{200, 20, 0.2});
+                    std::make_unique<LazyStorageStrategy>(),
+                    LazyLoadStrategy{},
+                    RuntimeArguments{200, 20, 0.2});
     auto video = make_video_adapter(input, "sample.mp4");
 
     auto vid = db.saveVideo(video)->frames();
@@ -121,7 +130,7 @@ TEST_F(DatabaseSuite, FileDatabase) {
 
     ASSERT_TRUE(loaded_ptr);
 
-    auto& loaded = loaded_ptr->frames();
+    auto &loaded = loaded_ptr->frames();
     cout << "size: " << vid.size() << endl;
 
     EXPECT_TRUE(vid.size() > 0);
@@ -129,11 +138,12 @@ TEST_F(DatabaseSuite, FileDatabase) {
     EXPECT_TRUE(equal(vid.begin(), vid.end(), loaded.begin()));
 }
 
-TEST_F(DatabaseSuite, EagerDatabase) {
+TEST_F(DatabaseSuite, EagerDatabase)
+{
     FileDatabase db(to_string(fs::current_path() / "database_test_dir"),
-        std::make_unique<AggressiveStorageStrategy>(),
-        AggressiveLoadStrategy{},
-        RuntimeArguments{200, 20, 0.2});
+                    std::make_unique<AggressiveStorageStrategy>(),
+                    AggressiveLoadStrategy{},
+                    RuntimeArguments{200, 20, 0.2});
 
     auto in = make_video_adapter(input, "sample.mp4");
     auto in_saved = db.saveVideo(in);
@@ -153,7 +163,7 @@ TEST_F(DatabaseSuite, EagerDatabase) {
 
     ASSERT_TRUE(loaded_ptr);
 
-    auto& loaded = loaded_ptr->frames();
+    auto &loaded = loaded_ptr->frames();
     cout << "size: " << vid->frames().size() << endl;
 
     EXPECT_GT(vid->frames().size(), 0);

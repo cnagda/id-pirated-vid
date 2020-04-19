@@ -11,16 +11,17 @@ using namespace std;
 using namespace chrono;
 using namespace cv;
 
-
-int main(int argc, char** argv )
+int main(int argc, char **argv)
 {
-    //srand(time(0));    
+    //srand(time(0));
     srand(500);
 
     cv::Mat randm(100000, 128, CV_32F);
-    for(int i = 0; i < randm.rows; i++){
-        for(int j = 0; j < randm.cols; j++){
-            randm.at<float>(i, j) = ((float)rand())/RAND_MAX;
+    for (int i = 0; i < randm.rows; i++)
+    {
+        for (int j = 0; j < randm.cols; j++)
+        {
+            randm.at<float>(i, j) = ((float)rand()) / RAND_MAX;
         }
     }
 
@@ -34,12 +35,11 @@ int main(int argc, char** argv )
 
     std::cout << "normal Kmeans took " << duration.count() << " seconds" << std::endl;
 
-
-    start = high_resolution_clock::now(); 
+    start = high_resolution_clock::now();
     centers = fastkmeans2(randm, ncenters);
-    stop = high_resolution_clock::now(); 
+    stop = high_resolution_clock::now();
 
-    duration = duration_cast<seconds>(stop - start); 
+    duration = duration_cast<seconds>(stop - start);
 
     std::cout << "fast Kmeans took " << duration.count() << " seconds" << std::endl;
 
@@ -55,11 +55,14 @@ int main(int argc, char** argv )
 
     int gapScore = 2;
     int threshold = 3;
-    
+
     auto as = calculateAlignment(v1, v2, comp, threshold, gapScore);
-    std::cout << as.size() << std::endl << std::endl;
-    std::cout << s1 << std::endl << s2 << std::endl;
-    for(auto& a : as){
+    std::cout << as.size() << std::endl
+              << std::endl;
+    std::cout << s1 << std::endl
+              << s2 << std::endl;
+    for (auto &a : as)
+    {
         std::cout << (std::string)a << std::endl;
     }
 

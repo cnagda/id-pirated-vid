@@ -21,7 +21,8 @@ int main()
     auto alignments = calculateAlignment(
         s1.begin(), s1.end(), s2.begin(), s2.end(), [](auto a, auto b) { return a == b ? 3 : -3; }, 10, 2);
 
-    if(alignments.size() > 0) {
+    if (alignments.size() > 0)
+    {
         std::cout << alignments[0].score << std::endl;
     }
     return 0;
