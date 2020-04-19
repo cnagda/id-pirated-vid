@@ -159,7 +159,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
         auto deref = [&v, &db](auto i) { return loadSceneDescriptor(i, *v, db); };
         boost::push_back(knownScenes, v->getScenes() | boost::adaptors::transformed(deref));
 
-        auto&& alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 0, 2);
+        auto&& alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 1, 2);
         std::cout << targetScenes.size() << " "<< knownScenes.size() << std::endl;
         if(alignments.size() > 0) {
             auto& a = alignments[0];
