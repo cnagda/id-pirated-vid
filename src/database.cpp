@@ -372,13 +372,21 @@ std::vector<Frame>& DatabaseVideo::frames() & {
 std::optional<Frame> FileLoader::readFrame(const std::string& videoName, v_size index) const {
     auto def = cv::Mat();
     ifstream stream(rootDir / videoName / "frames" / (to_string(index) + ".keypoints"), fstream::binary);
+
+    auto features = readFrameFeatures(videoName, index);
+    auto bag = readFrameBag(videoName, index);
+    auto color = readFrameColorHistogram(videoName, index);
+    if(!(stream.is_open() || bag || features || color)) {
+        return std::nullopt;
+    }
+
     auto keyPoints = readSequence<KeyPoint>(stream);
 
     return Frame{
         keyPoints,
-        readFrameFeatures(videoName, index).value_or(def),
-        readFrameBag(videoName, index).value_or(def),
-        readFrameColorHistogram(videoName, index).value_or(def)
+        features.value_or(def),
+        bag.value_or(def),
+        color.value_or(def)
     };
 }
 
