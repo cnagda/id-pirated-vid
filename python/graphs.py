@@ -8,11 +8,11 @@ matplotlib.use('TkAgg')
 for dir in os.listdir("Temp"):
     if os.path.isdir(os.path.join(os.getcwd(), "Temp", dir)):
         legendlist = []
-        plt.title(f"Testing Similarity of {dir}")
+        plt.title("Testing Similarity of " + dir)
         plt.xlabel("Frame Number")
         plt.ylabel("Similarity Score")
         maxframes = 0
-        for file in os.listdir(f"Temp/{dir}"):
+        for file in os.listdir("Temp/" + dir):
             legendlist.append(file)
             fpath = os.path.join(os.getcwd(), "Temp", dir, file)
             with open(fpath) as f:
