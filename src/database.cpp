@@ -263,7 +263,9 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(IVideo& video) {
         boost::copy(scenes, std::back_inserter(loadedScenes));
     }
     else if(strategy->shouldComputeScenes(video)) {
-        auto flat = convolutionalDetector(video, ColorComparator{}, config.threshold);
+        //auto flat = convolutionalDetector(video, ColorComparator{}, config.threshold);
+        auto distances = get_distances(loader, video.name);
+        auto flat = hierarchicalScenes(distances, config.threshold);
 
         if(!flat.empty()) {
             loader.clearScenes(video.name);
@@ -348,7 +350,11 @@ std::vector<SerializableScene>& DatabaseVideo::getScenes() & {
                 throw std::runtime_error("no threshold was provided to calculate scenes");
             }
 
-            auto ss = convolutionalDetector(*this, ColorComparator{}, config.threshold);
+            //auto ss = convolutionalDetector(*this, ColorComparator{}, config.threshold);
+            auto distances = get_distances(loader, name);
+            auto ss = hierarchicalScenes(distances, config.threshold);
+
+
             std::cout << "Found " << ss.size() << " scenes, serializing now" << std::endl;
             boost::push_back(sceneCache, ss
             | boost::adaptors::transformed([index = 0](auto scene){
@@ -496,7 +502,10 @@ DatabaseVideo make_scene_adapter(FileDatabase& db, IVideo& video, const std::str
     std::vector<SerializableScene> loadedScenes;
 
     auto config = db.getConfig();
-    auto scenes = convolutionalDetector(video, ColorComparator{}, config.threshold);
+    //auto scenes = convolutionalDetector(video, ColorComparator{}, config.threshold);
+    auto distances = get_distances(db.getFileLoader(), key);
+    auto scenes = hierarchicalScenes(distances, config.threshold);
+
 
     std::cout << "Found " << scenes.size() << " scenes, serializing now" << std::endl;
 

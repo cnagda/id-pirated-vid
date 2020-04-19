@@ -42,6 +42,78 @@ auto flatScenes(Video& video, Cmp&& comp, double threshold){
     return retval;
 }
 
+std::vector<float> get_distances(FileLoader fl, std::string video_path);
+std::vector<std::pair<int, int>> hierarchicalScenes(std::vector<float> distances, int min_scene_length);
+
+/*std::vector<float> get_distances(FileLoader fl, std::string video_path){
+    
+    cv::Mat current, next;
+    std::vector<float> retval;
+
+    auto rv = fl.readFrameColorHistogram(video_path, 0);
+    if(rv){
+        current = *rv;
+    }
+    else{
+        return {}; 
+    }
+
+    int index = 0;
+    ColorComparator cc;
+
+    while(1){
+        index++;
+        rv = fl.readFrameColorHistogram(video_path, index);
+        if(rv){
+            next = *rv;
+            retval.push_back(cc(current, next));
+            current = next;
+        }
+        else{
+            return retval;
+        }
+    }
+}
+
+std::vector<int> hierarchicalScenes(std::vector<float> distances, int min_scene_length){
+    std::vector<bool> excluded(distances.size(), 0);
+    std::vector<std::pair<float, int>> sorted_distances;
+
+    for(int i = 0; i < distances.size(); i++){
+        sorted_distances.push_back({distances[i], i});
+    }
+    
+    std::vector<int> retval;
+    std::sort(sorted_distances.begin(), sorted_distances.end(), [](auto l, auto r) { return l.first > r.first; } );
+
+    int index = -1;
+    std::pair<float, int> current;
+
+    // iterate over distances from lagest to smallest
+    while(index < distances.size()){
+        index++;
+        current = sorted_distances[index];
+        if(excluded[index]){
+            continue;
+        }
+
+        retval.push_back(current.second);
+        int low = std::max(index - min_scene_length, 0);
+        int high = std::min(index + min_scene_length, (int)distances.size());
+
+        // exclude neighbors of current
+        for(int i = low; i < high; i++){
+            excluded[i] = 1;
+        }
+
+    }
+
+    // return cutoffs from left to right
+    std::sort(retval.begin(), retval.end());
+
+    return {};
+}*/
+
 template<class Video, typename Cmp>
 auto convolutionalDetector(Video& video, Cmp&& comp, double threshold, unsigned int windowSize = 10){
     typedef typename std::decay_t<Video>::size_type index_t;
