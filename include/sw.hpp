@@ -25,7 +25,7 @@ std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix &m
 {
     std::vector<ItAlignment<It>> alignments;
 
-    for (unsigned int u; u < maxAlignments; u++)
+    for (unsigned int u = 0; u < maxAlignments; u++)
     {
         auto [i, j] = slowMatrixMax(matrix);
 

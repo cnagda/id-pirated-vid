@@ -17,3 +17,5 @@ data/**/*
 main
 */__pycache__
 results/**/*
+Temp
+results1
