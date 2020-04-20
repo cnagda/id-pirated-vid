@@ -1,4 +1,4 @@
-#include "scene.hpp"
+#include "video.hpp"
 #include "gtest/gtest.h"
 
 TEST(SceneTest, Is_copiable) {

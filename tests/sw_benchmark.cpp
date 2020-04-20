@@ -2,17 +2,18 @@
 #include "sw.hpp"
 #include <algorithm>
 
-static void BM_SmithWatterman(benchmark::State& state) {
-    auto randchar = []() -> char
-    {
+static void BM_SmithWatterman(benchmark::State &state)
+{
+    auto randchar = []() -> char {
         const char charset[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
         const size_t max_index = (sizeof(charset) - 1);
-        return charset[ rand() % max_index ];
+        return charset[rand() % max_index];
     };
-    for (auto _ : state) {
+    for (auto _ : state)
+    {
         state.PauseTiming();
 
         std::string s1(state.range(0), 0);
@@ -22,8 +23,9 @@ static void BM_SmithWatterman(benchmark::State& state) {
 
         state.ResumeTiming();
 
-        auto alignments = calculateAlignment(s1.begin(), s1.end(), s2.begin(), s2.end(), [](auto a, auto b){ return a == b ? 3 : -3; }, 10, 2);
+        auto alignments = calculateAlignment(
+            s1.begin(), s1.end(), s2.begin(), s2.end(), [](auto a, auto b) { return a == b ? 3 : -3; }, 10, 2);
     }
 }
 // Register the function as a benchmark
-BENCHMARK(BM_SmithWatterman) -> Ranges({{8, 8<<10}, {8, 8 << 10}});
+BENCHMARK(BM_SmithWatterman)->Ranges({{8, 8 << 10}, {8, 8 << 10}});
