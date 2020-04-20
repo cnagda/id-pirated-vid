@@ -1,4 +1,3 @@
-find_package(OpenCV REQUIRED core videoio xfeatures2d)
 find_package(OpenMP)
 find_package( TBB REQUIRED )
 
