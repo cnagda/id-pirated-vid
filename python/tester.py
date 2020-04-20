@@ -42,21 +42,24 @@ def main():
         vidname = os.path.basename(vidpath)
 
         # Run query
-        subprocess.check_output(['./piracy.py', 'QUERY', args.dbpath, vidpath])
+        output = subprocess.check_output(['./piracy.py', 'QUERY', args.dbpath, vidpath])
 
         # Check if result matches expected
         result = ""
         with open("./results/resultcache.txt") as file:
             result = file.read()
         success = 0
+        outstr = "Failure"
         if result == AV_LABELS[vidname]:
             success = 1
-            print ("Success")
-        else:
-            print("Failure")
+            outstr = "Success"
+        print(outstr)
 
         # record 0 for failure, 1 for success
         results[vidname] = success
+
+        with open('./results/dump.txt', 'a') as f2:
+            f2.write(f"{vidname}\n{output}\n{outstr}\n")
 
     with open('./results/allresults.txt','w') as f:
         f.write(str(results))
