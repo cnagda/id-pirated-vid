@@ -26,10 +26,12 @@ std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix& m
 
     for(unsigned int u; u < maxAlignments; u++){
         auto [i, j] = slowMatrixMax(matrix);
+
+        std::cout << "i: " << i << " j: " << j << std::endl;
         if(i <= 0 || j <= 0) {
             return alignments;
         }
-        if(matrix(i, j) == 0){
+        if(matrix(i, j) <= 0){
             return alignments;
         }
 
@@ -46,6 +48,9 @@ std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix& m
             i = tempi;
 
         } while(matrix(i, j) > 0);
+        if(matrix(i, j) == -1) {
+            continue;
+        }
 
         a.startUnknown = unknown + i;
         a.startKnown = known + j;

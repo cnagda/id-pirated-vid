@@ -23,6 +23,8 @@ class FileLoader {
 private:
     fs::path rootDir;
 public:
+    FileLoader(const std::string& path) : rootDir(path) {};
+
     std::optional<Frame> readFrame(const std::string& videoName, v_size index) const;
     std::optional<cv::Mat> readFrameFeatures(const std::string& videoName, v_size index) const;
     std::optional<cv::Mat> readFrameColorHistogram(const std::string& videoName, v_size index) const;

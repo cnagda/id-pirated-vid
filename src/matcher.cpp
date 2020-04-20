@@ -225,6 +225,10 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
         | boost::adaptors::transformed(deref));
 
     for(auto v2 : db.listVideos()) {
+        if(v2 == target.name) {
+            continue;
+        }
+
         std::cout << "Calculating match for " << v2 << std::endl;
         std::vector<cv::Mat> knownScenes;
         auto v = db.loadVideo(v2);
@@ -232,7 +236,7 @@ std::optional<MatchInfo> findMatch(IVideo& target, FileDatabase& db) {
         auto deref = [&v, &db](auto i) { return loadSceneDescriptor(i, *v, db); };
         boost::push_back(knownScenes, v->getScenes() | boost::adaptors::transformed(deref));
 
-        auto&& alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 1, 2);
+        auto&& alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 3, 2);
         std::cout << targetScenes.size() << " "<< knownScenes.size() << std::endl;
         if(alignments.size() > 0) {
             auto& a = alignments[0];
