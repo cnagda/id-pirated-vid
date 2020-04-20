@@ -126,7 +126,13 @@ template <typename Video>
 inline DatabaseVideo make_query_adapter(FileDatabase &db, Video &&video, const std::string &key)
 {
     auto frames = video.frames();
-    return {db, key, frames};
+    DatabaseVideo vid{db, key, frames};
+
+    auto loader = db.getFileLoader();
+    loader.clearFrames(vid.name);
+    loader.clearScenes(vid.name);
+    db.saveVideo(vid);
+    return vid;
 }
 
 template <typename Base>

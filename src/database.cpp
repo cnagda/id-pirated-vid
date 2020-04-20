@@ -289,9 +289,10 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(IVideo &video)
         loader.clearScenes(video.name);
         boost::copy(scenes, std::back_inserter(loadedScenes));
     }
-    else if (strategy->shouldComputeScenes(video))
-    {
-        auto flat = convolutionalDetector(video, ColorComparator{}, config.threshold);
+    else if(strategy->shouldComputeScenes(video)) {
+        //auto flat = convolutionalDetector(video, ColorComparator{}, config.threshold);
+        auto distances = get_distances(loader, video.name);
+        auto flat = hierarchicalScenes(distances, config.threshold);
 
         if (!flat.empty())
         {
@@ -398,7 +399,11 @@ std::vector<SerializableScene> &DatabaseVideo::getScenes() &
                 throw std::runtime_error("no threshold was provided to calculate scenes");
             }
 
-            auto ss = convolutionalDetector(*this, ColorComparator{}, config.threshold);
+            //auto ss = convolutionalDetector(*this, ColorComparator{}, config.threshold);
+            auto distances = get_distances(loader, name);
+            auto ss = hierarchicalScenes(distances, config.threshold);
+
+
             std::cout << "Found " << ss.size() << " scenes, serializing now" << std::endl;
             boost::push_back(sceneCache, ss | boost::adaptors::transformed([index = 0](auto scene) {
                                              return SerializableScene{scene.first, scene.second};
@@ -425,13 +430,22 @@ std::optional<Frame> FileLoader::readFrame(const std::string &videoName, v_size 
 {
     auto def = cv::Mat();
     ifstream stream(rootDir / videoName / "frames" / (to_string(index) + ".keypoints"), fstream::binary);
+
+    auto features = readFrameFeatures(videoName, index);
+    auto bag = readFrameBag(videoName, index);
+    auto color = readFrameColorHistogram(videoName, index);
+    if(!(stream.is_open() || bag || features || color)) {
+        return std::nullopt;
+    }
+
     auto keyPoints = readSequence<KeyPoint>(stream);
 
     return Frame{
         keyPoints,
-        readFrameFeatures(videoName, index).value_or(def),
-        readFrameBag(videoName, index).value_or(def),
-        readFrameColorHistogram(videoName, index).value_or(def)};
+        features.value_or(def),
+        bag.value_or(def),
+        color.value_or(def)
+    };
 }
 
 std::optional<cv::Mat> FileLoader::readFrameData(const std::string &videoName, const std::string &fileName) const
@@ -547,7 +561,10 @@ DatabaseVideo make_scene_adapter(FileDatabase &db, IVideo &video, const std::str
     std::vector<SerializableScene> loadedScenes;
 
     auto config = db.getConfig();
-    auto scenes = convolutionalDetector(video, ColorComparator{}, config.threshold);
+    //auto scenes = convolutionalDetector(video, ColorComparator{}, config.threshold);
+    auto distances = get_distances(db.getFileLoader(), key);
+    auto scenes = hierarchicalScenes(distances, config.threshold);
+
 
     std::cout << "Found " << scenes.size() << " scenes, serializing now" << std::endl;
 

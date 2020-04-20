@@ -27,7 +27,7 @@ private:
     std::optional<cv::Mat> readFrameData(const std::string &videoName, const std::string &fileName) const;
 
 public:
-    FileLoader(fs::path dir) : rootDir(dir){};
+    FileLoader(const std::string& path) : rootDir(path) {};
 
     std::optional<Frame> readFrame(const std::string &videoName, v_size index) const;
     std::optional<cv::Mat> readFrameFeatures(const std::string &videoName, v_size index) const;

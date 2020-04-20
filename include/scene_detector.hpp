@@ -52,6 +52,9 @@ auto flatScenes(Video &video, Cmp &&comp, double threshold)
     return retval;
 }
 
+std::vector<float> get_distances(FileLoader fl, std::string video_path);
+std::vector<std::pair<int, int>> hierarchicalScenes(std::vector<float> distances, int min_scene_length);
+
 template <class Video, typename Cmp>
 auto convolutionalDetector(Video &video, Cmp &&comp, double threshold, unsigned int windowSize = 10)
 {

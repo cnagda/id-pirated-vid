@@ -22,26 +22,7 @@ endif()
 find_package( Boost 1.32.0 )
 include_directories(${Boost_INCLUDE_DIRS})
 
-find_package (Eigen3 3.3 NO_MODULE)
-if(NOT TARGET Eigen3::Eigen)
-    configure_file(CMakeLists.Eigen.txt Eigen/CMakeLists.txt)
-    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Eigen)
-    if(result)
-    message(FATAL_ERROR "CMake step for Eigen failed: ${result}")
-    endif()
-    execute_process(COMMAND ${CMAKE_COMMAND} --build .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Eigen)
-    if(result)
-    message(FATAL_ERROR "Build step for Eigen failed: ${result}")
-    endif()
-
-    add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/Eigen-src
-                    ${CMAKE_CURRENT_BINARY_DIR}/Eigen-build
-                    EXCLUDE_FROM_ALL)
-endif()
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 if(BUILD_OPTIONAL)
     configure_file(CMakeLists.Raft.txt Raft/CMakeLists.txt)
@@ -62,60 +43,5 @@ if(BUILD_OPTIONAL)
                     ${CMAKE_CURRENT_BINARY_DIR}/Raft-build
                     EXCLUDE_FROM_ALL)
 endif()
-
-#[[
-
-configure_file(CMakeLists.fmt.txt fmt/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-RESULT_VARIABLE result
-WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/fmt)
-if(result)
-message(FATAL_ERROR "CMake step for fmt failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-RESULT_VARIABLE result
-WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/fmt)
-if(result)
-message(FATAL_ERROR "Build step for fmt failed: ${result}")
-endif()
-
-set(fmt_DIR ${CMAKE_CURRENT_BINARY_DIR}/fmt-build)
-
-configure_file(CMakeLists.Folly.txt Folly/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-RESULT_VARIABLE result
-WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Folly)
-if(result)
-message(FATAL_ERROR "CMake step for Folly failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-RESULT_VARIABLE result
-WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Folly)
-if(result)
-message(FATAL_ERROR "Build step for Folly failed: ${result}")
-endif()
-
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/Folly-src
-                ${CMAKE_CURRENT_BINARY_DIR}/Folly-build
-                EXCLUDE_FROM_ALL)
-
-configure_file(CMakeLists.Dyno.txt Dyno/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-RESULT_VARIABLE result
-WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Dyno)
-if(result)
-message(FATAL_ERROR "CMake step for Dyno failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-RESULT_VARIABLE result
-WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Dyno)
-if(result)
-message(FATAL_ERROR "Build step for Dyno failed: ${result}")
-endif()
-
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/Dyno-src
-                ${CMAKE_CURRENT_BINARY_DIR}/Dyno-build
-                EXCLUDE_FROM_ALL)
-]]
 
 find_package( OpenCV REQUIRED core videoio xfeatures2d highgui )

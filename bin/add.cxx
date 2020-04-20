@@ -8,6 +8,7 @@
 #include "matcher.hpp"
 #include "imgproc.hpp"
 #include <future>
+#include "scene_detector.hpp"
 
 #define DBPATH 1
 #define VIDPATH 2
@@ -73,6 +74,24 @@ int main(int argc, char **argv)
                                         fs::path(argv[VIDPATH]).filename().string());
 
         db->saveVideo(video);
+        // get distances
+        auto distances = get_distances(db->getFileLoader(), video.name);
+
+        std::cout << "distances size: " << distances.size() << std::endl;
+
+        // make graph
+        TimeSeries data;
+        data.name = "data";
+        for(int i = 0; i < distances.size(); i++){
+            data.data.push_back({0, distances[i]});
+        }
+        EmmaExporter().exportTimeseries(video.name + "_timeseries", "Frame number", "Distance", {data});
+        // get scenes
+        auto scenes = hierarchicalScenes(distances, 30);
+        std::cout << video.name << " scenes: " << std::endl;
+        for(auto& a : scenes){
+            std::cout << a.first << ", " << a.second << std::endl;
+        }
     }
 
     bool shouldRecalculateFrames = false;

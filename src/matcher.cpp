@@ -8,6 +8,89 @@
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 
+std::vector<float> get_distances(FileLoader fl, std::string video_path)
+{
+    cv::Mat current, next;
+    std::vector<float> retval;
+
+    auto rv = fl.readFrameColorHistogram(video_path, 0);
+    if (rv)
+    {
+        current = *rv;
+    }
+    else
+    {
+        return {};
+    }
+
+    int index = 0;
+    ColorComparator cc;
+
+    while (1)
+    {
+        index++;
+
+        rv = fl.readFrameColorHistogram(video_path, index);
+        if (rv)
+        {
+            next = *rv;
+            retval.push_back(cc(current, next));
+            current = next;
+        }
+        else
+        {
+            return retval;
+        }
+    }
+}
+
+std::vector<std::pair<int, int>> hierarchicalScenes(std::vector<float> distances, int min_scene_length)
+{
+    std::vector<bool> excluded(distances.size(), 0);
+    std::vector<std::pair<float, int>> sorted_distances;
+
+    for (int i = 0; i < distances.size(); i++)
+    {
+        sorted_distances.push_back({distances[i], i});
+    }
+
+    std::vector<int> retval;
+    std::sort(sorted_distances.begin(), sorted_distances.end(), [](auto l, auto r) { return l.first > r.first; });
+
+    int index = -1;
+    std::pair<float, int> current;
+
+    // iterate over distances from lagest to smallest
+    while (index < (int)distances.size() - 1)
+    {
+        index++;
+        current = sorted_distances[index];
+        if (excluded[current.second])
+        {
+            continue;
+        }
+
+        retval.push_back(current.second);
+
+        int low = std::max(current.second - min_scene_length, 0);
+        int high = std::min(current.second + min_scene_length, (int)distances.size());
+
+        // exclude neighbors of current
+        for (int i = low; i < high; i++)
+        {
+            excluded[i] = 1;
+        }
+    }
+
+    // return cutoffs from left to right
+    std::sort(retval.begin(), retval.end());
+
+    std::vector<std::pair<int, int>> v;
+    std::transform(retval.begin(), retval.end(), std::back_inserter(v), [last = 0](auto I) mutable { auto r = std::make_pair(last, I); last = I; return r; });
+
+    return v;
+}
+
 Vocab<Frame> constructFrameVocabulary(const FileDatabase &database, unsigned int K, unsigned int speedinator)
 {
     cv::Mat descriptors;
@@ -172,6 +255,11 @@ std::optional<MatchInfo> findMatch(IVideo &target, FileDatabase &db)
 
     for (auto v2 : db.listVideos())
     {
+        if (v2 == target.name)
+        {
+            continue;
+        }
+
         std::cout << "Calculating match for " << v2 << std::endl;
         std::vector<cv::Mat> knownScenes;
         auto v = db.loadVideo(v2);
@@ -179,7 +267,7 @@ std::optional<MatchInfo> findMatch(IVideo &target, FileDatabase &db)
         auto deref = [&v, &db](auto i) { return loadSceneDescriptor(i, *v, db); };
         boost::push_back(knownScenes, v->getScenes() | boost::adaptors::transformed(deref));
 
-        auto &&alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 0, 2);
+        auto &&alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 3, 2);
         std::cout << targetScenes.size() << " " << knownScenes.size() << std::endl;
         if (alignments.size() > 0)
         {

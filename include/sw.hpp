@@ -14,25 +14,27 @@
 #include <cassert>
 #include <tbb/parallel_do.h>
 
-#define BLOCK_SIZE 64
+#define BLOCK_SIZE 128
 #define BLOCK_MAX_DIM(max) (((max) + BLOCK_SIZE - 1) / BLOCK_SIZE)
 
 typedef VectorMatrix<uint8_t> SourceMatrix;
 typedef Eigen::MatrixXi ScoreMatrix;
 
 template <typename It>
-std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix &matrix, const SourceMatrix &sources, unsigned int threshold)
+std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix &matrix, const SourceMatrix &sources, unsigned int maxAlignments)
 {
     std::vector<ItAlignment<It>> alignments;
 
-    while (1)
+    for (unsigned int u; u < maxAlignments; u++)
     {
         auto [i, j] = slowMatrixMax(matrix);
+
+        std::cout << "i: " << i << " j: " << j << std::endl;
         if (i <= 0 || j <= 0)
         {
             return alignments;
         }
-        if (matrix(i, j) < threshold)
+        if (matrix(i, j) <= 0)
         {
             return alignments;
         }
@@ -51,6 +53,10 @@ std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix &m
             i = tempi;
 
         } while (matrix(i, j) > 0);
+        if (matrix(i, j) == -1)
+        {
+            continue;
+        }
 
         a.startUnknown = unknown + i;
         a.startKnown = known + j;
@@ -176,7 +182,7 @@ void populateSearchSpace(It known, It unknown, int m, int n, unsigned int gapSco
 }
 
 template <typename It, typename Cmp>
-std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknown, It unknownEnd, Cmp comp, unsigned int threshold, unsigned int gapScore)
+std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknown, It unknownEnd, Cmp comp, unsigned int maxAlignments, unsigned int gapScore)
 {
     int m = std::distance(unknown, unknownEnd) + 1;
     int n = std::distance(known, knownEnd) + 1;
@@ -199,13 +205,13 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
     std::cout << std::endl;
 #endif
 
-    return findAlignments(known, unknown, matrix, sources, threshold);
+    return findAlignments(known, unknown, matrix, sources, maxAlignments);
 }
 
 template <typename Range, typename Cmp>
-std::vector<Alignment> calculateAlignment(Range &&known, Range &&unknown, Cmp &&comp, int threshold, unsigned int gapScore)
+std::vector<Alignment> calculateAlignment(Range &&known, Range &&unknown, Cmp &&comp, unsigned int maxAlignments, unsigned int gapScore)
 {
-    auto alignments = calculateAlignment(known.begin(), known.end(), unknown.begin(), unknown.end(), comp, threshold, gapScore);
+    auto alignments = calculateAlignment(known.begin(), known.end(), unknown.begin(), unknown.end(), comp, maxAlignments, gapScore);
     std::vector<Alignment> ret;
     ret.reserve(alignments.size());
 
