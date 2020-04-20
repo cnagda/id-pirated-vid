@@ -1,5 +1,6 @@
 #include "vocabulary.hpp"
 #include "matcher.hpp"
+#include "scene_detector.hpp"
 #include "database.hpp"
 #include "subset.hpp"
 #include <chrono>

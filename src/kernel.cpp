@@ -44,12 +44,21 @@ ExtractSIFT::ExtractSIFT() : raft::kernel(), detector(cv::xfeatures2d::SiftFeatu
     // output.addPort<cv::KeyPoint>("keypoints");
 }
 
+ExtractSIFT::ExtractSIFT(const ExtractSIFT&) : raft::kernel(), detector(cv::xfeatures2d::SiftFeatureDetector::create(500))
+{
+    input.addPort<ordered_mat>("image");
+    output.addPort<ordered_mat>("sift_descriptor");
+    // output.addPort<size_type>("keypoints_size");
+    // output.addPort<cv::KeyPoint>("keypoints");
+}
+
 raft::kstatus ExtractSIFT::run()
 {
     auto image = input["image"].peek<ordered_mat>();
     std::vector<cv::KeyPoint> keyPoints;
     ordered_mat descriptors;
     descriptors.rank = image.rank;
+    std::cout << "Extract SIFT rank " << image.rank << std::endl;
 
     detector->detectAndCompute(image.data, cv::noArray(), keyPoints, descriptors.data);
     input["image"].unpeek();
@@ -73,6 +82,7 @@ raft::kstatus ExtractColorHistogram::run()
 
     ordered_mat colorHistogram;
     colorHistogram.rank = image.rank;
+    std::cout << "Extract Color rank " << image.rank << std::endl;
 
     std::vector<int> histSize{HBINS, SBINS};
     // hue varies from 0 to 179, see cvtColor
@@ -94,6 +104,8 @@ raft::kstatus ExtractFrame::run()
 {
     auto sift = input["sift_descriptor"].peek<ordered_mat>();
     auto rank = sift.rank;
+
+    std::cout << "Extract Frame rank " << sift.rank << std::endl;
     auto descriptor = baggify(sift.data, frameVocab.descriptors());
     input["sift_descriptor"].unpeek();
     input["sift_descriptor"].recycle();
@@ -131,41 +143,64 @@ raft::kstatus ExtractScene::run()
     return raft::proceed;
 }
 
-raft::kstatus CollectFrame::run()
+raft::kstatus SaveFrameDescriptor::run()
 {
-    ordered_mat siftDescriptor, frameDescriptor;
+    for (auto &port : input)
+    {
+        auto frame = port.peek<ordered_mat>();
 
-    input["sift_descriptor"].pop(siftDescriptor);
-    input["frame_descriptor"].pop(frameDescriptor);
-    assert(siftDescriptor.rank == frameDescriptor.rank);
+        std::cout << "frame: " << frame.rank << std::endl;
+        loader.saveFrameBag(video, frame.rank, frame.data);
 
-    output["frame"].allocate<ordered_frame>(frameDescriptor.rank, Frame{siftDescriptor.data, frameDescriptor.data, cv::Mat()});
-    output["frame"].send();
+        port.unpeek();
+        port.recycle();
+    }
 
     return raft::proceed;
 }
 
-raft::kstatus SaveFrame::run()
+raft::kstatus SaveSIFT::run()
 {
-    auto frame = input["frame"].peek<ordered_frame>();
+    for (auto &port : input)
+    {
+        auto frame = port.peek<ordered_mat>();
 
-    loader.saveFrame(video, frame.rank, frame.data);
+        std::cout << "sift: " << frame.rank << std::endl;
+        loader.saveFrameFeatures(video, frame.rank, frame.data);
 
-    input["frame"].unpeek();
-    input["frame"].recycle();
+        port.unpeek();
+        port.recycle();
+    }
+
+    return raft::proceed;
+}
+
+raft::kstatus SaveColor::run()
+{
+    for (auto &port : input)
+    {
+        auto frame = port.peek<ordered_mat>();
+
+        std::cout << "color: " << frame.rank << std::endl;
+        loader.saveFrameColorHistogram(video, frame.rank, frame.data);
+
+        port.unpeek();
+        port.recycle();
+    }
 
     return raft::proceed;
 }
 
 raft::kstatus SaveScene::run()
 {
-    auto scene = input["scene"].peek<ordered_scene>();
-    std::cout << "scene rank " << scene.rank << std::endl;
+    for (auto &port : input)
+    {
+        auto scene = port.peek<ordered_scene>();
+        loader.saveScene(video, scene.rank, scene.data);
 
-    loader.saveScene(video, scene.rank, scene.data);
-
-    input["scene"].unpeek();
-    input["scene"].recycle();
+        port.unpeek();
+        port.recycle();
+    }
 
     return raft::proceed;
 }

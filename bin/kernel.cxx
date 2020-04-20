@@ -44,29 +44,22 @@ int main(int argc, char **argv)
     DetectScene detect(threshold);
     auto frame = frameVocab ? make_unique<ExtractFrame>(frameVocab.value()) : nullptr;
     auto scene = sceneVocab ? make_unique<ExtractScene>(sceneVocab.value()) : nullptr;
-    CollectFrame collect;
-    SaveFrame saveFrame(videoName, db->getFileLoader());
+    SaveColor saveColor(videoName, db->getFileLoader());
+    SaveFrameDescriptor saveFrame(videoName, db->getFileLoader());
+    SaveSIFT saveSIFT(videoName, db->getFileLoader());
     SaveScene saveScene(videoName, db->getFileLoader());
 
-    m += source >> scale >> scaledup;
-    m += scaledup["first"] >> color;
-    m += scaledup["second"] >> sift;
+    m += source <= scale >= scaledup;
+    m += scaledup["first"] <= color >= saveColor;
     if (frame)
     {
-        m += sift["sift_descriptor"] >> siftdup;
-        m += siftdup["first"] >> *frame >> framedup["in"]["first"] >> collect["frame_descriptor"];
-        m += siftdup["second"] >> collect["sift_descriptor"];
-        m += collect >> saveFrame;
-        if (scene)
-        {
-            m += color >> detect >> (*scene)["scene_range"];
-            m += framedup["second"] >> (*scene)["frame_descriptor"];
-            m += *scene >> saveScene;
-        }
+        m += scaledup["second"] <= sift >= siftdup["in"];
+        m += siftdup["first"] <= *frame >= saveFrame;
+        m += siftdup["second"] >> saveSIFT;
     }
     else
     {
-        m += sift["sift_descriptor"] >> siftDescriptor;
+        m += scaledup["second"] <= sift >= siftDescriptor;
     }
 
     m.exe();

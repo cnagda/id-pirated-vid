@@ -30,6 +30,11 @@ public:
         output.addPort<T>("first");
         output.addPort<T>("second");
     }
+    Duplicate(const Duplicate&) : raft::kernel() {
+        input.addPort<T>("in");
+        output.addPort<T>("first");
+        output.addPort<T>("second");
+    }
 
     raft::kstatus run()
     {
@@ -47,17 +52,19 @@ public:
 };
 
 template <typename T>
-class Null : public raft::kernel
+class Null : public raft::parallel_k
 {
 public:
-    Null() : raft::kernel()
+    Null() : raft::parallel_k()
     {
-        input.addPort<T>("in");
+        addPortTo<T>(input);
     }
 
     raft::kstatus run()
     {
-        input["in"].recycle();
+        for(auto &port : input) {
+            port.recycle();
+        }
         return raft::proceed;
     }
 };
@@ -86,6 +93,13 @@ public:
         input.addPort<ordered_mat>("image");
         output.addPort<ordered_mat>("scaled_image");
     }
+    ScaleImage(const ScaleImage& other) : raft::kernel(), cropsize(other.cropsize)
+    {
+        input.addPort<ordered_mat>("image");
+        output.addPort<ordered_mat>("scaled_image");
+    }
+
+    CLONE();
 
     raft::kstatus run();
 };
@@ -96,6 +110,9 @@ class ExtractSIFT : public raft::kernel
 
 public:
     ExtractSIFT();
+    ExtractSIFT(const ExtractSIFT& other);
+
+    CLONE();
 
     raft::kstatus run();
 };
@@ -108,6 +125,13 @@ public:
         input.addPort<ordered_mat>("image");
         output.addPort<ordered_mat>("color_histogram");
     }
+    ExtractColorHistogram(const ExtractColorHistogram&) : raft::kernel()
+    {
+        input.addPort<ordered_mat>("image");
+        output.addPort<ordered_mat>("color_histogram");
+    }
+
+    CLONE();
 
     raft::kstatus run();
 };
@@ -144,6 +168,13 @@ public:
         input.addPort<ordered_mat>("sift_descriptor");
         output.addPort<ordered_mat>("frame_descriptor");
     }
+    ExtractFrame(const ExtractFrame& other) : raft::kernel(), frameVocab(other.frameVocab)
+    {
+        input.addPort<ordered_mat>("sift_descriptor");
+        output.addPort<ordered_mat>("frame_descriptor");
+    }
+
+    CLONE();
 
     raft::kstatus run();
 };
@@ -164,68 +195,64 @@ public:
     raft::kstatus run();
 };
 
-class SaveSIFT : public raft::kernel
+class SaveSIFT : public raft::parallel_k
 {
     FileLoader loader;
     std::string video;
 
 public:
-    SaveSIFT(const std::string &video, const FileLoader &loader) : raft::kernel(),
+    SaveSIFT(const std::string &video, const FileLoader &loader) : raft::parallel_k(),
                                                                    loader(loader), video(video)
     {
-        input.addPort<ordered_mat>("sift_descriptor");
-
+        addPortTo<ordered_mat>(input);
         loader.initVideoDir(video);
     }
 
     raft::kstatus run();
 };
 
-class SaveColor : public raft::kernel
+class SaveColor : public raft::parallel_k
 {
     FileLoader loader;
     std::string video;
 
 public:
-    SaveColor(const std::string &video, const FileLoader &loader) : raft::kernel(),
+    SaveColor(const std::string &video, const FileLoader &loader) : raft::parallel_k(),
                                                                     loader(loader), video(video)
     {
-        input.addPort<ordered_mat>("color_histogram");
-
+        addPortTo<ordered_mat>(input);
         loader.initVideoDir(video);
     }
 
     raft::kstatus run();
 };
 
-class SaveFrameDescriptor : public raft::kernel
+class SaveFrameDescriptor : public raft::parallel_k
 {
     FileLoader loader;
     std::string video;
 
 public:
-    SaveFrameDescriptor(const std::string &video, const FileLoader &loader) : raft::kernel(),
+    SaveFrameDescriptor(const std::string &video, const FileLoader &loader) : raft::parallel_k(),
                                                                               loader(loader), video(video)
     {
-        input.addPort<ordered_mat>("frame_descriptor");
-
+        addPortTo<ordered_mat>(input);
         loader.initVideoDir(video);
     }
 
     raft::kstatus run();
 };
 
-class SaveScene : public raft::kernel
+class SaveScene : public raft::parallel_k
 {
     FileLoader loader;
     std::string video;
 
 public:
-    SaveScene(const std::string &video, const FileLoader &loader) : raft::kernel(),
+    SaveScene(const std::string &video, const FileLoader &loader) : raft::parallel_k(),
                                                                     loader(loader), video(video)
     {
-        input.addPort<ordered_scene>("scene");
-
+        addPortTo<ordered_scene>(input);
         loader.initVideoDir(video);
     }
 
