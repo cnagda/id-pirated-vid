@@ -35,6 +35,9 @@ def main():
     # Results in dictionary
     results = dict()
 
+    # Empty dump file at beginning
+    with open('./results/dump.txt', 'w') as f2:
+        f2.write("")
 
     for vidpath in vidpaths:
         print(f"Querying: {vidpath}")
