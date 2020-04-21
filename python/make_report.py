@@ -39,4 +39,4 @@ if t_total_ins == 0:
     t_total_ins = 1
     t_corr_ins = 1
 
-print("\t{:<16}\t{}%\t\t{}%".format("TOTAL", t_corr / t_total * 100, t_corr_ins / t_total_ins * 100))
+print("\t{:<16}\t{:.3f}%\t\t{:.3f}%".format("TOTAL", t_corr / t_total * 100, t_corr_ins / t_total_ins * 100))
