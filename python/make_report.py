@@ -31,8 +31,12 @@ for attack in sorted(data):
 
     s1 = "\t{:<16}\t".format(attack)
     s2 = "{}/{}\t\t".format(data[attack]['correct'], data[attack]['total'])
-
     s3 = "{}/{}".format(data[inserted]['correct'], data[inserted]['total'])
     print(s1+s2+s3)
+
+# prevent divide by zero, 0/0 is 100%
+if t_total_ins == 0:
+    t_total_ins = 1
+    t_corr_ins = 1
 
 print("\t{:<16}\t{}%\t\t{}%".format("TOTAL", t_corr / t_total * 100, t_corr_ins / t_total_ins * 100))
