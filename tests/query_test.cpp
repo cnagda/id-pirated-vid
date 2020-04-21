@@ -24,7 +24,7 @@ protected:
         db = std::make_unique<FileDatabase>(to_string(fs::current_path() / "database_test_dir"),
                                             std::make_unique<AggressiveStorageStrategy>(),
                                             LazyLoadStrategy{},
-                                            RuntimeArguments{200, 20, 2});
+                                            RuntimeArguments{200, 20, 30});
 
         {
             auto video = make_video_adapter(

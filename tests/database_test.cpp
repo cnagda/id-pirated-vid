@@ -143,7 +143,7 @@ TEST_F(DatabaseSuite, EagerDatabase)
     FileDatabase db(to_string(fs::current_path() / "database_test_dir"),
                     std::make_unique<AggressiveStorageStrategy>(),
                     AggressiveLoadStrategy{},
-                    RuntimeArguments{200, 20, 0.2});
+                    RuntimeArguments{200, 20, 30});
 
     auto in = make_video_adapter(input, "sample.mp4");
     auto in_saved = db.saveVideo(in);
