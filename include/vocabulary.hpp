@@ -48,6 +48,7 @@ cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = c
 Vocab<Frame> constructFrameVocabulary(const FileDatabase &database, unsigned int K, unsigned int speedinator = 1);
 Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase &database, unsigned int K, unsigned int speedinator = 1);
 Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, unsigned int K, unsigned int N, unsigned int speedinator);
+Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase &database, unsigned int K, unsigned int N, unsigned int speedinator);
 
 template <typename Matrix, typename Vocab>
 cv::Mat baggify(Matrix &&f, Vocab &&vocab)

@@ -222,6 +222,50 @@ Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, 
     return Vocab<Frame>(descriptor_levels.back());
 }
 
+// N is maximum size on which to perform clustering
+Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase &database, unsigned int K, unsigned int N, unsigned int speedinator)
+{
+    if (K > N)
+    {
+        throw std::runtime_error("constructFrameVocabularyHierarchical: error, K > N");
+    }
+
+    //cv::Mat descriptors;
+
+    std::vector<cv::Mat> descriptor_levels(1);
+
+    // collect features, reduce if needed
+    for (auto video : database.listVideos())
+    {
+        auto v = database.loadVideo(video);
+        auto &frames = v->frames();
+        for (auto i = frames.begin(); i < frames.end(); i += speedinator){
+            descriptor_levels.push_back(getFrameDescriptor(*i, d));
+			if(descriptor_levels[0].rows >= N){
+				overflow(descriptor_levels, K, N, 0);
+			}
+		}
+    }
+
+    cv::UMat copy;
+    descriptors.copyTo(copy);
+
+    return Vocab<SerializableScene>(constructVocabulary(copy, K));
+
+    // flush all remaining features to lowest level
+    for (int i = 0; i < descriptor_levels.size(); i++)
+    {
+        // if K == 2000 and at lowest level this is the vocabulary
+        if (descriptor_levels[i].rows != K || i != descriptor_levels.size() - 1)
+        {
+            overflow(descriptor_levels, K, N, i);
+        }
+    }
+
+    // can return empty matrix if data has fewer than K descriptors
+    return Vocab<SerializableScene>(descriptor_levels.back());
+}
+
 double boneheadedSimilarity(IVideo &v1, IVideo &v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter)
 {
     auto frames1 = v1.frames();
