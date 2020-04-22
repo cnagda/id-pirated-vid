@@ -22,7 +22,7 @@ endif()
 find_package( Boost 1.32.0 )
 include_directories(${Boost_INCLUDE_DIRS})
 
-find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+find_package (Eigen3 REQUIRED NO_MODULE)
 
 if(BUILD_OPTIONAL)
     configure_file(CMakeLists.Raft.txt Raft/CMakeLists.txt)
