@@ -181,15 +181,21 @@ class Attack:
         print("mirror")
         return self.vid.fx(vfx.mirror_x)
 
-    def pic_in_pic(self):
+    def pic_in_pic(self, large, small, duration):
         print("pic_in_pic")
-        othervid = self.base_video.fx(vfx.loop, duration=self.vid.duration)
-        newvid = self.vid.resize(0.35)
+        othervid = large.fx(vfx.loop, duration=duration)
+        newvid = small.resize(0.35).fx(vfx.loop, duration=duration)
         newvid = CompositeVideoClip(
-            [self.base_video, newvid.set_position(("right", "top"))],
-            size=(self.base_video.w, self.base_video.h)
+            [othervid, newvid.set_position(("right", "top"))],
+            size=(large.w, large.h)
         )
         return newvid
+
+    def pic_in_pic_small(self):
+        return self.pic_in_pic(self.base_video, self.vid, self.vid.duration)
+
+    def pic_in_pic_large(self):
+        return self.pic_in_pic(self.vid, self.base_video, self.vid.duration)
 
 
     def speed_up(self):
@@ -234,7 +240,7 @@ class Attack:
         self.destdir = destdir
         self.base_video = VideoFileClip(basepath)
         self.attack_functions = [
-            self.projection,
+            # self.projection,
             # self.exact_match,
             # self.snowflakes,
             # self.scale_up,
@@ -247,7 +253,8 @@ class Attack:
             # self.rotate_90,
             # self.rotate_180,
             # self.mirror,
-            # self.pic_in_pic,
+            self.pic_in_pic_large,
+            self.pic_in_pic_small,
             # self.speed_up,
             # self.speed_down
         ]
