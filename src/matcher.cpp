@@ -8,43 +8,7 @@
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 
-std::vector<float> get_distances(FileLoader fl, std::string video_path)
-{
-    cv::Mat current, next;
-    std::vector<float> retval;
-
-    auto rv = fl.readFrameColorHistogram(video_path, 0);
-    if (rv)
-    {
-        current = *rv;
-    }
-    else
-    {
-        return {};
-    }
-
-    int index = 0;
-    ColorComparator cc;
-
-    while (1)
-    {
-        index++;
-
-        rv = fl.readFrameColorHistogram(video_path, index);
-        if (rv)
-        {
-            next = *rv;
-            retval.push_back(cc(current, next));
-            current = next;
-        }
-        else
-        {
-            return retval;
-        }
-    }
-}
-
-std::vector<std::pair<int, int>> hierarchicalScenes(std::vector<float> distances, int min_scene_length)
+std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<float>& distances, int min_scene_length)
 {
     std::vector<bool> excluded(distances.size(), 0);
     std::vector<std::pair<float, int>> sorted_distances;
@@ -85,7 +49,7 @@ std::vector<std::pair<int, int>> hierarchicalScenes(std::vector<float> distances
     // return cutoffs from left to right
     std::sort(retval.begin(), retval.end());
 
-    std::vector<std::pair<int, int>> v;
+    std::vector<std::pair<unsigned int, unsigned int>> v;
     std::transform(retval.begin(), retval.end(), std::back_inserter(v), [last = 0](auto I) mutable { auto r = std::make_pair(last, I); last = I; return r; });
 
     return v;
@@ -230,6 +194,13 @@ Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase
         throw std::runtime_error("constructFrameVocabularyHierarchical: error, K > N");
     }
 
+    auto vocab = loadVocabulary<Vocab<Frame>>(database);
+    if (!vocab)
+    {
+        throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");
+    }
+    auto d = vocab->descriptors();
+
     //cv::Mat descriptors;
 
     std::vector<cv::Mat> descriptor_levels(1);
@@ -240,17 +211,14 @@ Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase
         auto v = database.loadVideo(video);
         auto &frames = v->frames();
         for (auto i = frames.begin(); i < frames.end(); i += speedinator){
-            descriptor_levels.push_back(getFrameDescriptor(*i, d));
+            descriptor_levels.push_back(loadFrameDescriptor(*i, d));
 			if(descriptor_levels[0].rows >= N){
 				overflow(descriptor_levels, K, N, 0);
 			}
 		}
     }
 
-    cv::UMat copy;
-    descriptors.copyTo(copy);
-
-    return Vocab<SerializableScene>(constructVocabulary(copy, K));
+    return Vocab<SerializableScene>(constructVocabulary(descriptor_levels.begin(), descriptor_levels.end(), K));
 
     // flush all remaining features to lowest level
     for (int i = 0; i < descriptor_levels.size(); i++)

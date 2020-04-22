@@ -101,4 +101,19 @@ struct LazyLoadStrategy
     constexpr operator StrategyType() { return Lazy; };
 };
 
+// converts a functor to the concept required by get_distances
+template<typename F> struct distance_adapter {
+    F f;
+    distance_adapter(F&& f) : f(f) {}
+    distance_adapter(const F& f) : f(f) {}
+
+    auto read() { return f(); }
+};
+
+auto inline make_distance_source(const FileLoader& loader, const std::string& videoName) {
+    return distance_adapter{[&loader, &videoName, index = 0]() mutable {
+        return loader.readFrameColorHistogram(videoName, index++);
+    }};
+}
+
 #endif

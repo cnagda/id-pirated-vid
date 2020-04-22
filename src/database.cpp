@@ -291,7 +291,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(IVideo &video)
     }
     else if(strategy->shouldComputeScenes(video)) {
         //auto flat = convolutionalDetector(video, ColorComparator{}, config.threshold);
-        auto distances = get_distances(loader, video.name);
+        auto distances = get_distances(make_distance_source(loader, video.name), ColorComparator{});
         auto flat = hierarchicalScenes(distances, config.threshold);
 
         if (!flat.empty())
@@ -400,7 +400,7 @@ std::vector<SerializableScene> &DatabaseVideo::getScenes() &
             }
 
             //auto ss = convolutionalDetector(*this, ColorComparator{}, config.threshold);
-            auto distances = get_distances(loader, name);
+            auto distances = get_distances(make_distance_source(loader, name), ColorComparator{});
             auto ss = hierarchicalScenes(distances, config.threshold);
 
 
@@ -562,7 +562,7 @@ DatabaseVideo make_scene_adapter(FileDatabase &db, IVideo &video, const std::str
 
     auto config = db.getConfig();
     //auto scenes = convolutionalDetector(video, ColorComparator{}, config.threshold);
-    auto distances = get_distances(db.getFileLoader(), key);
+    auto distances = get_distances(make_distance_source(db.getFileLoader(), key), ColorComparator{});
     auto scenes = hierarchicalScenes(distances, config.threshold);
 
 

@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
         db->saveVideo(video);
         // get distances
-        auto distances = get_distances(db->getFileLoader(), video.name);
+        auto distances = get_distances(make_distance_source(db->getFileLoader(), video.name), ColorComparator{});
 
         std::cout << "distances size: " << distances.size() << std::endl;
 

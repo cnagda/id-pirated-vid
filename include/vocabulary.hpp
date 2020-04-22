@@ -136,6 +136,7 @@ std::optional<V> loadOrComputeVocab(Db &&db, int K)
     return vocab.value();
 }
 
+// Tries to read cached value of frame descriptor, or else will build and cache it
 template <class Vocab>
 cv::Mat loadFrameDescriptor(Frame &frame, Vocab &&vocab)
 {
@@ -146,6 +147,18 @@ cv::Mat loadFrameDescriptor(Frame &frame, Vocab &&vocab)
     return frame.frameDescriptor;
 }
 
+// Same as above, but does not save to cache
+template <class Vocab>
+cv::Mat loadFrameDescriptor(const Frame &frame, Vocab &&vocab)
+{
+    if (frame.frameDescriptor.empty())
+    {
+        return getFrameDescriptor(frame, std::forward<Vocab>(vocab));
+    }
+    return frame.frameDescriptor;
+}
+
+// get a descriptor from frame's sift data
 template <class Vocab>
 inline cv::Mat getFrameDescriptor(const Frame &frame, Vocab &&vocab)
 {
