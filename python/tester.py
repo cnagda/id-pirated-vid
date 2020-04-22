@@ -4,7 +4,6 @@ import argparse
 import glob
 import os
 import pickle
-from attack_vid_labels import *
 
 # NOTE: MUST BE RUN FROM ROOT FOLDER
 def main():
@@ -36,6 +35,9 @@ def main():
     # Results in dictionary
     results = dict()
 
+    # Empty dump file at beginning
+    with open('./results/dump.txt', 'w') as f2:
+        f2.write("")
 
     for vidpath in vidpaths:
         print(f"Querying: {vidpath}")
@@ -50,7 +52,9 @@ def main():
             result = file.read()
         success = 0
         outstr = "Failure"
-        if result == AV_LABELS[vidname]:
+        # Name is assumed to be first part of video name with .mpg
+        pirated_from = vidname.split("_")[0] + ".mpg"
+        if result == pirated_from:
             success = 1
             outstr = "Success"
         print(outstr)
