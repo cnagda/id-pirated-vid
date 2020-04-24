@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
     auto &fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
     std::string videoname = fs::path(argv[VIDPATH]).filename().string();
-    auto video2 = make_query_adapter(fd, getSIFTVideo(argv[VIDPATH]), "totallydifferenttestvid.mp4");
+    auto video2 = make_query_adapter(getSIFTVideo(argv[VIDPATH]));
     auto match = findMatch(video2, fd);
     std::string bestmatch = "";
     if (match)

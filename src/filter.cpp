@@ -2,28 +2,15 @@
 #include "imgproc.hpp"
 #include <opencv2/xfeatures2d.hpp>
 #include <vector>
-#include "vocabulary.hpp"
 #include "matcher.hpp"
 #include <cassert>
+#include <iostream>
+#include "vocabulary.hpp"
 
 #define HBINS 32
 #define SBINS 30
 
-ordered_mat VideoFrameSource::operator()(tbb::flow_control& fc)
-{
-    ordered_mat image;
-
-    if (cap.read(image.data))
-    {
-        image.rank = counter++;
-        return image;
-    }
-
-    fc.stop();
-    return image;
-}
-
-ordered_mat& ScaleImage::operator()(ordered_mat& image) const
+ordered_umat& ScaleImage::operator()(ordered_umat& image) const
 {
     image.data = scaleToTarget(image.data, cropsize.first, cropsize.second);
     return image;
@@ -31,7 +18,7 @@ ordered_mat& ScaleImage::operator()(ordered_mat& image) const
 
 ExtractSIFT::ExtractSIFT() : detector(cv::xfeatures2d::SiftFeatureDetector::create(500)) {}
 
-ordered_mat ExtractSIFT::operator()(const ordered_mat& image) const
+ordered_mat ExtractSIFT::operator()(const ordered_umat& image) const
 {
     cv::Mat descriptors;
     std::vector<cv::KeyPoint> keyPoints;
@@ -40,7 +27,7 @@ ordered_mat ExtractSIFT::operator()(const ordered_mat& image) const
     return {image.rank, descriptors};
 }
 
-ordered_mat ExtractColorHistogram::operator()(const ordered_mat& image) const
+ordered_mat ExtractColorHistogram::operator()(const ordered_umat& image) const
 {
     cv::Mat colorHistogram;
     cv::UMat hsv;
@@ -62,7 +49,12 @@ ordered_mat ExtractColorHistogram::operator()(const ordered_mat& image) const
 
 ordered_mat ExtractFrame::operator()(const ordered_mat& frame) const
 {
-    return {frame.rank, baggify(frame.data, frameVocab.descriptors())};
+    return {frame.rank, operator()(frame.data)};
+}
+
+cv::Mat ExtractFrame::operator()(const cv::Mat& frame) const
+{
+    return baggify(frame, frameVocab.descriptors());
 }
 
 void SaveFrameSink::operator()(const ordered_frame& frame) const

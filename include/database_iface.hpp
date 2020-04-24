@@ -1,32 +1,33 @@
 #ifndef DATABASE_ERASURE_HPP
 #define DATABASE_ERASURE_HPP
 #include <string>
-#include <vector>
+#include <optional>
+#include <memory>
 
-struct Frame;
-struct SerializableScene;
-class IVideo
+template <typename T>
+struct ICursor
 {
-public:
-    IVideo(const std::string &name) : name(name){};
-    IVideo(const IVideo &video) : name(video.name){};
-    IVideo(IVideo &&video) : name(video.name){};
-    const std::string name;
-    using size_type = std::vector<Frame>::size_type;
-
-    virtual size_type frameCount() = 0;
-    virtual std::vector<Frame> &frames() & = 0;
-    virtual std::vector<SerializableScene> &getScenes() & = 0;
-    virtual ~IVideo() = default;
+    virtual std::optional<T> read() = 0;
 };
 
 template <typename T>
-class ICursor
+struct NullCursor : public ICursor<T>
 {
-public:
-    virtual ICursor &advance() & = 0;
-    virtual operator bool() = 0;
-    virtual const T &getValue() const & = 0;
+    inline std::optional<T> read() override { return std::nullopt; }
+};
+
+
+struct Frame;
+struct SerializableScene;
+
+struct IVideo
+{
+    typedef size_t size_type;
+    const std::string name;
+
+    IVideo(const std::string &name) : name(name) {};
+    
+    virtual ~IVideo() = default;
 };
 
 enum StrategyType
@@ -39,9 +40,9 @@ class IVideoStorageStrategy
 {
 public:
     virtual StrategyType getType() const = 0;
-    virtual bool shouldBaggifyFrames(IVideo &video) = 0;
-    virtual bool shouldComputeScenes(IVideo &video) = 0;
-    virtual bool shouldBaggifyScenes(IVideo &video) = 0;
+    virtual bool shouldBaggifyFrames() const = 0;
+    virtual bool shouldComputeScenes() const = 0;
+    virtual bool shouldBaggifyScenes() const = 0;
     virtual ~IVideoStorageStrategy() = default;
 };
 

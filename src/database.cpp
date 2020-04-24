@@ -1,5 +1,4 @@
 #include "database.hpp"
-#include <opencv2/xfeatures2d.hpp>
 #include <cctype>
 #include <experimental/filesystem>
 #include <memory>
@@ -7,10 +6,9 @@
 #include "matcher.hpp"
 #include "video.hpp"
 #include "scene_detector.hpp"
-#include <boost/range/algorithm.hpp>
-#include <boost/range/adaptor/transformed.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
 #include "imgproc.hpp"
+#include "filter.hpp"
+#include <tbb/pipeline.h>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <fstream>
@@ -111,7 +109,7 @@ void writeMat(const cv::Mat &mat, ofstream &fs)
 
 SerializableScene SceneRead(const std::string &filename)
 {
-    v_size startIdx = 0, endIdx = 0;
+    size_t startIdx = 0, endIdx = 0;
 
     ifstream fs(filename, fstream::binary);
     fs.read((char *)&startIdx, sizeof(startIdx));
@@ -165,58 +163,58 @@ Frame SIFTread(const string &filename)
     return {keyPoints, mat, frameMat, colorHistogram};
 }
 
+class CaptureSource : public ICursor<cv::UMat> {
+    VideoCapture cap;
+
+public:
+    CaptureSource(const std::string& filename) : cap(filename, cv::CAP_ANY) {}
+
+    std::optional<cv::UMat> read() override {
+        UMat image;
+
+        if(cap.read(image))
+        {
+            return image;
+        }
+
+        return std::nullopt;
+    }
+};
+
+class FrameSource : public ICursor<Frame> {
+    CaptureSource source;
+    std::function<void(UMat, Frame)> callback;
+    ScaleImage scale;
+    ExtractColorHistogram color;
+    ExtractSIFT sift;
+
+public:
+    FrameSource(const std::string& filename, std::function<void(UMat, Frame)> callback,
+        std::pair<int, int> cropsize) : source(filename), callback(callback), scale(cropsize) {};
+
+    std::optional<Frame> read() override {
+        if(auto image = source.read()) {
+            auto ordered = ordered_umat{0, *image};
+            auto scaled = scale(ordered);
+            auto colorHistogram = color(scaled);
+            auto descriptors = sift(scaled);
+            Frame frame{descriptors.data, cv::Mat(), colorHistogram.data};
+            if(callback)
+                callback(*image, frame);
+
+            return frame;
+        }
+        return std::nullopt;
+    }
+};
+
+std::unique_ptr<ICursor<cv::UMat>> SIFTVideo::images() const {
+    return std::make_unique<CaptureSource>(filename);
+}
+
 SIFTVideo getSIFTVideo(const std::string &filepath, std::function<void(UMat, Frame)> callback, std::pair<int, int> cropsize)
 {
-    vector<Frame> frames;
-
-    Ptr<FeatureDetector> detector = xfeatures2d::SiftFeatureDetector::create(500);
-
-    VideoCapture cap(filepath, CAP_ANY);
-
-    vector<KeyPoint> keyPoints;
-    UMat image;
-
-    size_t index = 0;
-
-    auto num_frames = cap.get(CAP_PROP_FRAME_COUNT);
-
-    while (cap.read(image))
-    { // test only loading 2 frames
-        if (!(++index % 40))
-        {
-            std::cout << "Frame " << index << "/" << num_frames << std::endl;
-        }
-        UMat descriptors, colorHistogram, hsv;
-
-        image = scaleToTarget(image, cropsize.first, cropsize.second);
-        cvtColor(image, hsv, COLOR_BGR2HSV);
-
-        detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
-
-        std::vector<int> histSize{HBINS, SBINS};
-        // hue varies from 0 to 179, see cvtColor
-        std::vector<float> ranges{0, 180, 0, 256};
-        // we compute the histogram from the 0-th and 1-st channels
-        std::vector<int> channels{0, 1};
-
-        calcHist(std::vector<decltype(hsv)>{hsv}, channels, Mat(), // do not use mask
-                 colorHistogram, histSize, ranges,
-                 true);
-        normalize(colorHistogram, colorHistogram, 0, 1, NORM_MINMAX, -1, Mat());
-
-        Mat c, d;
-        colorHistogram.copyTo(c);
-        descriptors.copyTo(d);
-
-        Frame frame{keyPoints, d, Mat(), c};
-
-        frames.push_back(frame);
-
-        if (callback)
-            callback(image, frame);
-    }
-
-    return SIFTVideo(frames);
+    return {filepath, callback, cropsize};
 }
 
 const std::string SerializableScene::vocab_name = "SceneVocab.mat";
@@ -226,7 +224,7 @@ template <typename T>
 const std::string Vocab<T>::vocab_name = T::vocab_name;
 
 FileDatabase::FileDatabase(const std::string &databasePath,
-                           std::unique_ptr<IVideoStorageStrategy> &&strat, LoadStrategy l, RuntimeArguments args)
+                           std::unique_ptr<IVideoStorageStrategy> &&strat, StrategyType l, RuntimeArguments args)
     : strategy(std::move(strat)), loadStrategy(l), config(args, strategy->getType(), l), databaseRoot(databasePath),
       loader(databasePath)
 {
@@ -257,64 +255,65 @@ FileDatabase::FileDatabase(const std::string &databasePath,
     writer.write((char *)&config, sizeof(config));
 };
 
-std::optional<DatabaseVideo> FileDatabase::saveVideo(IVideo &video)
+auto make_image_source(std::unique_ptr<ICursor<UMat>> source) {
+    size_t index = 0;
+    return [&source, index](tbb::flow_control& fc) mutable {
+        if(auto image = source->read()) {
+            return ordered_umat{index++, *image};
+        }
+        fc.stop();
+        return ordered_umat{};
+    };
+}
+
+std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video, const::string& key)
 {
-    fs::path video_dir{databaseRoot / video.name};
-    loader.initVideoDir(video.name);
+    fs::path video_dir{databaseRoot / key};
+    loader.initVideoDir(key);
+    loader.clearFrames(key);
 
-    auto &frames = video.frames();
-    auto &scenes = video.getScenes();
-    std::vector<SerializableScene> loadedScenes;
+    auto source = make_image_source(video.images());
 
-    if (strategy->shouldBaggifyFrames(video))
-    {
-        if (auto vocab = loadVocabulary<Vocab<Frame>>(*this); vocab)
-        {
-            for (auto &frame : frames)
-            {
-                loadFrameDescriptor(frame, vocab->descriptors());
-            }
+    ScaleImage scale(video.cropsize);
+    ExtractSIFT sift;
+    ExtractColorHistogram color;
+    SaveFrameSink saveFrame(key, getFileLoader());
+
+    auto filter = tbb::make_filter<void, ordered_umat>(tbb::filter::serial_out_of_order, [&source](auto fc){
+            return source(fc);
+        }) &
+        tbb::make_filter<ordered_umat, ordered_umat>(tbb::filter::parallel, scale) &
+        tbb::make_filter<ordered_umat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto mat){
+            Frame f;
+            f.descriptors = sift(mat).data;
+            return make_pair(f, mat);
+        }) &
+        tbb::make_filter<std::pair<Frame, ordered_umat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
+            pair.first.colorHistogram = color(pair.second).data;
+            return ordered_frame{pair.second.rank, pair.first};
+        });
+
+    if(strategy->shouldBaggifyFrames()) {
+        if(auto vocab = loadVocabulary<Vocab<Frame>>(*this)) {
+            ExtractFrame frame(*vocab);
+            filter = filter & tbb::make_filter<ordered_frame, ordered_frame>(tbb::filter::parallel, [frame](auto f){
+                f.data.frameDescriptor = frame(f.data.descriptors);
+                return f;
+            });
         }
     }
 
-    if (!frames.empty())
-    {
-        loader.clearFrames(video.name);
-    }
+    tbb::parallel_pipeline(300,
+        filter &
+        tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, saveFrame) 
+    );
 
-    loader.saveRange(frames, video.name, 0);
+    return saveVideo(DatabaseVideo{*this, databaseRoot / key, key});
+}
 
-    if (!scenes.empty())
-    {
-        loader.clearScenes(video.name);
-        boost::copy(scenes, std::back_inserter(loadedScenes));
-    }
-    else if(strategy->shouldComputeScenes(video)) {
-        //auto flat = convolutionalDetector(video, ColorComparator{}, config.threshold);
-        auto distances = get_distances(make_distance_source(loader, video.name), ColorComparator{});
-        auto flat = hierarchicalScenes(distances, config.threshold);
-
-        if (!flat.empty())
-        {
-            loader.clearScenes(video.name);
-            boost::copy(flat | boost::adaptors::transformed([](auto pair) {
-                            return SerializableScene{pair.first, pair.second};
-                        }),
-                        std::back_inserter(loadedScenes));
-        }
-    }
-
-    if (strategy->shouldBaggifyScenes(video))
-    {
-        for (auto &scene : loadedScenes)
-        {
-            loadSceneDescriptor(scene, video, *this);
-        }
-    }
-
-    loader.saveRange(loadedScenes, video.name, 0);
-
-    return DatabaseVideo{*this, video.name, frames, loadedScenes};
+std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo& video) {
+    auto vocab = loadVocabulary<Vocab<Frame>>(*this);
+    auto sceneVocab = loadVocabulary<Vocab<SerializableScene>>(*this);
 }
 
 std::vector<std::string> FileDatabase::listVideos() const
@@ -337,29 +336,7 @@ std::optional<DatabaseVideo> FileDatabase::loadVideo(const std::string &key) con
         return std::nullopt;
     }
 
-    std::vector<Frame> frames;
-    v_size index = 0;
-
-    if (loadStrategy == AggressiveLoadStrategy{})
-    {
-        while (auto f = loader.readFrame(key, index++))
-            frames.push_back(f.value());
-    }
-
-    if (!fs::exists(databaseRoot / key / "scenes"))
-    {
-        return DatabaseVideo{*this, key, frames};
-    }
-
-    std::vector<SerializableScene> scenes;
-    index = 0;
-    if (loadStrategy == AggressiveLoadStrategy{})
-    {
-        while (auto f = loader.readScene(key, index++))
-            scenes.push_back(f.value());
-    }
-
-    return DatabaseVideo{*this, key, frames, scenes};
+    return DatabaseVideo{*this, databaseRoot / key, key};
 }
 
 bool FileDatabase::saveVocab(const ContainerVocab &vocab, const std::string &key)
@@ -382,51 +359,7 @@ std::optional<ContainerVocab> FileDatabase::loadVocab(const std::string &key) co
     return ContainerVocab{myvocab};
 }
 
-std::vector<SerializableScene> &DatabaseVideo::getScenes() &
-{
-    if (sceneCache.empty())
-    {
-        auto loader = db.getFileLoader();
-        v_size index = 0;
-        while (auto scene = loader.readScene(name, index++))
-            sceneCache.push_back(scene.value());
-
-        if (sceneCache.empty())
-        {
-            auto config = db.getConfig();
-            if (config.threshold == -1)
-            {
-                throw std::runtime_error("no threshold was provided to calculate scenes");
-            }
-
-            //auto ss = convolutionalDetector(*this, ColorComparator{}, config.threshold);
-            auto distances = get_distances(make_distance_source(loader, name), ColorComparator{});
-            auto ss = hierarchicalScenes(distances, config.threshold);
-
-
-            std::cout << "Found " << ss.size() << " scenes, serializing now" << std::endl;
-            boost::push_back(sceneCache, ss | boost::adaptors::transformed([index = 0](auto scene) {
-                                             return SerializableScene{scene.first, scene.second};
-                                         }));
-        }
-    }
-
-    return sceneCache;
-}
-
-std::vector<Frame> &DatabaseVideo::frames() &
-{
-    if (frameCache.empty())
-    {
-        auto loader = db.getFileLoader();
-        IVideo::size_type index = 0;
-        while (auto frame = loader.readFrame(name, index++))
-            frameCache.push_back(frame.value());
-    }
-    return frameCache;
-}
-
-std::optional<Frame> FileLoader::readFrame(const std::string &videoName, v_size index) const
+std::optional<Frame> FileLoader::readFrame(const std::string &videoName, size_t index) const
 {
     auto def = cv::Mat();
     ifstream stream(rootDir / videoName / "frames" / (to_string(index) + ".keypoints"), fstream::binary);
@@ -434,7 +367,8 @@ std::optional<Frame> FileLoader::readFrame(const std::string &videoName, v_size 
     auto features = readFrameFeatures(videoName, index);
     auto bag = readFrameBag(videoName, index);
     auto color = readFrameColorHistogram(videoName, index);
-    if(!(stream.is_open() || bag || features || color)) {
+    if (!(stream.is_open() || bag || features || color))
+    {
         return std::nullopt;
     }
 
@@ -444,8 +378,7 @@ std::optional<Frame> FileLoader::readFrame(const std::string &videoName, v_size 
         keyPoints,
         features.value_or(def),
         bag.value_or(def),
-        color.value_or(def)
-    };
+        color.value_or(def)};
 }
 
 std::optional<cv::Mat> FileLoader::readFrameData(const std::string &videoName, const std::string &fileName) const
@@ -459,20 +392,20 @@ std::optional<cv::Mat> FileLoader::readFrameData(const std::string &videoName, c
     return readMat(stream);
 }
 
-std::optional<cv::Mat> FileLoader::readFrameFeatures(const std::string &videoName, v_size index) const
+std::optional<cv::Mat> FileLoader::readFrameFeatures(const std::string &videoName, size_t index) const
 {
     return readFrameData(videoName, to_string(index) + ".sift");
 }
-std::optional<cv::Mat> FileLoader::readFrameColorHistogram(const std::string &videoName, v_size index) const
+std::optional<cv::Mat> FileLoader::readFrameColorHistogram(const std::string &videoName, size_t index) const
 {
     return readFrameData(videoName, to_string(index) + ".color");
 }
-std::optional<cv::Mat> FileLoader::readFrameBag(const std::string &videoName, v_size index) const
+std::optional<cv::Mat> FileLoader::readFrameBag(const std::string &videoName, size_t index) const
 {
     return readFrameData(videoName, to_string(index) + ".bag");
 }
 
-std::optional<SerializableScene> FileLoader::readScene(const std::string &videoName, v_size index) const
+std::optional<SerializableScene> FileLoader::readScene(const std::string &videoName, size_t index) const
 {
     auto path = rootDir / videoName / "scenes" / to_string(index);
     if (!fs::exists(path))
@@ -483,7 +416,7 @@ std::optional<SerializableScene> FileLoader::readScene(const std::string &videoN
     return SceneRead(path.string());
 }
 
-bool FileLoader::saveFrame(const std::string &video, v_size index, const Frame &frame) const
+bool FileLoader::saveFrame(const std::string &video, size_t index, const Frame &frame) const
 {
     ofstream stream(rootDir / video / "frames" / (to_string(index) + ".keypoints"), fstream::binary);
     if (!stream.is_open())
@@ -509,22 +442,22 @@ bool FileLoader::saveFrameData(const std::string &videoName, const std::string &
     return true;
 }
 
-bool FileLoader::saveFrameFeatures(const std::string &videoName, v_size index, const cv::Mat &mat) const
+bool FileLoader::saveFrameFeatures(const std::string &videoName, size_t index, const cv::Mat &mat) const
 {
     return saveFrameData(videoName, to_string(index) + ".sift", mat);
 }
 
-bool FileLoader::saveFrameColorHistogram(const std::string &videoName, v_size index, const cv::Mat &mat) const
+bool FileLoader::saveFrameColorHistogram(const std::string &videoName, size_t index, const cv::Mat &mat) const
 {
     return saveFrameData(videoName, to_string(index) + ".color", mat);
 }
 
-bool FileLoader::saveFrameBag(const std::string &videoName, v_size index, const cv::Mat &mat) const
+bool FileLoader::saveFrameBag(const std::string &videoName, size_t index, const cv::Mat &mat) const
 {
     return saveFrameData(videoName, to_string(index) + ".bag", mat);
 }
 
-bool FileLoader::saveScene(const std::string &video, v_size index, const SerializableScene &scene) const
+bool FileLoader::saveScene(const std::string &video, size_t index, const SerializableScene &scene) const
 {
     SceneWrite(to_string(rootDir / video / "scenes" / std::to_string(index)), scene);
     return true;
@@ -554,29 +487,6 @@ void clearDir(fs::path path)
     }
 
     fs::create_directories(path);
-}
-
-DatabaseVideo make_scene_adapter(FileDatabase &db, IVideo &video, const std::string &key)
-{
-    std::vector<SerializableScene> loadedScenes;
-
-    auto config = db.getConfig();
-    //auto scenes = convolutionalDetector(video, ColorComparator{}, config.threshold);
-    auto distances = get_distances(make_distance_source(db.getFileLoader(), key), ColorComparator{});
-    auto scenes = hierarchicalScenes(distances, config.threshold);
-
-
-    std::cout << "Found " << scenes.size() << " scenes, serializing now" << std::endl;
-
-    if (!scenes.empty())
-    {
-        for (auto &scene : scenes)
-        {
-            loadedScenes.emplace_back(scene.first, scene.second);
-        }
-    }
-
-    return {db, key, video.frames(), loadedScenes};
 }
 
 double ColorComparator::operator()(const Frame &f1, const Frame &f2) const

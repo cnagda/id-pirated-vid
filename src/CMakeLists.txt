@@ -2,13 +2,12 @@ find_package(OpenCV REQUIRED core videoio xfeatures2d)
 find_package(OpenMP)
 find_package( TBB REQUIRED )
 
-add_library(database database.cpp 
+add_library(database 
+    database.cpp 
     matcher.cpp 
     instrumentation.cpp 
-    kmeans2.cpp
-    filter.cpp
-    matrix.cpp)
+    filter.cpp)
 
 target_link_libraries(database PUBLIC ${OpenCV_LIBS}
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs> 
-    PRIVATE OpenMP::OpenMP_CXX ${Boost_LIBRARIES} Eigen3::Eigen TBB::tbb)
+    PRIVATE OpenMP::OpenMP_CXX TBB::tbb)

@@ -3,22 +3,18 @@
 
 #include <vector>
 #include <utility>
-#include <functional>
 #include <iostream>
-#include <iomanip>
-#include <type_traits>
 #include "matrix.hpp"
 #include "matcher.hpp"
 #include <iostream>
 #include <atomic>
-#include <cassert>
 #include <tbb/parallel_do.h>
 
 #define BLOCK_SIZE 128
 #define BLOCK_MAX_DIM(max) (((max) + BLOCK_SIZE - 1) / BLOCK_SIZE)
 
 typedef VectorMatrix<uint8_t> SourceMatrix;
-typedef Eigen::MatrixXi ScoreMatrix;
+typedef VectorMatrix<uint16_t> ScoreMatrix;
 
 template <typename It>
 std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix &matrix, const SourceMatrix &sources, unsigned int maxAlignments)
@@ -188,8 +184,8 @@ std::vector<ItAlignment<It>> calculateAlignment(It known, It knownEnd, It unknow
     int n = std::distance(known, knownEnd) + 1;
 
     ScoreMatrix matrix(m, n);
-    matrix.col(0).fill(0);
-    matrix.row(0).fill(0);
+    for(auto i = 0; i < matrix.rows; i++) matrix(i, 0) = 0;
+    for(auto i = 0; i < matrix.cols; i++) matrix(0, i) = 0;
     // 0 for left, 1 for diagonal, 2 for up
     SourceMatrix sources(m, n);
 

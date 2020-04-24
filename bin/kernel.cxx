@@ -41,16 +41,16 @@ int main(int argc, char **argv)
     SaveFrameSink saveFrame(videoName, db->getFileLoader());
 
     tbb::parallel_pipeline(300,
-        tbb::make_filter<void, ordered_mat>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc){
+        tbb::make_filter<void, ordered_umat>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc){
             return source(fc);
         }) &
-        tbb::make_filter<ordered_mat, ordered_mat>(tbb::filter::parallel, scale) &
-        tbb::make_filter<ordered_mat, std::pair<Frame, ordered_mat>>(tbb::filter::parallel, [&](auto mat){
+        tbb::make_filter<ordered_umat, ordered_umat>(tbb::filter::parallel, scale) &
+        tbb::make_filter<ordered_mat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto mat){
             Frame f;
             f.descriptors = sift(mat).data;
             return make_pair(f, mat);
         }) &
-        tbb::make_filter<std::pair<Frame, ordered_mat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
+        tbb::make_filter<std::pair<Frame, ordered_ymat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
             pair.first.colorHistogram = color(pair.second).data;
             return ordered_frame{pair.second.rank, pair.first};
         }) &
