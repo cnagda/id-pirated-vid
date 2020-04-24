@@ -85,13 +85,8 @@ public:
     DatabaseVideo() = delete;
     DatabaseVideo(const FileDatabase &database, const fs::path& videoRoot, const std::string &key) : IVideo(key), db(database), videoRoot(videoRoot) {};
 
-    auto frames() const {
-       return make_frame_source(db.getFileLoader(), name);
-    }
-
-    auto getScenes() const {
-        return make_scene_source(db.getFileLoader(), name);
-    }
+    std::unique_ptr<ICursor<Frame>> frames() const;
+    std::unique_ptr<ICursor<SerializableScene>> getScenes() const;
 
     VideoMetadata getMetadata() const;
 };

@@ -61,7 +61,7 @@ Vocab<Frame> constructFrameVocabulary(const FileDatabase &database, unsigned int
     {
         auto v = database.loadVideo(video);
         auto frames = v->frames();
-        while(auto i = frames.read())
+        while(auto i = frames->read())
             descriptors.push_back(i->descriptors);
     }
     cv::UMat copy;
@@ -85,7 +85,7 @@ Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase &database, 
     {
         auto v = database.loadVideo(video);
         auto frames = v->frames();
-        while(auto i = frames.read())
+        while(auto i = frames->read())
             descriptors.push_back(getFrameDescriptor(*i, d));
     }
 
@@ -159,7 +159,7 @@ Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, 
     {
         auto v = database.loadVideo(video);
         auto frames = v->frames();
-        while(auto i = frames.read())
+        while(auto i = frames->read())
         {
             descriptor_levels[0].push_back(i->descriptors);
             // limit largest kmeans run
@@ -208,7 +208,7 @@ Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase
     {
         auto v = database.loadVideo(video);
         auto frames = v->frames();
-        while(auto i = frames.read()){
+        while(auto i = frames->read()){
             descriptor_levels.push_back(loadFrameDescriptor(*i, d));
 			if(descriptor_levels[0].rows >= N){
 				overflow(descriptor_levels, K, N, 0);
@@ -276,7 +276,7 @@ std::optional<MatchInfo> findMatch(QueryVideo &target, FileDatabase &db)
         std::vector<cv::Mat> knownScenes;
         auto v = db.loadVideo(v2);
         auto scenes = v->getScenes();
-        while(auto scene = scenes.read()) knownScenes.push_back(scene->frameBag);
+        while(auto scene = scenes->read()) knownScenes.push_back(scene->frameBag);
 
         auto &&alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 3, 2);
         std::cout << targetScenes.size() << " " << knownScenes.size() << std::endl;
