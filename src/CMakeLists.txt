@@ -6,12 +6,8 @@ add_library(database database.cpp
     matcher.cpp 
     instrumentation.cpp 
     kmeans2.cpp
+    filter.cpp
     matrix.cpp)
-
-if(BUILD_OPTIONAL)
-    add_library(kernel kernel.cpp)
-    target_link_libraries(kernel PUBLIC raft ${OpenCV_LIBS} )
-endif()
 
 target_link_libraries(database PUBLIC ${OpenCV_LIBS}
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs> 

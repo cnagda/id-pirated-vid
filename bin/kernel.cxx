@@ -1,7 +1,6 @@
-#include "kernel.hpp"
+#include "filter.hpp"
 #include "database.hpp"
 #include "vocabulary.hpp"
-#include <raft>
 #include <optional>
 #include <memory>
 
@@ -34,35 +33,29 @@ int main(int argc, char **argv)
     auto frameVocab = loadVocabulary<Vocab<Frame>>(*db);
     auto sceneVocab = loadVocabulary<Vocab<SerializableScene>>(*db);
 
-    raft::map m;
     VideoFrameSource source(argv[VIDPATH]);
     ScaleImage scale({600, 700});
-    Duplicate<ordered_mat> scaledup, framedup, siftdup;
-    Null<ordered_mat> siftDescriptor;
     ExtractSIFT sift;
     ExtractColorHistogram color;
-    DetectScene detect(threshold);
     auto frame = frameVocab ? make_unique<ExtractFrame>(frameVocab.value()) : nullptr;
-    auto scene = sceneVocab ? make_unique<ExtractScene>(sceneVocab.value()) : nullptr;
-    SaveColor saveColor(videoName, db->getFileLoader());
-    SaveFrameDescriptor saveFrame(videoName, db->getFileLoader());
-    SaveSIFT saveSIFT(videoName, db->getFileLoader());
-    SaveScene saveScene(videoName, db->getFileLoader());
+    SaveFrameSink saveFrame(videoName, db->getFileLoader());
 
-    m += source <= scale >= scaledup;
-    m += scaledup["first"] <= color >= saveColor;
-    if (frame)
-    {
-        m += scaledup["second"] <= sift >= siftdup["in"];
-        m += siftdup["first"] <= *frame >= saveFrame;
-        m += siftdup["second"] >> saveSIFT;
-    }
-    else
-    {
-        m += scaledup["second"] <= sift >= siftDescriptor;
-    }
-
-    m.exe();
+    tbb::parallel_pipeline(300,
+        tbb::make_filter<void, ordered_mat>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc){
+            return source(fc);
+        }) &
+        tbb::make_filter<ordered_mat, ordered_mat>(tbb::filter::parallel, scale) &
+        tbb::make_filter<ordered_mat, std::pair<Frame, ordered_mat>>(tbb::filter::parallel, [&](auto mat){
+            Frame f;
+            f.descriptors = sift(mat).data;
+            return make_pair(f, mat);
+        }) &
+        tbb::make_filter<std::pair<Frame, ordered_mat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
+            pair.first.colorHistogram = color(pair.second).data;
+            return ordered_frame{pair.second.rank, pair.first};
+        }) &
+        tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, saveFrame) 
+    );
 
     return 0;
 }
