@@ -104,7 +104,7 @@ struct LazyLoadStrategy
 
 // converts a functor to the concept required by get_distances
 template<typename F> struct read_adapter {
-    F f;
+    std::decay_t<F> f;
     read_adapter(F&& f) : f(f) {}
     read_adapter(const F& f) : f(f) {}
 

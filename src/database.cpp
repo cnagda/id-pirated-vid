@@ -13,9 +13,6 @@
 #include <opencv2/videoio.hpp>
 #include <fstream>
 
-#define HBINS 32
-#define SBINS 30
-
 using namespace std;
 using namespace cv;
 namespace fs = std::experimental::filesystem;
@@ -223,6 +220,36 @@ const std::string Frame::vocab_name = "FrameVocab.mat";
 template <typename T>
 const std::string Vocab<T>::vocab_name = T::vocab_name;
 
+template<typename Read>
+using read_value_t = typename decltype(std::declval<Read>().read())::value_type;
+
+template<typename Read>
+struct cursor_adapter : public ICursor<read_value_t<Read>>
+{
+    std::decay_t<Read> reader;
+    cursor_adapter(Read&& r): reader(r) {}
+    cursor_adapter(const Read& r) : reader(r) {}
+    std::optional<read_value_t<Read>> read() override { return reader.read(); }
+};
+
+std::unique_ptr<ICursor<Frame>> DatabaseVideo::frames() const {
+    if(loadStrategy == Eager) {
+        return nullptr;
+    } else {
+        cursor_adapter source{make_frame_source(db.getFileLoader(), name)};
+        return std::make_unique<decltype(source)>(source);
+    }
+}
+
+std::unique_ptr<ICursor<SerializableScene>> DatabaseVideo::getScenes() const {
+    if(loadStrategy == Eager) {
+        return nullptr;
+    } else {
+        cursor_adapter source{make_scene_source(db.getFileLoader(), name)};
+        return std::make_unique<decltype(source)>(source);
+    }
+}
+
 FileDatabase::FileDatabase(const std::string &databasePath,
                            std::unique_ptr<IVideoStorageStrategy> &&strat, StrategyType l, RuntimeArguments args)
     : strategy(std::move(strat)), loadStrategy(l), config(args, strategy->getType(), l), databaseRoot(databasePath),
@@ -257,7 +284,7 @@ FileDatabase::FileDatabase(const std::string &databasePath,
 
 auto make_image_source(std::unique_ptr<ICursor<UMat>> source) {
     size_t index = 0;
-    return [&source, index](tbb::flow_control& fc) mutable {
+    return [source = std::move(source), index](tbb::flow_control& fc) mutable {
         if(auto image = source->read()) {
             return ordered_umat{index++, *image};
         }
@@ -487,28 +514,4 @@ void clearDir(fs::path path)
     }
 
     fs::create_directories(path);
-}
-
-double ColorComparator::operator()(const Frame &f1, const Frame &f2) const
-{
-    return operator()(f1.colorHistogram, f2.colorHistogram);
-}
-double ColorComparator::operator()(const cv::Mat &f1, const cv::Mat &f2) const
-{
-    if (f1.rows != HBINS || f1.cols != SBINS)
-    {
-        std::cerr
-            << "rows: " << f1.rows
-            << " cols: " << f1.cols << std::endl;
-        throw std::runtime_error("color histogram is wrong size");
-    }
-
-    if (f1.size() != f2.size())
-    {
-        throw std::runtime_error("colorHistograms not matching");
-    }
-
-    auto subbed = f1 - f2;
-    auto val = cv::sum(subbed)[0];
-    return std::abs(val);
 }

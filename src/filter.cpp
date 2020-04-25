@@ -7,9 +7,6 @@
 #include <iostream>
 #include "vocabulary.hpp"
 
-#define HBINS 32
-#define SBINS 30
-
 ordered_umat& ScaleImage::operator()(ordered_umat& image) const
 {
     image.data = scaleToTarget(image.data, cropsize.first, cropsize.second);

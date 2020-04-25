@@ -9,6 +9,9 @@
 #include <memory>
 #include "database_iface.hpp"
 
+#define HBINS 32
+#define SBINS 30
+
 inline bool keyPointEqual(const cv::KeyPoint &a, const cv::KeyPoint &b)
 {
     return a.size == b.size &&
