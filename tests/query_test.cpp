@@ -27,11 +27,11 @@ protected:
                                             RuntimeArguments{200, 20, 30});
 
         {
-            db->saveVideo(getSIFTVideo("../coffee.mp4"), "coffee.mp4");
+            db->saveVideo(getSIFTVideo("../coffee.mp4"));
         }
 
         {
-            db->saveVideo(getSIFTVideo("../crab.mp4"), "crab.mp4");
+            db->saveVideo(getSIFTVideo("../crab.mp4"));
         }
 
         saveVocabulary(constructFrameVocabulary(*db, 200), *db);

@@ -69,7 +69,7 @@ public:
                  std::unique_ptr<IVideoStorageStrategy> &&strat, StrategyType l, RuntimeArguments args);
 
     std::optional<DatabaseVideo> saveVideo(const DatabaseVideo& video);
-    std::optional<DatabaseVideo> saveVideo(const SIFTVideo& video, const std::string& key);
+    std::optional<DatabaseVideo> saveVideo(const SIFTVideo& video);
 
     std::optional<DatabaseVideo> loadVideo(const std::string &key) const;
     std::vector<std::string> listVideos() const;

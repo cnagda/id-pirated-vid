@@ -275,19 +275,19 @@ void writeMetadata(const VideoMetadata &data, const fs::path &videoDir)
     stream.write((char *)&data, sizeof(data));
 }
 
-std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video, const ::string &key)
+std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
 {
     VideoMetadata metadata{};
-    fs::path video_dir{databaseRoot / key};
-    loader.initVideoDir(key);
-    loader.clearFrames(key);
+    fs::path video_dir{databaseRoot / video.name};
+    loader.initVideoDir(video.name);
+    loader.clearFrames(video.name);
 
     auto source = make_image_source(video.images());
 
     ScaleImage scale(video.cropsize);
     ExtractSIFT sift;
     ExtractColorHistogram color;
-    SaveFrameSink saveFrame(key, getFileLoader());
+    SaveFrameSink saveFrame(video.name, getFileLoader());
 
     auto filter = tbb::make_filter<void, ordered_umat>(tbb::filter::serial_out_of_order, [&source](auto fc) {
                       return source(fc);
@@ -326,7 +326,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video, con
 
     metadata.frameCount = frameCount.load(std::memory_order_relaxed);
     writeMetadata(metadata, video_dir);
-    return saveVideo(DatabaseVideo{*this, key});
+    return saveVideo(DatabaseVideo{*this, video.name});
 }
 
 std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)

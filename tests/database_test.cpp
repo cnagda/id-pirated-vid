@@ -124,7 +124,7 @@ TEST_F(DatabaseSuite, FileDatabase)
                     LazyLoadStrategy{},
                     RuntimeArguments{200, 20, 0.2});
 
-    auto vid = read_all(*db.saveVideo(input, "sample.mp4")->frames());
+    auto vid = read_all(*db.saveVideo(input)->frames());
     auto loaded_ptr = db.loadVideo("sample.mp4");
 
     ASSERT_TRUE(loaded_ptr);
@@ -144,7 +144,7 @@ TEST_F(DatabaseSuite, EagerDatabase)
                     AggressiveLoadStrategy{},
                     RuntimeArguments{200, 20, 30});
 
-    auto in_saved = db.saveVideo(input, "sample.mp4");
+    auto in_saved = db.saveVideo(input);
     saveVocabulary(constructFrameVocabulary(db, db.getConfig().KFrames, 10), db);
 
     auto vid = db.saveVideo(*in_saved);

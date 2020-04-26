@@ -72,7 +72,7 @@ int main(int argc, char **argv)
             }
         });
 
-        auto saved = db->saveVideo(video, fs::path(argv[VIDPATH]).filename().string());
+        auto saved = db->saveVideo(video);
         // get distances
         auto distances = get_distances(make_color_source(db->getFileLoader(), saved->name), ColorComparator{});
 
