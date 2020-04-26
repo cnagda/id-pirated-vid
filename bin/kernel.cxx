@@ -3,6 +3,8 @@
 #include "vocabulary.hpp"
 #include <optional>
 #include <memory>
+#include <tbb/pipeline.h>
+#include <opencv2/videoio.hpp>
 
 #define DBPATH 1
 #define VIDPATH 2
@@ -16,6 +18,22 @@ int isUnspecified(std::string arg)
 {
     return (arg == "-1");
 }
+
+class VideoFrameSource {
+    cv::VideoCapture cap;
+    size_t counter = 0;
+
+public:
+    VideoFrameSource(const std::string& path) : cap(path, cv::CAP_ANY) {}
+    ordered_umat operator()(tbb::flow_control& fc) {
+        cv::UMat image;
+        if(cap.read(image)) {
+            return {counter++, image};
+        }
+        fc.stop();
+        return {};
+    }
+};
 
 int main(int argc, char **argv)
 {
@@ -45,12 +63,12 @@ int main(int argc, char **argv)
             return source(fc);
         }) &
         tbb::make_filter<ordered_umat, ordered_umat>(tbb::filter::parallel, scale) &
-        tbb::make_filter<ordered_mat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto mat){
+        tbb::make_filter<ordered_umat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto mat){
             Frame f;
             f.descriptors = sift(mat).data;
             return make_pair(f, mat);
         }) &
-        tbb::make_filter<std::pair<Frame, ordered_ymat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
+        tbb::make_filter<std::pair<Frame, ordered_umat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
             pair.first.colorHistogram = color(pair.second).data;
             return ordered_frame{pair.second.rank, pair.first};
         }) &

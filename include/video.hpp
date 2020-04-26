@@ -32,16 +32,13 @@ inline bool matEqual(const cv::Mat &a, const cv::Mat &b)
 struct Frame;
 struct SerializableScene;
 
-struct SIFTVideo
+struct SIFTVideo : public IVideo
 {
-    const std::string filename;
-    const std::function<void(cv::UMat, Frame)> callback;
-    const std::pair<int, int> cropsize;
+    std::string filename;
+    std::function<void(cv::UMat, Frame)> callback;
+    std::pair<int, int> cropsize;
 
-    SIFTVideo(const std::string &filename, std::function<void(cv::UMat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700})
-        : filename(filename), callback(callback), cropsize(cropsize){};
-        
-    SIFTVideo(SIFTVideo &&) = default;
+    SIFTVideo(const std::string& filename = "", std::function<void(cv::UMat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
 
     std::unique_ptr<ICursor<Frame>> frames() const;
     std::unique_ptr<ICursor<cv::UMat>> images() const;
@@ -79,8 +76,9 @@ struct SerializableScene
     size_t startIdx, endIdx;
     const static std::string vocab_name;
 
-    SerializableScene() : frameBag(), startIdx(), endIdx(){};
-    SerializableScene(size_t startIdx, size_t endIdx) : startIdx(startIdx), endIdx(endIdx), frameBag(){};
+    SerializableScene() = default;
+    SerializableScene(std::pair<size_t, size_t> pair) : SerializableScene(pair.first, pair.second) {}
+    SerializableScene(size_t startIdx, size_t endIdx) : startIdx(startIdx), endIdx(endIdx) {};
     SerializableScene(const cv::Mat &matrix, size_t startIdx, size_t endIdx) : startIdx(startIdx), endIdx(endIdx), frameBag(matrix){};
 };
 

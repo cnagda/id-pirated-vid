@@ -10,10 +10,6 @@
 
 namespace fs = std::experimental::filesystem;
 
-std::string getAlphas(const std::string &input);
-void createFolder(const std::string &folder_name);
-std::string to_string(const fs::path &);
-
 struct RuntimeArguments
 {
     int KScenes;
@@ -38,11 +34,23 @@ class DatabaseVideo;
 
 struct DatabaseMetadata {
     size_t frameHash, sceneHash;
+    double threshold;
 
-    bool operator==(const DatabaseMetadata& other) const;
+    inline bool operator==(const DatabaseMetadata& other) const {
+        return frameHash == other.frameHash 
+            && sceneHash == other.sceneHash
+            && threshold == other.threshold;
+    }
+    inline bool operator!=(const DatabaseMetadata& other) const {
+        return !(*this == other);
+    }
 };
 
-struct VideoMetadata : public DatabaseMetadata {};
+struct VideoMetadata : public DatabaseMetadata {
+    size_t frameCount;
+    size_t sceneCount;
+};
+
 
 class FileDatabase
 {
@@ -78,17 +86,16 @@ public:
 class DatabaseVideo : public IVideo
 {
     const FileDatabase &db;
-    fs::path videoRoot;
     StrategyType loadStrategy;
 
 public:
     DatabaseVideo() = delete;
-    DatabaseVideo(const FileDatabase &database, const fs::path& videoRoot, const std::string &key) : IVideo(key), db(database), videoRoot(videoRoot) {};
+    DatabaseVideo(const FileDatabase &database, const std::string &key) : IVideo(key), db(database) {};
 
     std::unique_ptr<ICursor<Frame>> frames() const;
     std::unique_ptr<ICursor<SerializableScene>> getScenes() const;
 
-    VideoMetadata getMetadata() const;
+    VideoMetadata loadMetadata() const;
 };
 
 inline std::unique_ptr<FileDatabase> database_factory(const std::string &dbPath, int KFrame, int KScene, double threshold)

@@ -6,6 +6,7 @@ add_library(database
     database.cpp 
     matcher.cpp 
     instrumentation.cpp 
+    storage.cpp
     filter.cpp)
 
 target_link_libraries(database PUBLIC ${OpenCV_LIBS}

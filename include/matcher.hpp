@@ -77,9 +77,10 @@ class FileDatabase;
 class DatabaseVideo;
 class SIFTVideo;
 
-QueryVideo make_query_adapter(const SIFTVideo&);
+QueryVideo make_query_adapter(const SIFTVideo&, const FileDatabase&);
 QueryVideo make_query_adapter(const DatabaseVideo&);
 
-std::optional<MatchInfo> findMatch(QueryVideo &target, FileDatabase &db);
+std::optional<MatchInfo> findMatch(QueryVideo& target, const FileDatabase &db);
+std::optional<MatchInfo> findMatch(QueryVideo&& target, const FileDatabase &db);
 
 #endif

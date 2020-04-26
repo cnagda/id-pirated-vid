@@ -123,18 +123,17 @@ TEST_F(DatabaseSuite, FileDatabase)
                     std::make_unique<LazyStorageStrategy>(),
                     LazyLoadStrategy{},
                     RuntimeArguments{200, 20, 0.2});
-    auto video = make_video_adapter(input, "sample.mp4");
 
-    auto vid = db.saveVideo(video)->frames();
+    auto vid = read_all(*db.saveVideo(input, "sample.mp4")->frames());
     auto loaded_ptr = db.loadVideo("sample.mp4");
 
     ASSERT_TRUE(loaded_ptr);
 
-    auto &loaded = loaded_ptr->frames();
+    auto loaded = read_all(*loaded_ptr->frames());
     cout << "size: " << vid.size() << endl;
 
     EXPECT_TRUE(vid.size() > 0);
-    EXPECT_TRUE(vid.size() == loaded.size());
+    EXPECT_TRUE(vid.size() ==loaded.size());
     EXPECT_TRUE(equal(vid.begin(), vid.end(), loaded.begin()));
 }
 
@@ -145,32 +144,36 @@ TEST_F(DatabaseSuite, EagerDatabase)
                     AggressiveLoadStrategy{},
                     RuntimeArguments{200, 20, 30});
 
-    auto in = make_video_adapter(input, "sample.mp4");
-    auto in_saved = db.saveVideo(in);
+    auto in_saved = db.saveVideo(input, "sample.mp4");
     saveVocabulary(constructFrameVocabulary(db, db.getConfig().KFrames, 10), db);
 
     auto vid = db.saveVideo(*in_saved);
-    EXPECT_GT(vid->getScenes().size(), 0);
-    EXPECT_TRUE(vid->getScenes()[0].frameBag.empty());
+    auto scenes = read_all(*vid->getScenes());
+    ASSERT_GT(scenes.size(), 0);
+    EXPECT_TRUE(scenes[0].frameBag.empty());
 
     saveVocabulary(constructSceneVocabulary(db, db.getConfig().KScenes), db);
 
     auto vid_3 = db.saveVideo(*vid);
 
-    EXPECT_FALSE(vid_3->getScenes()[0].frameBag.empty());
+    auto scene = vid_3->getScenes()->read();
+    ASSERT_TRUE(scene);
+    EXPECT_FALSE(scene->frameBag.empty());
 
     auto loaded_ptr = db.loadVideo("sample.mp4");
 
     ASSERT_TRUE(loaded_ptr);
 
-    auto &loaded = loaded_ptr->frames();
-    cout << "size: " << vid->frames().size() << endl;
+    auto loaded = read_all(*loaded_ptr->frames());
+    auto frames = read_all(*vid->frames());
 
-    EXPECT_GT(vid->frames().size(), 0);
-    EXPECT_EQ(vid->frames().size(), loaded.size());
-    EXPECT_TRUE(equal(vid->frames().begin(), vid->frames().end(), loaded.begin()));
+    EXPECT_GT(frames.size(), 0);
+    EXPECT_EQ(frames.size(), loaded.size());
+    EXPECT_TRUE(equal(frames.begin(), frames.end(), loaded.begin()));
 
-    EXPECT_GT(vid->getScenes().size(), 0);
-    EXPECT_EQ(vid->getScenes().size(), loaded_ptr->getScenes().size());
-    // EXPECT_TRUE(equal(vid->getScenes().begin(), vid->getScenes().end(), loaded_ptr->getScenes().begin()));
+    EXPECT_GT(scenes.size(), 0);
+
+    auto loaded_scenes = read_all(*loaded_ptr->getScenes());
+    EXPECT_EQ(scenes.size(), loaded_scenes.size());
+    // EXPECT_TRUE(equal(scenes.begin(), scenes.end(), loaded_ptr->getScenes().begin()));
 }

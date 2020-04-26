@@ -2,7 +2,7 @@
 #define DATABASE_ERASURE_HPP
 #include <string>
 #include <optional>
-#include <memory>
+#include <vector>
 
 template <typename T>
 struct ICursor
@@ -16,6 +16,14 @@ struct NullCursor : public ICursor<T>
     inline std::optional<T> read() override { return std::nullopt; }
 };
 
+template<typename T>
+std::vector<T> read_all(ICursor<T>& cursor) {
+    std::vector<T> retval;
+    while(auto val = cursor.read()) retval.push_back(*val);
+
+    return retval;
+}
+
 
 struct Frame;
 struct SerializableScene;
@@ -23,7 +31,7 @@ struct SerializableScene;
 struct IVideo
 {
     typedef size_t size_type;
-    const std::string name;
+    std::string name;
 
     IVideo(const std::string &name) : name(name) {};
     
@@ -45,14 +53,5 @@ public:
     virtual bool shouldBaggifyScenes() const = 0;
     virtual ~IVideoStorageStrategy() = default;
 };
-
-/* templated thing
-class IVideoLoadStrategy {
-public:
-    static StrategyType getType() = 0;
-    static bool shouldLoadFrames() = 0;
-    static bool shouldLoadScenes() = 0;
-}; 
-*/
 
 #endif

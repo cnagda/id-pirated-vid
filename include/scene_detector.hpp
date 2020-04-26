@@ -4,6 +4,11 @@
 #include <vector>
 #include <utility>
 
+#define FRAMES_PER_SCENE 45
+
+// FIXME broken
+
+/*
 template <class Video, typename Cmp>
 auto flatScenes(Video &video, Cmp &&comp, double threshold)
 {
@@ -12,11 +17,7 @@ auto flatScenes(Video &video, Cmp &&comp, double threshold)
 
     std::vector<std::pair<index_t, index_t>> retval;
 
-    auto &frames = video.frames();
-    if (!frames.size())
-    {
-        return retval;
-    }
+    auto frames = video.frames();
 
     index_t last = 0;
 
@@ -50,7 +51,7 @@ auto flatScenes(Video &video, Cmp &&comp, double threshold)
     }
 
     return retval;
-}
+} */
 
 template<typename Cmp, typename Source>
 std::vector<float> get_distances(Source&& fl, Cmp&& comp)

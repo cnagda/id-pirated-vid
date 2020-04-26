@@ -15,8 +15,6 @@
 struct SerializableScene;
 class FileDatabase;
 
-#define FRAMES_PER_SCENE 45
-
 template <typename Matrix>
 cv::Mat constructVocabulary(Matrix &&descriptors, unsigned int K, cv::Mat labels = cv::Mat())
 {

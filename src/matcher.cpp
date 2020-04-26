@@ -256,22 +256,17 @@ double boneheadedSimilarity(IVideo &v1, IVideo &v2, std::function<double(Frame, 
     return total / len;
 }*/
 
-std::optional<MatchInfo> findMatch(QueryVideo &target, FileDatabase &db)
+template<typename SceneRead>
+std::optional<MatchInfo> internal_findMatch(SceneRead&& reader, const FileDatabase &db)
 {
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
 
     MatchInfo match{};
     std::vector<cv::Mat> targetScenes;
-    auto scenes = target.getScenes();
-    while(auto scene = scenes->read()) targetScenes.push_back(scene->frameBag);
+    while(auto scene = reader.read()) targetScenes.push_back(scene->frameBag);
 
     for (auto v2 : db.listVideos())
     {
-        if (v2 == target.name)
-        {
-            continue;
-        }
-
         std::cout << "Calculating match for " << v2 << std::endl;
         std::vector<cv::Mat> knownScenes;
         auto v = db.loadVideo(v2);
@@ -299,6 +294,13 @@ std::optional<MatchInfo> findMatch(QueryVideo &target, FileDatabase &db)
     return std::nullopt;
 }
 
+std::optional<MatchInfo> findMatch(QueryVideo& video, const FileDatabase &db) {
+    return internal_findMatch(*video.getScenes(), db);
+}
+
+std::optional<MatchInfo> findMatch(QueryVideo&& video, const FileDatabase &db) {
+    return internal_findMatch(*video.getScenes(), db);
+}
 
 double ColorComparator::operator()(const Frame &f1, const Frame &f2) const
 {

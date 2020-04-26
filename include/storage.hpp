@@ -9,6 +9,9 @@
 namespace fs = std::experimental::filesystem;
 
 void clearDir(fs::path path);
+std::string getAlphas(const std::string &input);
+void createFolder(const std::string &folder_name);
+std::string to_string(const fs::path &);
 
 template <class T, class RankType>
 struct ordered_adapter
@@ -64,15 +67,6 @@ public:
     void clearScenes(const std::string &videoName) const;
 };
 
-// TODO think of how to use these, templated
-/* Example strategies
-class IVideoLoadStrategy {
-public:
-    virtual std::unique_ptr<IVideo> operator()(const std::string& findKey) const = 0;
-    virtual ~IVideoLoadStrategy() = default;
-};
-
- */
 
 class AggressiveStorageStrategy : public IVideoStorageStrategy
 {
@@ -108,25 +102,37 @@ template<typename F> struct read_adapter {
     read_adapter(F&& f) : f(f) {}
     read_adapter(const F& f) : f(f) {}
 
-    auto read() { return f(); }
+    constexpr auto read() { return f(); }
+};
+
+template <typename Read>
+using read_value_t = typename decltype(std::declval<Read>().read())::value_type;
+
+template <typename Read>
+struct cursor_adapter : public ICursor<read_value_t<Read>>
+{
+    std::decay_t<Read> reader;
+    cursor_adapter(Read &&r) : reader(std::move(r)) {}
+    cursor_adapter(const Read &r) : reader(r) {}
+    constexpr std::optional<read_value_t<Read>> read() override { return reader.read(); }
 };
 
 auto inline make_frame_source(const FileLoader& loader, const std::string& videoName) {
-    return read_adapter{[&loader, &videoName, index = 0]() mutable {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
         return loader.readFrame(videoName, index++);
-    }};
+    }}};
 }
 
 auto inline make_scene_source(const FileLoader& loader, const std::string& videoName) {
-    return read_adapter{[&loader, &videoName, index = 0]() mutable {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
         return loader.readScene(videoName, index++);
-    }};
+    }}};
 }
 
 auto inline make_color_source(const FileLoader& loader, const std::string& videoName) {
-    return read_adapter{[&loader, &videoName, index = 0]() mutable {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
         return loader.readFrameColorHistogram(videoName, index++);
-    }};
+    }}};
 }
 
 #endif
