@@ -14,7 +14,7 @@
 #define BLOCK_MAX_DIM(max) (((max) + BLOCK_SIZE - 1) / BLOCK_SIZE)
 
 typedef VectorMatrix<uint8_t> SourceMatrix;
-typedef VectorMatrix<uint16_t> ScoreMatrix;
+typedef VectorMatrix<int_fast32_t> ScoreMatrix;
 
 template <typename It>
 std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix &matrix, const SourceMatrix &sources, unsigned int maxAlignments)
