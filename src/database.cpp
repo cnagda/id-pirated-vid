@@ -290,17 +290,17 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
     SaveFrameSink saveFrame(video.name, getFileLoader());
 
     auto filter = tbb::make_filter<void, ordered_umat>(tbb::filter::serial_out_of_order, [&source](auto fc) {
-                      return source(fc);
-                  }) &
-                  tbb::make_filter<ordered_umat, ordered_umat>(tbb::filter::parallel, scale) & tbb::make_filter<ordered_umat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto mat) {
-                      Frame f;
-                      f.descriptors = sift(mat).data;
-                      return make_pair(f, mat);
-                  }) &
-                  tbb::make_filter<std::pair<Frame, ordered_umat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
-                      pair.first.colorHistogram = color(pair.second).data;
-                      return ordered_frame{pair.second.rank, pair.first};
-                  });
+            return source(fc);
+        }) &
+        tbb::make_filter<ordered_umat, ordered_umat>(tbb::filter::parallel, scale) & tbb::make_filter<ordered_umat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto mat) {
+            Frame f;
+            f.descriptors = sift(mat).data;
+            return make_pair(f, mat);
+        }) &
+        tbb::make_filter<std::pair<Frame, ordered_umat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
+            pair.first.colorHistogram = color(pair.second).data;
+            return ordered_frame{pair.second.rank, pair.first};
+        });
 
     if (strategy->shouldBaggifyFrames())
     {
@@ -309,20 +309,20 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
             metadata.frameHash = loadMetadata().frameHash;
             ExtractFrame frame(*vocab);
             filter = filter & tbb::make_filter<ordered_frame, ordered_frame>(tbb::filter::parallel, [frame](auto f) {
-                         f.data.frameDescriptor = frame(f.data.descriptors);
-                         return f;
-                     });
+                f.data.frameDescriptor = frame(f.data.descriptors);
+                return f;
+            });
         }
     }
 
     std::atomic<size_t> frameCount = 0;
 
     tbb::parallel_pipeline(300,
-                           filter &
-                               tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, [&](auto frame) {
-                                   frameCount.fetch_add(1, std::memory_order_relaxed);
-                                   saveFrame(frame);
-                               }));
+        filter &
+        tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, [&](auto frame) {
+            frameCount.fetch_add(1, std::memory_order_relaxed);
+            saveFrame(frame);
+        }));
 
     metadata.frameCount = frameCount.load(std::memory_order_relaxed);
     writeMetadata(metadata, video_dir);
