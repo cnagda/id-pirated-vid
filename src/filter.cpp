@@ -12,6 +12,10 @@ ordered_umat& ScaleImage::operator()(ordered_umat& image) const
     image.data = scaleToTarget(image.data, cropsize.first, cropsize.second);
     return image;
 }
+cv::UMat& ScaleImage::operator()(cv::UMat& image) const
+{
+    return image = scaleToTarget(image, cropsize.first, cropsize.second);
+}
 
 ExtractSIFT::ExtractSIFT() : detector(cv::xfeatures2d::SiftFeatureDetector::create(500)) {}
 
@@ -24,11 +28,26 @@ ordered_mat ExtractSIFT::operator()(const ordered_umat& image) const
     return {image.rank, descriptors};
 }
 
+
+cv::Mat ExtractSIFT::operator()(const cv::UMat& image) const
+{
+    cv::Mat descriptors;
+    std::vector<cv::KeyPoint> keyPoints;
+    detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
+
+    return descriptors;
+}
+
 ordered_mat ExtractColorHistogram::operator()(const ordered_umat& image) const
+{
+    return {image.rank, operator()(image.data)};
+}
+
+cv::Mat ExtractColorHistogram::operator()(const cv::UMat& image) const
 {
     cv::Mat colorHistogram;
     cv::UMat hsv;
-    cv::cvtColor(image.data, hsv, cv::COLOR_BGR2HSV);
+    cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
 
     std::vector<int> histSize{HBINS, SBINS};
     // hue varies from 0 to 179, see cvtColor
@@ -41,7 +60,7 @@ ordered_mat ExtractColorHistogram::operator()(const ordered_umat& image) const
                  true);
     cv::normalize(colorHistogram, colorHistogram, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
 
-    return {image.rank, colorHistogram};
+    return colorHistogram;
 }
 
 ordered_mat ExtractFrame::operator()(const ordered_mat& frame) const

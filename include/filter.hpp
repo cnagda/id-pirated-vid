@@ -25,6 +25,7 @@ public:
     ScaleImage(std::pair<std::uint16_t, std::uint16_t> cropsize) : cropsize(cropsize) {}
 
     ordered_umat& operator()(ordered_umat&) const;
+    cv::UMat& operator()(cv::UMat&) const;
 };
 
 class ExtractSIFT
@@ -35,6 +36,7 @@ public:
     ExtractSIFT();
 
     ordered_mat operator()(const ordered_umat&) const;
+    cv::Mat operator()(const cv::UMat&) const;
 };
 
 class ExtractColorHistogram
@@ -43,6 +45,7 @@ public:
     ExtractColorHistogram() {}
 
     ordered_mat operator()(const ordered_umat&) const;
+    cv::Mat operator()(const cv::UMat&) const;
 };
 
 class ExtractFrame

@@ -42,6 +42,7 @@ struct SIFTVideo : public IVideo
 
     std::unique_ptr<ICursor<Frame>> frames() const;
     std::unique_ptr<ICursor<cv::UMat>> images() const;
+    std::unique_ptr<ICursor<cv::Mat>> color() const;
 };
 
 struct Frame

@@ -6,7 +6,6 @@
 #include "matcher.hpp"
 #include "video.hpp"
 #include "scene_detector.hpp"
-#include "imgproc.hpp"
 #include "filter.hpp"
 #include <tbb/pipeline.h>
 #include <opencv2/core/mat.hpp>
@@ -59,6 +58,31 @@ public:
     }
 };
 
+class ColorSource : public ICursor<cv::Mat> {
+    CaptureSource source;
+    ScaleImage scale;
+    ExtractColorHistogram color;
+    size_t counter = 0;
+
+public:
+    ColorSource(const std::string &filename, std::pair<int, int> cropsize) 
+            : source(filename), scale(cropsize){};
+
+    std::optional<cv::Mat> read() override
+    {
+        if (auto image = source.read())
+        {
+            if(counter++ % 40 == 0) {
+                std::cout << "video frame: " << counter - 1 << std::endl;
+            }
+            
+            scale(*image);
+            return color(*image);
+        }
+        return std::nullopt;
+    }
+};
+
 class FrameSource : public ICursor<Frame>
 {
     CaptureSource source;
@@ -66,6 +90,7 @@ class FrameSource : public ICursor<Frame>
     ScaleImage scale;
     ExtractColorHistogram color;
     ExtractSIFT sift;
+    size_t counter = 0;
 
 public:
     FrameSource(const std::string &filename, std::function<void(UMat, Frame)> callback,
@@ -75,6 +100,10 @@ public:
     {
         if (auto image = source.read())
         {
+            if(counter++ % 40 == 0) {
+                std::cout << "video frame: " << counter - 1 << std::endl;
+            }
+            
             auto ordered = ordered_umat{0, *image};
             auto scaled = scale(ordered);
             auto colorHistogram = color(scaled);
@@ -92,6 +121,11 @@ public:
 std::unique_ptr<ICursor<cv::UMat>> SIFTVideo::images() const
 {
     return std::make_unique<CaptureSource>(filename);
+}
+
+std::unique_ptr<ICursor<cv::Mat>> SIFTVideo::color() const
+{
+    return std::make_unique<ColorSource>(filename, cropsize);
 }
 
 std::unique_ptr<ICursor<Frame>> SIFTVideo::frames() const
@@ -190,6 +224,7 @@ public:
                 }
             }
 
+            std::cout << "bagging scene of length: " << frames.size() << std::endl;
             val->frameBag = baggify(frames.begin(), frames.end(), vocab.descriptors());
             return val;
         }
@@ -363,13 +398,15 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
     auto vocab = loadVocabulary<Vocab<Frame>>(*this);
     auto sceneVocab = loadVocabulary<Vocab<SerializableScene>>(*this);
     auto metadata = video.loadMetadata();
+    VideoMetadata saveMetadata{metadata};
+
     auto db_metadata = loadMetadata();
 
     if (strategy->shouldBaggifyFrames() 
         && metadata.frameHash != db_metadata.frameHash 
         && vocab)
     {
-        metadata.frameHash = db_metadata.frameHash;
+        saveMetadata.frameHash = db_metadata.frameHash;
         auto frame_source = make_cursor_source(video.frames());
         ExtractFrame extractFrame(*vocab);
         SaveFrameSink saveFrame(video.name, getFileLoader());
@@ -388,8 +425,8 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         && (metadata.frameHash != db_metadata.frameHash || metadata.threshold != db_metadata.threshold)
         && config.threshold != -1)
     {
-        metadata.threshold = config.threshold;
-        loader.clearScenes(databaseRoot / video.name);
+        saveMetadata.threshold = config.threshold;
+        loader.clearScenes(video.name);
         size_t index = 0;
         scene_detect_cursor scenes{*video.frames(), config.threshold};
         while(auto scene = scenes.read()) loader.saveScene(video.name, index++, *scene);
@@ -399,13 +436,13 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         && (metadata != db_metadata)
         && sceneVocab)
     {
-        metadata.sceneHash = db_metadata.sceneHash;
+        saveMetadata.sceneHash = db_metadata.sceneHash;
         size_t index = 0;
         scene_bag_adapter adapter{video.getScenes(), make_frame_bag_source(loader, video.name), *sceneVocab};
         while(auto scene = adapter.read()) loader.saveScene(video.name, index++, *scene);
     }
 
-    writeMetadata(metadata, databaseRoot / video.name);
+    writeMetadata(saveMetadata, databaseRoot / video.name);
     return DatabaseVideo(*this, video.name);
 }
 
@@ -480,16 +517,22 @@ QueryVideo make_query_adapter(const SIFTVideo &video, const FileDatabase &db)
         throw std::runtime_error("no min_scenes provided");
     }
 
-    auto vocab = loadVocabulary<Vocab<SerializableScene>>(db);
+    auto frame_vocab = loadVocabulary<Vocab<Frame>>(db);
+    auto scene_vocab = loadVocabulary<Vocab<SerializableScene>>(db);
 
-    if (!vocab)
+    if (!frame_vocab)
     {
         throw std::runtime_error("no frame vocab available");
     }
 
+    if (!scene_vocab)
+    {
+        throw std::runtime_error("no scene vocab available");
+    }
+
     auto frames = video.frames();
 
-    scene_bag_adapter adapter{scene_detect_cursor{*frames, threshold}, video.frames(), *vocab};
+    scene_bag_adapter adapter{scene_detect_cursor{*video.color(), threshold}, frame_bag_adapter{video.frames(), *frame_vocab}, *scene_vocab};
 
     return QueryVideo{video, std::make_unique<decltype(adapter)>(std::move(adapter))};
 }
