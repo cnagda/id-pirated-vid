@@ -93,11 +93,12 @@ std::unique_ptr<ICursor<cv::UMat>> SIFTVideo::images() const
     return std::make_unique<CaptureSource>(filename);
 }
 
-std::unique_ptr<ICursor<Frame>> SIFTVideo::frames() const {
+std::unique_ptr<ICursor<Frame>> SIFTVideo::frames() const
+{
     return std::make_unique<FrameSource>(filename, callback, cropsize);
 }
 
-SIFTVideo::SIFTVideo(const std::string& filename, std::function<void(cv::UMat, Frame)> callback, std::pair<int, int> cropsize)
+SIFTVideo::SIFTVideo(const std::string &filename, std::function<void(cv::UMat, Frame)> callback, std::pair<int, int> cropsize)
     : IVideo(fs::path(filename).filename()), filename(filename), callback(callback), cropsize(cropsize) {}
 
 SIFTVideo getSIFTVideo(const std::string &filepath, std::function<void(UMat, Frame)> callback, std::pair<int, int> cropsize)
@@ -111,7 +112,6 @@ const std::string Frame::vocab_name = "FrameVocab.mat";
 template <typename T>
 const std::string Vocab<T>::vocab_name = T::vocab_name;
 
-
 template <typename Read>
 class frame_bag_adapter : public ICursor<Frame>
 {
@@ -124,7 +124,7 @@ public:
 
     constexpr std::optional<Frame> read() override
     {
-        if(auto val = reader.read())
+        if (auto val = reader.read())
         {
             loadFrameDescriptor(*val, vocab.descriptors());
             return val;
@@ -142,14 +142,14 @@ class scene_bag_adapter : public ICursor<SerializableScene>
     Vocab<SerializableScene> vocab;
 
 public:
-    scene_bag_adapter(SceneRead&& s, FrameRead&& f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(std::move(f)), vocab(v) {}
-    scene_bag_adapter(const SceneRead& s, const FrameRead& f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(f), vocab(v) {}
-    scene_bag_adapter(const SceneRead& s, FrameRead&& f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), vocab(v) {}
-    scene_bag_adapter(SceneRead&& s, const FrameRead& f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), vocab(v) {}
+    scene_bag_adapter(SceneRead &&s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(std::move(f)), vocab(v) {}
+    scene_bag_adapter(const SceneRead &s, const FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(f), vocab(v) {}
+    scene_bag_adapter(const SceneRead &s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), vocab(v) {}
+    scene_bag_adapter(SceneRead &&s, const FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), vocab(v) {}
 
     constexpr std::optional<SerializableScene> read() override
     {
-        if(auto val = scene_reader.read())
+        if (auto val = scene_reader.read())
         {
             return val;
         }
@@ -157,24 +157,29 @@ public:
     }
 };
 
-template<typename Read>
-class scene_detect_cursor : ICursor<SerializableScene> {
+template <typename Read>
+class scene_detect_cursor : ICursor<SerializableScene>
+{
     std::vector<std::pair<unsigned int, unsigned int>> scenes;
     decltype(scenes.begin()) iterator;
 
 public:
     scene_detect_cursor() : iterator(scenes.begin()) {}
-    scene_detect_cursor(Read& reader, unsigned int min_scenes) {
+    scene_detect_cursor(Read &reader, unsigned int min_scenes)
+    {
         scenes = hierarchicalScenes(get_distances(reader, ColorComparator{}), min_scenes);
         iterator = scenes.begin();
     }
-    scene_detect_cursor(Read&& reader, unsigned int min_scenes) {
+    scene_detect_cursor(Read &&reader, unsigned int min_scenes)
+    {
         scenes = hierarchicalScenes(get_distances(std::move(reader), ColorComparator{}), min_scenes);
         iterator = scenes.begin();
     }
 
-    constexpr std::optional<SerializableScene> read() override {
-        if(iterator == scenes.end()) {
+    constexpr std::optional<SerializableScene> read() override
+    {
+        if (iterator == scenes.end())
+        {
             return std::nullopt;
         }
         return SerializableScene{*iterator++};
@@ -218,8 +223,11 @@ std::unique_ptr<ICursor<SerializableScene>> DatabaseVideo::getScenes() const
 
 FileDatabase::FileDatabase(const std::string &databasePath,
                            std::unique_ptr<IVideoStorageStrategy> &&strat, StrategyType l, RuntimeArguments args)
-    : strategy(std::move(strat)), loadStrategy(l), config(args, strategy->getType(), l), databaseRoot(databasePath),
-      loader(databasePath)
+    : config(args, strat->getType(), l),
+      loader(databasePath),
+      strategy(std::move(strat)),
+      loadStrategy(l),
+      databaseRoot(databasePath)
 {
     if (!fs::exists(databaseRoot))
     {
@@ -404,15 +412,18 @@ VideoMetadata DatabaseVideo::loadMetadata() const
     return data;
 }
 
-QueryVideo make_query_adapter(const SIFTVideo& video, const FileDatabase& db) {
+QueryVideo make_query_adapter(const SIFTVideo &video, const FileDatabase &db)
+{
     auto threshold = db.getConfig().threshold;
-    if(threshold == -1) {
+    if (threshold == -1)
+    {
         throw std::runtime_error("no min_scenes provided");
     }
 
     auto vocab = loadVocabulary<Vocab<SerializableScene>>(db);
 
-    if(!vocab) {
+    if (!vocab)
+    {
         throw std::runtime_error("no frame vocab available");
     }
 
@@ -423,6 +434,7 @@ QueryVideo make_query_adapter(const SIFTVideo& video, const FileDatabase& db) {
     return QueryVideo{video, std::make_unique<decltype(adapter)>(std::move(adapter))};
 }
 
-QueryVideo make_query_adapter(const DatabaseVideo& video) {
+QueryVideo make_query_adapter(const DatabaseVideo &video)
+{
     return QueryVideo{video, video.getScenes()};
 }

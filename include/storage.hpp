@@ -80,7 +80,7 @@ public:
 class LazyStorageStrategy : public IVideoStorageStrategy
 {
 public:
-inline StrategyType getType() const override { return Lazy; };
+    inline StrategyType getType() const override { return Lazy; };
     inline bool shouldBaggifyFrames() const override { return false; };
     inline bool shouldComputeScenes() const override { return false; };
     inline bool shouldBaggifyScenes() const override { return false; };
