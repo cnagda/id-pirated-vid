@@ -4,7 +4,6 @@
 #include "database_iface.hpp"
 #include <experimental/filesystem>
 #include "video.hpp"
-#include <utility>
 
 namespace fs = std::experimental::filesystem;
 
@@ -98,7 +97,7 @@ struct LazyLoadStrategy
 
 // converts a functor to the concept required by get_distances
 template<typename F> struct read_adapter {
-    std::decay_t<F> f;
+    F f;
     read_adapter(F&& f) : f(f) {}
     read_adapter(const F& f) : f(f) {}
 
@@ -111,7 +110,7 @@ using read_value_t = typename decltype(std::declval<Read>().read())::value_type;
 template <typename Read>
 struct cursor_adapter : public ICursor<read_value_t<Read>>
 {
-    std::decay_t<Read> reader;
+    Read reader;
     cursor_adapter(Read &&r) : reader(std::move(r)) {}
     cursor_adapter(const Read &r) : reader(r) {}
     constexpr std::optional<read_value_t<Read>> read() override { return reader.read(); }
@@ -120,6 +119,12 @@ struct cursor_adapter : public ICursor<read_value_t<Read>>
 auto inline make_frame_source(const FileLoader& loader, const std::string& videoName) {
     return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
         return loader.readFrame(videoName, index++);
+    }}};
+}
+
+auto inline make_frame_bag_source(const FileLoader& loader, const std::string& videoName) {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
+        return loader.readFrameBag(videoName, index++);
     }}};
 }
 

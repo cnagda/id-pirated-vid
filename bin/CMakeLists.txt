@@ -7,8 +7,6 @@ add_executable(query query.cxx)
 
 if(BUILD_OPTIONAL)
     add_executable(dataflow kernel.cxx)
-    add_executable(keyframes keyframes.cxx)
-    target_link_libraries( keyframes database )
     target_link_libraries( dataflow database )
 endif()
 

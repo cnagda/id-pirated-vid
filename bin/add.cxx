@@ -7,7 +7,6 @@
 #include "database.hpp"
 #include "matcher.hpp"
 #include "imgproc.hpp"
-#include <future>
 #include "scene_detector.hpp"
 
 #define DBPATH 1
@@ -118,30 +117,10 @@ int main(int argc, char **argv)
 
     if (shouldRecalculateFrames)
     {
-        auto vocab = loadVocabulary<Vocab<Frame>>(*db);
-
-        if (!vocab)
+        for (auto& v : db->listVideos())
         {
-            throw std::runtime_error("no frame vocab");
-        }
-
-        std::shared_ptr db_shared(std::move(db));
-
-        auto func = [](auto v, auto db) -> void {
             auto video = db->loadVideo(v);
             db->saveVideo(*video);
-        };
-
-        std::vector<std::future<void>> runners;
-
-        for (auto v : db_shared->listVideos())
-        {
-            runners.push_back(std::async(std::launch::async, func, v, db_shared));
-        }
-
-        for (auto &i : runners)
-        {
-            i.wait();
         }
     }
 
