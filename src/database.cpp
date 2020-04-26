@@ -1,5 +1,4 @@
 #include "database.hpp"
-#include <cctype>
 #include <experimental/filesystem>
 #include <memory>
 #include "vocabulary.hpp"
