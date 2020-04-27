@@ -529,8 +529,6 @@ QueryVideo make_query_adapter(const SIFTVideo &video, const FileDatabase &db)
         throw std::runtime_error("no scene vocab available");
     }
 
-    auto frames = video.frames();
-
     scene_bag_adapter adapter{scene_detect_cursor{*video.color(), threshold}, frame_bag_adapter{video.frames(), *frame_vocab}, *scene_vocab};
 
     return QueryVideo{video, std::make_unique<decltype(adapter)>(std::move(adapter))};
