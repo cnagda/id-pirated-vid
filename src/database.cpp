@@ -373,12 +373,12 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
             return source(fc);
         }) &
         tbb::make_filter<ordered_umat, ordered_umat>(tbb::filter::parallel, scale) & 
-        tbb::make_filter<ordered_umat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto mat) {
+        tbb::make_filter<ordered_umat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto& mat) {
             Frame f;
             f.descriptors = sift(mat).data;
             return make_pair(f, mat);
         }) &
-        tbb::make_filter<std::pair<Frame, ordered_umat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
+        tbb::make_filter<std::pair<Frame, ordered_umat>, ordered_frame>(tbb::filter::parallel, [&](auto& pair) {
             pair.first.colorHistogram = color(pair.second).data;
             return ordered_frame{pair.second.rank, pair.first};
         }) &
@@ -414,7 +414,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
             tbb::make_filter<void, ordered_frame>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc) {
                 return frame_source(fc);
             }) &
-            tbb::make_filter<ordered_frame, ordered_frame>(tbb::filter::parallel, [&](auto frame){
+            tbb::make_filter<ordered_frame, ordered_frame>(tbb::filter::parallel, [&](auto& frame){
                 frame.data.frameDescriptor = extractFrame(frame.data.descriptors);
                 return frame;
             }) &
