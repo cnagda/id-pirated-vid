@@ -10,7 +10,7 @@ on:
 
 # Workflow level environment variables
 env:
-  ATTACKREPO:  https://raw.githubusercontent.com/cnagda/id-pirated-vid-attackvids/master/attackvids/
+  ATTACKREPO: "https://raw.githubusercontent.com/cnagda/id-pirated-vid-attackvids/master/attackvids/"
 
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -31,7 +31,7 @@ jobs:
     - name: download video
       run: 
         echo $ATTACKREPO${{ matrix.vid }}
-        curl -LJO ${{ ATTACKREPO }}${{ matrix.vid }}
+        curl -LJO $ATTACKREPO${{ matrix.vid }}
     
           
   # This workflow contains a single job called "build"
