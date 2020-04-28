@@ -97,7 +97,7 @@ jobs:
         curl -LJO ${ATTACKREPO}${{ matrix.vid }}
         ls
         mkdir results
-        python3 python/tester.py ${{ matrix.vid }} id-pirated-vid-db/database > result.txt
+        python3 python/tester.py ${{ matrix.vid }} id-pirated-vid-db/database > ${{ matrix.vid }}.txt
   
     - name: upload result
       uses: actions/upload-artifact@v1
@@ -113,3 +113,6 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: results
+
+      - name: Make report
+        run: ls results
