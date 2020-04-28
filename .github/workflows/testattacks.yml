@@ -97,5 +97,10 @@ jobs:
         curl -LJO ${ATTACKREPO}${{ matrix.vid }}
         ls
         mkdir results
-        python3 python/tester.py ${{ matrix.vid }} id-pirated-vid-db/database
+        python3 python/tester.py ${{ matrix.vid }} id-pirated-vid-db/database > result.txt
   
+    - name: upload result
+      uses: actions/upload-artifact@v1
+      with:
+        name: ${{ matrix.vid }}
+        path: result.txt
