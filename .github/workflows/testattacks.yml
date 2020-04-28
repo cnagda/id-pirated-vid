@@ -30,7 +30,7 @@ jobs:
     # Download the video from the attackvids repo
     - name: download video
       run: 
-        echo ${{ ATTACKREPO }}${{ matrix.vid }}
+        echo $ATTACKREPO${{ matrix.vid }}
         curl -LJO ${{ ATTACKREPO }}${{ matrix.vid }}
     
           
