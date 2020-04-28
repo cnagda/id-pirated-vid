@@ -109,6 +109,9 @@ jobs:
     needs: query
     runs-on: ubuntu-latest
     steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        
       - name: Download artifacts
         uses: actions/download-artifact@v1
         with:
