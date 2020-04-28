@@ -44,7 +44,7 @@ def main():
         vidname = os.path.basename(vidpath)
 
         # Run query
-        output = subprocess.check_output(['./piracy.py', 'QUERY', args.dbpath, vidpath])
+        output = subprocess.check_output(['python3', 'piracy.py', 'QUERY', args.dbpath, vidpath])
 
         # Check if result matches expected
         result = ""
