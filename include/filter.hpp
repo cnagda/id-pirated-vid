@@ -37,6 +37,7 @@ public:
 
     ordered_mat operator()(const ordered_umat&) const;
     cv::Mat operator()(const cv::UMat&) const;
+    Frame withKeyPoints(const cv::UMat&) const;
 };
 
 class ExtractColorHistogram

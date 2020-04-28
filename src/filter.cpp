@@ -38,6 +38,14 @@ cv::Mat ExtractSIFT::operator()(const cv::UMat& image) const
     return descriptors;
 }
 
+Frame ExtractSIFT::withKeyPoints(const cv::UMat& image) const
+{
+    Frame frame{};
+    detector->detectAndCompute(image, cv::noArray(), frame.keyPoints, frame.descriptors);
+
+    return frame;
+}
+
 ordered_mat ExtractColorHistogram::operator()(const ordered_umat& image) const
 {
     return {image.rank, operator()(image.data)};

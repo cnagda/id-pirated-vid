@@ -68,6 +68,11 @@ struct Frame
                matEqual(frameDescriptor, f2.frameDescriptor) &&
                matEqual(colorHistogram, f2.colorHistogram);
     }
+
+    bool operator!=(const Frame& f) const {
+        return !(*this == f);
+    }
+
     static const std::string vocab_name;
 };
 
@@ -81,6 +86,16 @@ struct SerializableScene
     SerializableScene(std::pair<size_t, size_t> pair) : SerializableScene(pair.first, pair.second) {}
     SerializableScene(size_t startIdx, size_t endIdx) : startIdx(startIdx), endIdx(endIdx) {};
     SerializableScene(const cv::Mat &matrix, size_t startIdx, size_t endIdx) : startIdx(startIdx), endIdx(endIdx), frameBag(matrix){};
+
+    bool operator==(const SerializableScene& scene) const {
+        return startIdx == scene.startIdx &&
+            endIdx == scene.endIdx &&
+            matEqual(frameBag, scene.frameBag);
+    }
+
+    bool operator!=(const SerializableScene& scene) const {
+        return !(*this == scene);
+    }
 };
 
 SIFTVideo getSIFTVideo(const std::string &filename, std::function<void(cv::UMat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});

@@ -103,15 +103,18 @@ public:
                 std::cout << "video frame: " << counter - 1 << std::endl;
             }
             
-            auto ordered = ordered_umat{0, *image};
-            auto scaled = scale(ordered);
+            auto scaled = scale(*image);
+            
+            if (callback) {
+                auto frame = sift.withKeyPoints(scaled);
+                frame.colorHistogram = color(scaled);
+                callback(*image, frame);
+                return frame;
+            }
+            
             auto colorHistogram = color(scaled);
             auto descriptors = sift(scaled);
-            Frame frame{descriptors.data, cv::Mat(), colorHistogram.data};
-            if (callback)
-                callback(*image, frame);
-
-            return frame;
+            return Frame{descriptors, cv::Mat(), colorHistogram};
         }
         return std::nullopt;
     }

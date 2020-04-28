@@ -74,3 +74,16 @@ TEST_F(DatabaseFixture, InDatabase)
     EXPECT_EQ(topMatch.startFrame, 0);
     EXPECT_EQ(topMatch.endFrame, scenes.size());
 }
+
+
+TEST_F(DatabaseFixture, InDatabaseQueryAdapter)
+{
+    auto video = make_query_adapter(getSIFTVideo("../coffee.mp4"), *db);
+    auto match = findMatch(video, *db);
+    ASSERT_TRUE(match);
+    auto topMatch = match.value();
+    auto scenes = read_all(*video.getScenes());
+    EXPECT_EQ(topMatch.video, video.name);
+    EXPECT_EQ(topMatch.startFrame, 0);
+    EXPECT_EQ(topMatch.endFrame, scenes.size());
+}

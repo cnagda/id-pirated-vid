@@ -3,6 +3,7 @@
 #include <experimental/filesystem>
 #include "database.hpp"
 #include "vocabulary.hpp"
+#include "matcher.hpp"
 
 using namespace std;
 using namespace cv;
@@ -171,9 +172,53 @@ TEST_F(DatabaseSuite, EagerDatabase)
     EXPECT_EQ(frames.size(), loaded.size());
     EXPECT_TRUE(equal(frames.begin(), frames.end(), loaded.begin()));
 
-    EXPECT_GT(scenes.size(), 0);
+    auto loaded_scenes = read_all(*loaded_ptr->getScenes());
+
+    EXPECT_TRUE(equal(scenes.begin(), scenes.end(), loaded_scenes.begin(), loaded_scenes.end(), [](auto& a, auto& b){
+        return a.startIdx == b.startIdx && a.endIdx == b.endIdx;
+    }));
+}
+
+TEST_F(DatabaseSuite, QueryAdapter)
+{
+    FileDatabase db(to_string(fs::current_path() / "database_test_dir"),
+                    std::make_unique<AggressiveStorageStrategy>(),
+                    AggressiveLoadStrategy{},
+                    RuntimeArguments{200, 20, 30});
+
+    auto in_saved = db.saveVideo(input);
+    ASSERT_TRUE(in_saved);
+
+    saveVocabulary(constructFrameVocabulary(db, db.getConfig().KFrames, 10), db);
+    saveVocabulary(constructSceneVocabulary(db, db.getConfig().KScenes), db);
+
+    db.saveVideo(*in_saved);
+
+    auto loaded_ptr = db.loadVideo("sample.mp4");
+
+    ASSERT_TRUE(loaded_ptr);
+
+    auto loaded = read_all(*loaded_ptr->frames());
+    ASSERT_GT(loaded.size(), 0);
 
     auto loaded_scenes = read_all(*loaded_ptr->getScenes());
-    EXPECT_EQ(scenes.size(), loaded_scenes.size());
-    // EXPECT_TRUE(equal(scenes.begin(), scenes.end(), loaded_ptr->getScenes().begin()));
+    ASSERT_GT(loaded_scenes.size(), 0);
+
+    auto original = getSIFTVideo("../sample.mp4");
+    auto original_frames = read_all(*original.frames());
+
+    EXPECT_TRUE(equal(original_frames.begin(), original_frames.end(), loaded.begin(), loaded.end(), [](auto &a, auto &b) {
+        return matEqual(a.descriptors, b.descriptors);
+    }));
+
+    auto original_scenes = read_all(*make_query_adapter(original, db).getScenes());
+    EXPECT_TRUE(equal(original_scenes.begin(), original_scenes.end(), loaded_scenes.begin(), loaded_scenes.end(), [](auto &a, auto &b) {
+        if(a != b) {
+            std::cout << a.startIdx << " " << b.startIdx << std::endl;
+            std::cout << a.endIdx << " " << b.endIdx << std::endl;
+            std::cout << a.frameBag << " " << b.frameBag << std::endl;
+            return false;
+        }
+        return true;
+    }));
 }
