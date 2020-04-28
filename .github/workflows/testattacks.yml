@@ -79,11 +79,16 @@ jobs:
     - name: make
       run: cmake --build build/ 
     
-    - name: checkout database
-      uses: actions/checkout@v2
+    - name: Cache Database
+      id: cache-database
+      uses: actions/cache@v1
       with:
-        repository: cnagda/id-pirated-vid-db
         path: id-pirated-vid-db
+        key: id-pirated-vid-db-nofail
+
+    - name: Download Database
+      if: steps.cache-database.outputs.cache-hit != 'true'
+      run: git clone https://github.com/cnagda/id-pirated-vid-db.git
     
     # Download the video from the attackvids repo
     - name: download video
