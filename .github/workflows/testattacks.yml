@@ -79,9 +79,9 @@ jobs:
     - name: make
       run: cmake --build build/ 
       
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - name: checkout main 
-      uses: actions/checkout@v2
+#     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+#     - name: checkout main 
+#       uses: actions/checkout@v2
     
     - name: checkout database
       uses: actions/checkout@v2
