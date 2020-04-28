@@ -3,7 +3,6 @@
 
 #include <utility>
 #include <vector>
-#include <Eigen/Core>
 
 template <typename T>
 class VectorMatrix
@@ -33,14 +32,25 @@ public:
     constexpr auto end() { return matrix.end(); }
 };
 
-std::pair<int, int> slowMatrixMax(std::vector<std::vector<int>> &matrix);
-
-template <typename Matrix>
-inline std::pair<int, int> slowMatrixMax(Matrix &&matrix)
+template<typename T>
+std::pair<int, int> slowMatrixMax(const VectorMatrix<T> &matrix)
 {
-    int i, j;
-    matrix.maxCoeff(&i, &j);
-    return {i, j};
+    int max = -1, mi = -1, mj = -1;
+
+    for (int i = 0; i < matrix.rows; i++)
+    {
+        for (int j = 0; j < matrix.cols; j++)
+        {
+            if (max < matrix(i, j))
+            {
+                max = matrix(i, j);
+                mi = i;
+                mj = j;
+            }
+        }
+    }
+
+    return {mi, mj};
 }
 
 #endif

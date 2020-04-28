@@ -22,5 +22,4 @@ endif()
 find_package( Boost 1.32.0 )
 include_directories(${Boost_INCLUDE_DIRS})
 
-find_package (Eigen3 REQUIRED NO_MODULE)
 find_package( OpenCV REQUIRED core videoio xfeatures2d highgui )
