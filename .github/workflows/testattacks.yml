@@ -102,5 +102,14 @@ jobs:
     - name: upload result
       uses: actions/upload-artifact@v1
       with:
-        name: ${{ matrix.vid }}
-        path: result.txt
+        name: results
+        path: ${{ matrix.vid }}.txt
+
+  combine-results:
+    needs: query
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: results
