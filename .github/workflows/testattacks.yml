@@ -29,9 +29,10 @@ jobs:
     
     # Download the video from the attackvids repo
     - name: download video
-      run: 
-        echo $ATTACKREPO${{ matrix.vid }}
-        curl -LJO $ATTACKREPO${{ matrix.vid }}
+      run: |
+        echo ${ATTACKREPO}${{ matrix.vid }}
+        curl -LJO ${ATTACKREPO}${{ matrix.vid }}
+        ls
     
           
   # This workflow contains a single job called "build"
