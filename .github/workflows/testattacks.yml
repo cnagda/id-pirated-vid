@@ -68,6 +68,7 @@ jobs:
         echo ${ATTACKREPO}${{ matrix.vid }}
         curl -LJO ${ATTACKREPO}${{ matrix.vid }}
         ls
+        mkdir results
         python3 python/tester.py ${{ matrix.vid }} id-pirated-vid-db/database
     
           
