@@ -40,7 +40,7 @@ def main():
         f2.write("")
 
     for vidpath in vidpaths:
-        print(f"Querying: {vidpath}")
+        # print(f"Querying: {vidpath}")
         vidname = os.path.basename(vidpath)
 
         # Run query
@@ -57,7 +57,7 @@ def main():
         if result == pirated_from:
             success = 1
             outstr = "Success"
-        print(outstr)
+        # print(outstr)
 
         # record 0 for failure, 1 for success
         results[vidname] = success
@@ -70,6 +70,8 @@ def main():
 
     with open("./results/allresults.pkl", 'wb') as f:
         pickle.dump(results, f, pickle.HIGHEST_PROTOCOL)
+
+    print(results)
 
 if __name__ == '__main__':
     main()
