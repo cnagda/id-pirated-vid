@@ -228,6 +228,6 @@ TEST_F(DatabaseSuite, QueryAdapter)
 
     auto original_scenes = read_all(*make_query_adapter(input, db).getScenes());
     EXPECT_TRUE(equal(original_scenes.begin(), original_scenes.end(), loaded_scenes.begin(), loaded_scenes.end(), [](auto &a, auto &b) {
-        return (a.startIdx = b.startIdx && a.endIdx == b.endIdx);
+        return (a.startIdx == b.startIdx && a.endIdx == b.endIdx && cosineSimilarity(a.frameBag, b.frameBag) > 0.95);
     }));
 }
