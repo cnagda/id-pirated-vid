@@ -1,5 +1,3 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Test Attacks CI
 
 # Controls when the action will run. Triggers the workflow on push or pull request
@@ -10,36 +8,532 @@ on:
   pull_request:
     branches: [ master ]
 
+# Workflow level environment variables
+env:
+  ATTACKREPO: "https://raw.githubusercontent.com/cnagda/id-pirated-vid-attackvids/master/attackvids/"
+
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  refresh-cache:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - name: checkout main 
-      uses: actions/checkout@v2
-      
-    - name: checkout attackvids
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v1
       with:
-        repository: cnagda/id-pirated-vid-attackvids
-        path: id-pirated-vid-attackvids 
-
-    # Runs a single command using the runners shell
-    - name: Run a one-line script
-      run: ls id-pirated-vid-attackvids > dirlisting.txt
-    
-    - uses: actions/upload-artifact@v1
-      with:
-        name: dirlisting
-        path: dirlisting.txt
-
-    # Runs a set of commands using the runners shell
-    - name: Run a multi-line script
+        ref: pipeline-rewrite
+    - name: deps
       run: |
-        echo Add other actions to build,
-        echo test, and deploy your project.
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libavcodec-dev libavresample-dev libavformat-dev libswscale-dev libgtk-3-dev
+    - name: Cache OpenCV
+      id: cache-opencv
+      uses: actions/cache@v1
+      with:
+        path: OpenCV # npm cache files are stored in `~/.npm` on Linux/macOS
+        key: OpenCV-nofail3
+    - name: OpenCV
+      if: steps.cache-opencv.outputs.cache-hit != 'true'
+      run: |
+        mkdir $GITHUB_WORKSPACE/OpenCV
+        cd $GITHUB_WORKSPACE/OpenCV
+        git clone --depth=1 --branch 4.2.0 https://github.com/opencv/opencv.git
+        git clone --depth=1 --branch 4.2.0 https://github.com/opencv/opencv_contrib.git
+        mkdir build
+        cd build
+        cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local \
+        -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules -D WITH_FFMPEG=ON -D WITH_OPENMP=ON \
+        -DOPENCV_ENABLE_NONFREE=ON -D BUILD_EXAMPLES=OFF -WITH_GTK=ON -D BUILD_opencv_apps=OFF -D BUILD_DOCS=OFF \
+        -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF ../opencv
+        make -j8
+       
+  # Query with one attack video
+  firstquery:
+    needs: refresh-cache
+    strategy:
+      matrix:
+        vid: 
+          - CNAU0235000H_exact_match.mp4
+          - CNAU0235000H_exact_match_inserted.mp4
+          - CNAU0235000H_frame_rate_down.mp4
+          - CNAU0235000H_frame_rate_down_inserted.mp4
+          - CNAU0235000H_frame_rate_up.mp4
+          - CNAU0235000H_frame_rate_up_inserted.mp4
+          - CNAU0235000H_mirror.mp4
+          - CNAU0235000H_mirror_inserted.mp4
+          - CNAU0235000H_pic_in_pic_large.mp4
+          - CNAU0235000H_pic_in_pic_large_inserted.mp4
+          - CNAU0235000H_pic_in_pic_small.mp4
+          - CNAU0235000H_pic_in_pic_small_inserted.mp4
+          - CNAU0235000H_projection.mp4
+          - CNAU0235000H_projection_inserted.mp4
+          - CNAU0235000H_recolor_dark.mp4
+          - CNAU0235000H_recolor_dark_inserted.mp4
+          - CNAU0235000H_recolor_grey.mp4
+          - CNAU0235000H_recolor_grey_inserted.mp4
+          - CNAU0235000H_rotate_180.mp4
+          - CNAU0235000H_rotate_180_inserted.mp4
+          - CNAU0235000H_rotate_90.mp4
+          - CNAU0235000H_rotate_90_inserted.mp4
+          - CNAU0235000H_scale_down_black.mp4
+          - CNAU0235000H_scale_down_black_inserted.mp4
+          - CNAU0235000H_scale_down_noise.mp4
+          - CNAU0235000H_scale_down_noise_inserted.mp4
+          - CNAU0235000H_scale_up.mp4
+          - CNAU0235000H_scale_up_inserted.mp4
+          - CNAU0235000H_snowflakes.mp4
+          - CNAU0235000H_snowflakes_inserted.mp4
+          - CNAU0235000H_speed_down.mp4
+          - CNAU0235000H_speed_down_inserted.mp4
+          - CNAU0235000H_speed_up.mp4
+          - CNAU0235000H_speed_up_inserted.mp4
+          - CNBU0069000H_exact_match.mp4
+          - CNBU0069000H_exact_match_inserted.mp4
+          - CNBU0069000H_frame_rate_down.mp4
+          - CNBU0069000H_frame_rate_down_inserted.mp4
+          - CNBU0069000H_frame_rate_up.mp4
+          - CNBU0069000H_frame_rate_up_inserted.mp4
+          - CNBU0069000H_mirror.mp4
+          - CNBU0069000H_mirror_inserted.mp4
+          - CNBU0069000H_pic_in_pic_large.mp4
+          - CNBU0069000H_pic_in_pic_large_inserted.mp4
+          - CNBU0069000H_pic_in_pic_small.mp4
+          - CNBU0069000H_pic_in_pic_small_inserted.mp4
+          - CNBU0069000H_projection.mp4
+          - CNBU0069000H_projection_inserted.mp4
+          - CNBU0069000H_recolor_dark.mp4
+          - CNBU0069000H_recolor_dark_inserted.mp4
+          - CNBU0069000H_recolor_grey.mp4
+          - CNBU0069000H_recolor_grey_inserted.mp4
+          - CNBU0069000H_rotate_180.mp4
+          - CNBU0069000H_rotate_180_inserted.mp4
+          - CNBU0069000H_rotate_90.mp4
+          - CNBU0069000H_rotate_90_inserted.mp4
+          - CNBU0069000H_scale_down_black.mp4
+          - CNBU0069000H_scale_down_black_inserted.mp4
+          - CNBU0069000H_scale_down_noise.mp4
+          - CNBU0069000H_scale_down_noise_inserted.mp4
+          - CNBU0069000H_scale_up.mp4
+          - CNBU0069000H_scale_up_inserted.mp4
+          - CNBU0069000H_snowflakes.mp4
+          - CNBU0069000H_snowflakes_inserted.mp4
+          - CNBU0069000H_speed_down.mp4
+          - CNBU0069000H_speed_down_inserted.mp4
+          - CNBU0069000H_speed_up.mp4
+          - CNBU0069000H_speed_up_inserted.mp4
+          - CNCM0046000H_exact_match.mp4
+          - CNCM0046000H_exact_match_inserted.mp4
+          - CNCM0046000H_frame_rate_down.mp4
+          - CNCM0046000H_frame_rate_down_inserted.mp4
+          - CNCM0046000H_frame_rate_up.mp4
+          - CNCM0046000H_frame_rate_up_inserted.mp4
+          - CNCM0046000H_mirror.mp4
+          - CNCM0046000H_mirror_inserted.mp4
+          - CNCM0046000H_pic_in_pic_large.mp4
+          - CNCM0046000H_pic_in_pic_large_inserted.mp4
+          - CNCM0046000H_pic_in_pic_small.mp4
+          - CNCM0046000H_pic_in_pic_small_inserted.mp4
+          - CNCM0046000H_projection.mp4
+          - CNCM0046000H_projection_inserted.mp4
+          - CNCM0046000H_recolor_dark.mp4
+          - CNCM0046000H_recolor_dark_inserted.mp4
+          - CNCM0046000H_recolor_grey.mp4
+          - CNCM0046000H_recolor_grey_inserted.mp4
+          - CNCM0046000H_rotate_180.mp4
+          - CNCM0046000H_rotate_180_inserted.mp4
+          - CNCM0046000H_rotate_90.mp4
+          - CNCM0046000H_rotate_90_inserted.mp4
+          - CNCM0046000H_scale_down_black.mp4
+          - CNCM0046000H_scale_down_black_inserted.mp4
+          - CNCM0046000H_scale_down_noise.mp4
+          - CNCM0046000H_scale_down_noise_inserted.mp4
+          - CNCM0046000H_scale_up.mp4
+          - CNCM0046000H_scale_up_inserted.mp4
+          - CNCM0046000H_snowflakes.mp4
+          - CNCM0046000H_snowflakes_inserted.mp4
+          - CNCM0046000H_speed_down.mp4
+          - CNCM0046000H_speed_down_inserted.mp4
+          - CNCM0046000H_speed_up.mp4
+          - CNCM0046000H_speed_up_inserted.mp4
+          - CNEH0045000H_exact_match.mp4
+          - CNEH0045000H_exact_match_inserted.mp4
+          - CNEH0045000H_frame_rate_down.mp4
+          - CNEH0045000H_frame_rate_down_inserted.mp4
+          - CNEH0045000H_frame_rate_up.mp4
+          - CNEH0045000H_frame_rate_up_inserted.mp4
+          - CNEH0045000H_mirror.mp4
+          - CNEH0045000H_mirror_inserted.mp4
+          - CNEH0045000H_pic_in_pic_large.mp4
+          - CNEH0045000H_pic_in_pic_large_inserted.mp4
+          - CNEH0045000H_pic_in_pic_small.mp4
+          - CNEH0045000H_pic_in_pic_small_inserted.mp4
+          - CNEH0045000H_projection.mp4
+          - CNEH0045000H_projection_inserted.mp4
+          - CNEH0045000H_recolor_dark.mp4
+          - CNEH0045000H_recolor_dark_inserted.mp4
+          - CNEH0045000H_recolor_grey.mp4
+          - CNEH0045000H_recolor_grey_inserted.mp4
+          - CNEH0045000H_rotate_180.mp4
+          - CNEH0045000H_rotate_180_inserted.mp4
+          - CNEH0045000H_rotate_90.mp4
+          - CNEH0045000H_rotate_90_inserted.mp4
+          - CNEH0045000H_scale_down_black.mp4
+          - CNEH0045000H_scale_down_black_inserted.mp4
+          - CNEH0045000H_scale_down_noise.mp4
+          - CNEH0045000H_scale_down_noise_inserted.mp4
+          - CNEH0045000H_scale_up.mp4
+          - CNEH0045000H_scale_up_inserted.mp4
+          - CNEH0045000H_snowflakes.mp4
+          - CNEH0045000H_snowflakes_inserted.mp4
+          - CNEH0045000H_speed_down.mp4
+          - CNEH0045000H_speed_down_inserted.mp4
+          - CNEH0045000H_speed_up.mp4
+          - CNEH0045000H_speed_up_inserted.mp4
+          - CNFN0021000H_exact_match.mp4
+          - CNFN0021000H_exact_match_inserted.mp4
+          - CNFN0021000H_frame_rate_down.mp4
+          - CNFN0021000H_frame_rate_down_inserted.mp4
+          - CNFN0021000H_frame_rate_up.mp4
+          - CNFN0021000H_frame_rate_up_inserted.mp4
+          - CNFN0021000H_mirror.mp4
+          - CNFN0021000H_mirror_inserted.mp4
+          - CNFN0021000H_pic_in_pic_large.mp4
+          - CNFN0021000H_pic_in_pic_large_inserted.mp4
+          - CNFN0021000H_pic_in_pic_small.mp4
+          - CNFN0021000H_pic_in_pic_small_inserted.mp4
+          - CNFN0021000H_projection.mp4
+          - CNFN0021000H_projection_inserted.mp4
+          - CNFN0021000H_recolor_dark.mp4
+          - CNFN0021000H_recolor_dark_inserted.mp4
+          - CNFN0021000H_recolor_grey.mp4
+          - CNFN0021000H_recolor_grey_inserted.mp4
+          - CNFN0021000H_rotate_180.mp4
+          - CNFN0021000H_rotate_180_inserted.mp4
+          - CNFN0021000H_rotate_90.mp4
+          - CNFN0021000H_rotate_90_inserted.mp4
+          - CNFN0021000H_scale_down_black.mp4
+          - CNFN0021000H_scale_down_black_inserted.mp4
+          - CNFN0021000H_scale_down_noise.mp4
+          - CNFN0021000H_scale_down_noise_inserted.mp4
+          - CNFN0021000H_scale_up.mp4
+          - CNFN0021000H_scale_up_inserted.mp4
+          - CNFN0021000H_snowflakes.mp4
+          - CNFN0021000H_snowflakes_inserted.mp4
+          - CNFN0021000H_speed_down.mp4
+          - CNFN0021000H_speed_down_inserted.mp4
+          - CNFN0021000H_speed_up.mp4
+          - CNFN0021000H_speed_up_inserted.mp4
+          - CNGA0055000H_exact_match.mp4
+          - CNGA0055000H_exact_match_inserted.mp4
+          - CNGA0055000H_frame_rate_down.mp4
+          - CNGA0055000H_frame_rate_down_inserted.mp4
+          - CNGA0055000H_frame_rate_up.mp4
+          - CNGA0055000H_frame_rate_up_inserted.mp4
+          - CNGA0055000H_mirror.mp4
+          - CNGA0055000H_mirror_inserted.mp4
+          - CNGA0055000H_pic_in_pic_large.mp4
+          - CNGA0055000H_pic_in_pic_large_inserted.mp4
+          - CNGA0055000H_pic_in_pic_small.mp4
+          - CNGA0055000H_pic_in_pic_small_inserted.mp4
+          - CNGA0055000H_projection.mp4
+          - CNGA0055000H_projection_inserted.mp4
+          - CNGA0055000H_recolor_dark.mp4
+          - CNGA0055000H_recolor_dark_inserted.mp4
+          - CNGA0055000H_recolor_grey.mp4
+          - CNGA0055000H_recolor_grey_inserted.mp4
+          - CNGA0055000H_rotate_180.mp4
+          - CNGA0055000H_rotate_180_inserted.mp4
+          - CNGA0055000H_rotate_90.mp4
+          - CNGA0055000H_rotate_90_inserted.mp4
+          - CNGA0055000H_scale_down_black.mp4
+          - CNGA0055000H_scale_down_black_inserted.mp4
+          - CNGA0055000H_scale_down_noise.mp4
+          - CNGA0055000H_scale_down_noise_inserted.mp4
+          - CNGA0055000H_scale_up.mp4
+          - CNGA0055000H_scale_up_inserted.mp4
+          - CNGA0055000H_snowflakes.mp4
+          - CNGA0055000H_snowflakes_inserted.mp4
+          - CNGA0055000H_speed_down.mp4
+          - CNGA0055000H_speed_down_inserted.mp4
+          - CNGA0055000H_speed_up.mp4
+          - CNGA0055000H_speed_up_inserted.mp4
+          - CNHL0336000H_exact_match.mp4
+          - CNHL0336000H_exact_match_inserted.mp4
+          - CNHL0336000H_frame_rate_down.mp4
+          - CNHL0336000H_frame_rate_down_inserted.mp4
+          - CNHL0336000H_frame_rate_up.mp4
+          - CNHL0336000H_frame_rate_up_inserted.mp4
+          - CNHL0336000H_mirror.mp4
+          - CNHL0336000H_mirror_inserted.mp4
+          - CNHL0336000H_pic_in_pic_large.mp4
+          - CNHL0336000H_pic_in_pic_large_inserted.mp4
+          - CNHL0336000H_pic_in_pic_small.mp4
+          - CNHL0336000H_pic_in_pic_small_inserted.mp4
+          - CNHL0336000H_projection.mp4
+          - CNHL0336000H_projection_inserted.mp4
+          - CNHL0336000H_recolor_dark.mp4
+          - CNHL0336000H_recolor_dark_inserted.mp4
+          - CNHL0336000H_recolor_grey.mp4
+          - CNHL0336000H_recolor_grey_inserted.mp4
+          - CNHL0336000H_rotate_180.mp4
+          - CNHL0336000H_rotate_180_inserted.mp4
+          - CNHL0336000H_rotate_90.mp4
+          - CNHL0336000H_rotate_90_inserted.mp4
+          - CNHL0336000H_scale_down_black.mp4
+          - CNHL0336000H_scale_down_black_inserted.mp4
+          - CNHL0336000H_scale_down_noise.mp4
+          - CNHL0336000H_scale_down_noise_inserted.mp4
+          - CNHL0336000H_scale_up.mp4
+          - CNHL0336000H_scale_up_inserted.mp4
+          - CNHL0336000H_snowflakes.mp4
+          - CNHL0336000H_snowflakes_inserted.mp4
+          - CNHL0336000H_speed_down.mp4
+          - CNHL0336000H_speed_down_inserted.mp4
+          - CNHL0336000H_speed_up.mp4
+          - CNHL0336000H_speed_up_inserted.mp4
+          - CNNH0131000H_exact_match.mp4
+          - CNNH0131000H_exact_match_inserted.mp4
+          - CNNH0131000H_frame_rate_down.mp4
+          - CNNH0131000H_frame_rate_down_inserted.mp4
+          - CNNH0131000H_frame_rate_up.mp4
+          - CNNH0131000H_frame_rate_up_inserted.mp4
+          - CNNH0131000H_mirror.mp4
+          - CNNH0131000H_mirror_inserted.mp4
+          - CNNH0131000H_pic_in_pic_large.mp4
+          - CNNH0131000H_pic_in_pic_large_inserted.mp4
+          - CNNH0131000H_pic_in_pic_small.mp4
+          - CNNH0131000H_pic_in_pic_small_inserted.mp4
+          - CNNH0131000H_projection.mp4
+          - CNNH0131000H_projection_inserted.mp4
+          - CNNH0131000H_recolor_dark.mp4
+          - CNNH0131000H_recolor_dark_inserted.mp4
+          - CNNH0131000H_recolor_grey.mp4
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        ref: pipeline-rewrite
+    - name: deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libavcodec-dev libavresample-dev libavformat-dev libswscale-dev libgtk-3-dev libboost-dev libeigen3-dev libtbb-dev
+    
+    - name: Cache OpenCV
+      id: cache-opencv
+      uses: actions/cache@v1
+      with:
+        path: OpenCV
+        key: OpenCV-nofail3
+    
+    - name: Install OpenCV
+      run: |
+        cd $GITHUB_WORKSPACE/OpenCV/build
+        sudo make install
+        
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake ../
+        
+    - name: make
+      run: cmake --build build/ 
+    
+    - name: Cache Database
+      id: cache-database
+      uses: actions/cache@v1
+      with:
+        path: id-pirated-vid-db
+        key: id-pirated-vid-db-nofail
+
+    - name: Download Database
+      if: steps.cache-database.outputs.cache-hit != 'true'
+      run: git clone https://github.com/cnagda/id-pirated-vid-db.git
+    
+    # Download the video from the attackvids repo
+    - name: download video
+      run: |
+        echo ${ATTACKREPO}${{ matrix.vid }}
+        curl -LJO ${ATTACKREPO}${{ matrix.vid }}
+        ls
+        mkdir results
+        python3 python/tester.py ${{ matrix.vid }} id-pirated-vid-db/database > ${{ matrix.vid }}.txt
+  
+    - name: upload result
+      uses: actions/upload-artifact@v1
+      with:
+        name: results
+        path: ${{ matrix.vid }}.txt
+  
+  secondquery:
+    strategy:
+      matrix:
+        vid:
+          - CNNH0131000H_recolor_grey_inserted.mp4
+          - CNNH0131000H_rotate_180.mp4
+          - CNNH0131000H_rotate_180_inserted.mp4
+          - CNNH0131000H_rotate_90.mp4
+          - CNNH0131000H_rotate_90_inserted.mp4
+          - CNNH0131000H_scale_down_black.mp4
+          - CNNH0131000H_scale_down_black_inserted.mp4
+          - CNNH0131000H_scale_down_noise.mp4
+          - CNNH0131000H_scale_down_noise_inserted.mp4
+          - CNNH0131000H_scale_up.mp4
+          - CNNH0131000H_scale_up_inserted.mp4
+          - CNNH0131000H_snowflakes.mp4
+          - CNNH0131000H_snowflakes_inserted.mp4
+          - CNNH0131000H_speed_down.mp4
+          - CNNH0131000H_speed_down_inserted.mp4
+          - CNNH0131000H_speed_up.mp4
+          - CNNH0131000H_speed_up_inserted.mp4
+          - CNRD0036000H_exact_match.mp4
+          - CNRD0036000H_exact_match_inserted.mp4
+          - CNRD0036000H_frame_rate_down.mp4
+          - CNRD0036000H_frame_rate_down_inserted.mp4
+          - CNRD0036000H_frame_rate_up.mp4
+          - CNRD0036000H_frame_rate_up_inserted.mp4
+          - CNRD0036000H_mirror.mp4
+          - CNRD0036000H_mirror_inserted.mp4
+          - CNRD0036000H_pic_in_pic_large.mp4
+          - CNRD0036000H_pic_in_pic_large_inserted.mp4
+          - CNRD0036000H_pic_in_pic_small.mp4
+          - CNRD0036000H_pic_in_pic_small_inserted.mp4
+          - CNRD0036000H_projection.mp4
+          - CNRD0036000H_projection_inserted.mp4
+          - CNRD0036000H_recolor_dark.mp4
+          - CNRD0036000H_recolor_dark_inserted.mp4
+          - CNRD0036000H_recolor_grey.mp4
+          - CNRD0036000H_recolor_grey_inserted.mp4
+          - CNRD0036000H_rotate_180.mp4
+          - CNRD0036000H_rotate_180_inserted.mp4
+          - CNRD0036000H_rotate_90.mp4
+          - CNRD0036000H_rotate_90_inserted.mp4
+          - CNRD0036000H_scale_down_black.mp4
+          - CNRD0036000H_scale_down_black_inserted.mp4
+          - CNRD0036000H_scale_down_noise.mp4
+          - CNRD0036000H_scale_down_noise_inserted.mp4
+          - CNRD0036000H_scale_up.mp4
+          - CNRD0036000H_scale_up_inserted.mp4
+          - CNRD0036000H_snowflakes.mp4
+          - CNRD0036000H_snowflakes_inserted.mp4
+          - CNRD0036000H_speed_down.mp4
+          - CNRD0036000H_speed_down_inserted.mp4
+          - CNRD0036000H_speed_up.mp4
+          - CNRD0036000H_speed_up_inserted.mp4
+          - CNUL0179000H_exact_match.mp4
+          - CNUL0179000H_exact_match_inserted.mp4
+          - CNUL0179000H_frame_rate_down.mp4
+          - CNUL0179000H_frame_rate_down_inserted.mp4
+          - CNUL0179000H_frame_rate_up.mp4
+          - CNUL0179000H_frame_rate_up_inserted.mp4
+          - CNUL0179000H_mirror.mp4
+          - CNUL0179000H_mirror_inserted.mp4
+          - CNUL0179000H_pic_in_pic_large.mp4
+          - CNUL0179000H_pic_in_pic_large_inserted.mp4
+          - CNUL0179000H_pic_in_pic_small.mp4
+          - CNUL0179000H_pic_in_pic_small_inserted.mp4
+          - CNUL0179000H_projection.mp4
+          - CNUL0179000H_projection_inserted.mp4
+          - CNUL0179000H_recolor_dark.mp4
+          - CNUL0179000H_recolor_dark_inserted.mp4
+          - CNUL0179000H_recolor_grey.mp4
+          - CNUL0179000H_recolor_grey_inserted.mp4
+          - CNUL0179000H_rotate_180.mp4
+          - CNUL0179000H_rotate_180_inserted.mp4
+          - CNUL0179000H_rotate_90.mp4
+          - CNUL0179000H_rotate_90_inserted.mp4
+          - CNUL0179000H_scale_down_black.mp4
+          - CNUL0179000H_scale_down_black_inserted.mp4
+          - CNUL0179000H_scale_down_noise.mp4
+          - CNUL0179000H_scale_down_noise_inserted.mp4
+          - CNUL0179000H_scale_up.mp4
+          - CNUL0179000H_scale_up_inserted.mp4
+          - CNUL0179000H_snowflakes.mp4
+          - CNUL0179000H_snowflakes_inserted.mp4
+          - CNUL0179000H_speed_down.mp4
+          - CNUL0179000H_speed_down_inserted.mp4
+          - CNUL0179000H_speed_up.mp4
+          - CNUL0179000H_speed_up_inserted.mp4 
+    needs: firstquery
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        ref: pipeline-rewrite
+    - name: deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libavcodec-dev libavresample-dev libavformat-dev libswscale-dev libgtk-3-dev libboost-dev libeigen3-dev libtbb-dev
+    
+    - name: Cache OpenCV
+      id: cache-opencv
+      uses: actions/cache@v1
+      with:
+        path: OpenCV
+        key: OpenCV-nofail3
+    
+    - name: Install OpenCV
+      run: |
+        cd $GITHUB_WORKSPACE/OpenCV/build
+        sudo make install
+        
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake ../
+        
+    - name: make
+      run: cmake --build build/ 
+    
+    - name: Cache Database
+      id: cache-database
+      uses: actions/cache@v1
+      with:
+        path: id-pirated-vid-db
+        key: id-pirated-vid-db-nofail
+
+    - name: Download Database
+      if: steps.cache-database.outputs.cache-hit != 'true'
+      run: git clone https://github.com/cnagda/id-pirated-vid-db.git
+    
+    # Download the video from the attackvids repo
+    - name: download video
+      run: |
+        echo ${ATTACKREPO}${{ matrix.vid }}
+        curl -LJO ${ATTACKREPO}${{ matrix.vid }}
+        ls
+        mkdir results
+        python3 python/tester.py ${{ matrix.vid }} id-pirated-vid-db/database > ${{ matrix.vid }}.txt
+  
+    - name: upload result
+      uses: actions/upload-artifact@v1
+      with:
+        name: results
+        path: ${{ matrix.vid }}.txt
+  
+  combine-results:
+    needs: secondquery
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          ref: pipeline-rewrite
+        
+      - name: Download artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: results
+
+      - name: Make report
+        run: |
+          cd python
+          python3 make_report.py ../results > ../report.txt
+          cd ..
+          
+      - name: Upload report
+        uses: actions/upload-artifact@v1
+        with:
+          name: report
+          path: report.txt
+          

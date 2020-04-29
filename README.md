@@ -37,6 +37,17 @@ cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local \
  -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF <opencv_src>
 ```
 
+Alternatively
+```
+cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local \
+ -DOPENCV_EXTRA_MODULES_PATH=<opencv_contrib>/modules \
+-D WITH_CUDA=ON -D WITH_VA=ON -D WITH_VA_INTEL=ON -D WITH_CUBLAS=ON \
+-D WITH_FFMPEG=ON -D WITH_OPENMP=ON  -DOPENCV_ENABLE_NONFREE=ON \
+ -D BUILD_EXAMPLES=OFF -D WITH_GTK=ON -D BUILD_opencv_apps=OFF -D BUILD_DOCS=OFF \
+ -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF -DWITH_CUBLAS=ON -DWITH_MKL=ON \
+ -DMKL_USE_MULTITHREAD=ON -DMKL_WITH_TBB=ON -DWITH_TBB=ON <opencv_src>
+```
+
 ## Using ffmpeg
 
 To read in an mp4 and dump all the frames through ffmpeg ->
