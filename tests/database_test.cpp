@@ -192,8 +192,6 @@ TEST_F(DatabaseSuite, QueryAdapter)
     saveVocabulary(constructFrameVocabulary(db, db.getConfig().KFrames, 10), db);
     saveVocabulary(constructSceneVocabulary(db, db.getConfig().KScenes), db);
 
-    db.saveVideo(*in_saved);
-
     auto loaded_ptr = db.loadVideo("sample.mp4");
 
     ASSERT_TRUE(loaded_ptr);
@@ -214,7 +212,7 @@ TEST_F(DatabaseSuite, QueryAdapter)
             std::cout << "SIFT descriptors don't match" << std::endl;
             return false;
         }
-        if(!matEqual(a.frameDescriptor, b.frameDescriptor)) {
+        if(cosineSimilarity(a.frameDescriptor, b.frameDescriptor) < 0.95) {
             std::cout << a.frameDescriptor << std::endl;
             std::cout << b.frameDescriptor << std::endl;
             std::cout << "frame bag doesn't match" << std::endl;
@@ -230,12 +228,6 @@ TEST_F(DatabaseSuite, QueryAdapter)
 
     auto original_scenes = read_all(*make_query_adapter(input, db).getScenes());
     EXPECT_TRUE(equal(original_scenes.begin(), original_scenes.end(), loaded_scenes.begin(), loaded_scenes.end(), [](auto &a, auto &b) {
-        if(a != b) {
-            std::cout << a.startIdx << " " << b.startIdx << std::endl;
-            std::cout << a.endIdx << " " << b.endIdx << std::endl;
-            std::cout << a.frameBag << " " << b.frameBag << std::endl;
-            return false;
-        }
-        return true;
+        return (a.startIdx = b.startIdx && a.endIdx == b.endIdx && cosineSimilarity(a.frameBag, b.frameBag) > 0.95);
     }));
 }

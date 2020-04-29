@@ -52,12 +52,12 @@ public:
     {
         if constexpr(has_arrow_v<Read>) {
             if (auto val = reader->read()) {
-                loadFrameDescriptor(*val, vocab.descriptors());
+                val->frameDescriptor = getFrameDescriptor(*val, vocab.descriptors());
                 return val;
             }
         } else {
             if (auto val = reader.read()) {
-                loadFrameDescriptor(*val, vocab.descriptors());
+                val->frameDescriptor = getFrameDescriptor(*val, vocab.descriptors());
                 return val;
             }
         }
@@ -90,14 +90,15 @@ public:
         }
         if (val) {
             std::vector<cv::Mat> frames;
-            while(f_index++ < val->startIdx) {
+            while(f_index < val->startIdx) {
                 if constexpr(has_arrow_v<FrameRead>) {
                     frame_reader->read();
                 } else {
                     frame_reader.read();
                 }
+                f_index++;
             }
-            while(f_index++ < val->endIdx) {
+            while(f_index < val->endIdx) {
                 if constexpr(has_arrow_v<FrameRead>) {
                     auto val = frame_reader->read();
                     if constexpr(std::is_same_v<typename decltype(val)::value_type, Frame>) {
@@ -113,6 +114,7 @@ public:
                         frames.push_back(*val);
                     }
                 }
+                f_index++;
             }
 
             std::cout << "bagging scene of length: " << frames.size() << std::endl;

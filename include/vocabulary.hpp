@@ -21,7 +21,7 @@ cv::Mat constructVocabulary(Matrix &&descriptors, unsigned int K, cv::Mat labels
     //cv::BOWKMeansTrainer trainer(K);
     cv::Mat retval;
 
-    kmeans(descriptors, K, labels, cv::TermCriteria(), 1, cv::KMEANS_PP_CENTERS, retval);
+    cv::kmeans(descriptors, K, labels, cv::TermCriteria(), 1, cv::KMEANS_PP_CENTERS, retval);
 
     std::cout << "About to return" << std::endl;
 
