@@ -1,9 +1,23 @@
 import pickle
 from collections import defaultdict
 import re
+import glob
+import sys
 
-# results = pickle.load(open("../../id-pirated-vid-db/results/allresults.pkl", "rb"))
-results = pickle.load(open("../results/allresults.pkl", "rb"))
+def read_artifacts(dirname):
+    fnames = glob.glob(dirname + "/*.txt")
+    dict_string = "{"
+    for fname in fnames:
+        with open(fname) as f:
+            line = f.readline()
+            dict_string = dict_string + line[1:-2] + ","
+    dict_string = dict_string[:-1] + "}"
+    return eval(dict_string)
+
+if len(sys.argv) > 1:
+    results = read_artifacts(sys.argv[1])
+else:
+    results = pickle.load(open("../results/allresults.pkl", "rb"))
 
 data = defaultdict(lambda: defaultdict(lambda: 0))
 for fname in results:
