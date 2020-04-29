@@ -204,14 +204,31 @@ TEST_F(DatabaseSuite, QueryAdapter)
     auto loaded_scenes = read_all(*loaded_ptr->getScenes());
     ASSERT_GT(loaded_scenes.size(), 0);
 
-    auto original = getSIFTVideo("../sample.mp4");
-    auto original_frames = read_all(*original.frames());
+    auto vocab = loadVocabulary<Vocab<Frame>>(db);
+    ASSERT_TRUE(vocab);
+
+    auto original_frames = read_all(*input.frames(*vocab));
 
     EXPECT_TRUE(equal(original_frames.begin(), original_frames.end(), loaded.begin(), loaded.end(), [](auto &a, auto &b) {
-        return matEqual(a.descriptors, b.descriptors);
+        if(!matEqual(a.descriptors, b.descriptors)) {
+            std::cout << "SIFT descriptors don't match" << std::endl;
+            return false;
+        }
+        if(!matEqual(a.frameDescriptor, b.frameDescriptor)) {
+            std::cout << a.frameDescriptor << std::endl;
+            std::cout << b.frameDescriptor << std::endl;
+            std::cout << "frame bag doesn't match" << std::endl;
+            return false;
+        }
+        if(!matEqual(a.colorHistogram, b.colorHistogram)) {
+            std::cout << "color histogram doesn't match" << std::endl;
+            return false;
+        }
+
+        return true;
     }));
 
-    auto original_scenes = read_all(*make_query_adapter(original, db).getScenes());
+    auto original_scenes = read_all(*make_query_adapter(input, db).getScenes());
     EXPECT_TRUE(equal(original_scenes.begin(), original_scenes.end(), loaded_scenes.begin(), loaded_scenes.end(), [](auto &a, auto &b) {
         if(a != b) {
             std::cout << a.startIdx << " " << b.startIdx << std::endl;

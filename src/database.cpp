@@ -37,117 +37,6 @@ size_t getHash(ifstream &input)
     return std::hash<std::string>{}(read);
 }
 
-class CaptureSource : public ICursor<cv::UMat>
-{
-    VideoCapture cap;
-
-public:
-    CaptureSource(const std::string &filename) : cap(filename, cv::CAP_ANY) {}
-
-    std::optional<cv::UMat> read() override
-    {
-        UMat image;
-
-        if (cap.read(image))
-        {
-            return image;
-        }
-
-        return std::nullopt;
-    }
-};
-
-class ColorSource : public ICursor<cv::Mat> {
-    CaptureSource source;
-    ScaleImage scale;
-    ExtractColorHistogram color;
-    size_t counter = 0;
-
-public:
-    ColorSource(const std::string &filename, std::pair<int, int> cropsize) 
-            : source(filename), scale(cropsize){};
-
-    std::optional<cv::Mat> read() override
-    {
-        if (auto image = source.read())
-        {
-            if(counter++ % 40 == 0) {
-                std::cout << "video frame: " << counter - 1 << std::endl;
-            }
-            
-            scale(*image);
-            return color(*image);
-        }
-        return std::nullopt;
-    }
-};
-
-class FrameSource : public ICursor<Frame>
-{
-    CaptureSource source;
-    std::function<void(UMat, Frame)> callback;
-    ScaleImage scale;
-    ExtractColorHistogram color;
-    ExtractSIFT sift;
-    size_t counter = 0;
-
-public:
-    FrameSource(const std::string &filename, std::function<void(UMat, Frame)> callback,
-                std::pair<int, int> cropsize) : source(filename), callback(callback), scale(cropsize){};
-
-    std::optional<Frame> read() override
-    {
-        if (auto image = source.read())
-        {
-            if(counter++ % 40 == 0) {
-                std::cout << "video frame: " << counter - 1 << std::endl;
-            }
-            
-            auto scaled = scale(*image);
-            
-            if (callback) {
-                auto frame = sift.withKeyPoints(scaled);
-                frame.colorHistogram = color(scaled);
-                callback(*image, frame);
-                return frame;
-            }
-            
-            auto colorHistogram = color(scaled);
-            auto descriptors = sift(scaled);
-            return Frame{descriptors, cv::Mat(), colorHistogram};
-        }
-        return std::nullopt;
-    }
-};
-
-std::unique_ptr<ICursor<cv::UMat>> SIFTVideo::images() const
-{
-    return std::make_unique<CaptureSource>(filename);
-}
-
-std::unique_ptr<ICursor<cv::Mat>> SIFTVideo::color() const
-{
-    return std::make_unique<ColorSource>(filename, cropsize);
-}
-
-std::unique_ptr<ICursor<Frame>> SIFTVideo::frames() const
-{
-    return std::make_unique<FrameSource>(filename, callback, cropsize);
-}
-
-SIFTVideo::SIFTVideo(const std::string &filename, std::function<void(cv::UMat, Frame)> callback, std::pair<int, int> cropsize)
-    : IVideo(fs::path(filename).filename()), filename(filename), callback(callback), cropsize(cropsize) {}
-
-SIFTVideo getSIFTVideo(const std::string &filepath, std::function<void(UMat, Frame)> callback, std::pair<int, int> cropsize)
-{
-    return {filepath, callback, cropsize};
-}
-
-const std::string SerializableScene::vocab_name = "SceneVocab.mat";
-const std::string Frame::vocab_name = "FrameVocab.mat";
-
-template <typename T>
-const std::string Vocab<T>::vocab_name = T::vocab_name;
 
 template <typename Read>
 class frame_bag_adapter : public ICursor<Frame>
@@ -265,12 +154,130 @@ public:
     }
 };
 
+
+class CaptureSource : public ICursor<cv::UMat>
+{
+    VideoCapture cap;
+
+public:
+    CaptureSource(const std::string &filename) : cap(filename, cv::CAP_ANY) {}
+
+    std::optional<cv::UMat> read() override
+    {
+        UMat image;
+
+        if (cap.read(image))
+        {
+            return image;
+        }
+
+        return std::nullopt;
+    }
+};
+
+class ColorSource : public ICursor<cv::Mat> {
+    CaptureSource source;
+    ScaleImage scale;
+    ExtractColorHistogram color;
+    size_t counter = 0;
+
+public:
+    ColorSource(const std::string &filename, std::pair<int, int> cropsize) 
+            : source(filename), scale(cropsize){};
+
+    std::optional<cv::Mat> read() override
+    {
+        if (auto image = source.read())
+        {
+            if(counter++ % 40 == 0) {
+                std::cout << "video frame: " << counter - 1 << std::endl;
+            }
+            
+            scale(*image);
+            return color(*image);
+        }
+        return std::nullopt;
+    }
+};
+
+class FrameSource : public ICursor<Frame>
+{
+    CaptureSource source;
+    std::function<void(UMat, Frame)> callback;
+    ScaleImage scale;
+    ExtractColorHistogram color;
+    ExtractSIFT sift;
+    size_t counter = 0;
+
+public:
+    FrameSource(const std::string &filename, std::function<void(UMat, Frame)> callback,
+                std::pair<int, int> cropsize) : source(filename), callback(callback), scale(cropsize){};
+
+    std::optional<Frame> read() override
+    {
+        if (auto image = source.read())
+        {
+            if(counter++ % 40 == 0) {
+                std::cout << "video frame: " << counter - 1 << std::endl;
+            }
+            
+            auto scaled = scale(*image);
+            
+            if (callback) {
+                auto frame = sift.withKeyPoints(scaled);
+                frame.colorHistogram = color(scaled);
+                callback(*image, frame);
+                return frame;
+            }
+            
+            auto colorHistogram = color(scaled);
+            auto descriptors = sift(scaled);
+            return Frame{descriptors, cv::Mat(), colorHistogram};
+        }
+        return std::nullopt;
+    }
+};
+
+std::unique_ptr<ICursor<cv::UMat>> SIFTVideo::images() const
+{
+    return std::make_unique<CaptureSource>(filename);
+}
+
+std::unique_ptr<ICursor<cv::Mat>> SIFTVideo::color() const
+{
+    return std::make_unique<ColorSource>(filename, cropsize);
+}
+
+std::unique_ptr<ICursor<Frame>> SIFTVideo::frames() const
+{
+    return std::make_unique<FrameSource>(filename, callback, cropsize);
+}
+
+std::unique_ptr<ICursor<Frame>> SIFTVideo::frames(const Vocab<Frame>& vocab) const {
+    frame_bag_adapter source{FrameSource{filename, callback, cropsize}, vocab};
+    return std::make_unique<decltype(source)>(std::move(source));
+}
+
+SIFTVideo::SIFTVideo(const std::string &filename, std::function<void(cv::UMat, Frame)> callback, std::pair<int, int> cropsize)
+    : IVideo(fs::path(filename).filename()), filename(filename), callback(callback), cropsize(cropsize) {}
+
+SIFTVideo getSIFTVideo(const std::string &filepath, std::function<void(UMat, Frame)> callback, std::pair<int, int> cropsize)
+{
+    return {filepath, callback, cropsize};
+}
+
+const std::string SerializableScene::vocab_name = "SceneVocab.mat";
+const std::string Frame::vocab_name = "FrameVocab.mat";
+
+template <typename T>
+const std::string Vocab<T>::vocab_name = T::vocab_name;
+
 std::unique_ptr<ICursor<Frame>> DatabaseVideo::frames() const
 {
     auto frame_source = make_frame_source(db.getFileLoader(), name);
     auto vocab = loadVocabulary<Vocab<Frame>>(db);
 
-    if (loadStrategy == Eager &&
+    if (db.loadStrategy == Eager &&
         db.loadMetadata().frameHash != loadMetadata().frameHash &&
         vocab)
     {
@@ -287,7 +294,7 @@ std::unique_ptr<ICursor<SerializableScene>> DatabaseVideo::getScenes() const
 {
     auto scene_source = make_scene_source(db.getFileLoader(), name);
     auto vocab = loadVocabulary<Vocab<SerializableScene>>(db);
-    if (loadStrategy == Eager &&
+    if (db.loadStrategy == Eager &&
         db.loadMetadata() != loadMetadata() &&
         vocab)
     {
@@ -346,6 +353,21 @@ auto make_cursor_source(std::unique_ptr<ICursor<T>> source)
         }
         fc.stop();
         return ordered_adapter<T, size_t>{};
+    };
+}
+
+template<typename Read>
+auto make_cursor_source(Read&& source)
+{
+    size_t index = 0;
+    return [source = std::forward<Read>(source), index](tbb::flow_control &fc) mutable {
+        auto val = source.read();
+        if (val)
+        {
+            return ordered_adapter<typename decltype(val)::value_type, size_t>{index++, *val};
+        }
+        fc.stop();
+        return ordered_adapter<typename decltype(val)::value_type, size_t>{};
     };
 }
 
@@ -409,7 +431,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         && vocab)
     {
         saveMetadata.frameHash = db_metadata.frameHash;
-        auto frame_source = make_cursor_source(video.frames());
+        auto frame_source = make_cursor_source(make_frame_source(loader, video.name));
         ExtractFrame extractFrame(*vocab);
         SaveFrameSink saveFrame(video.name, getFileLoader());
 
@@ -424,15 +446,15 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
             tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, saveFrame));
     }
     if (strategy->shouldComputeScenes() 
-        && (metadata.frameHash != db_metadata.frameHash || metadata.threshold != db_metadata.threshold)
+        && metadata.threshold != db_metadata.threshold
         && config.threshold != -1)
     {
         saveMetadata.threshold = config.threshold;
         loader.clearScenes(video.name);
         size_t index = 0;
-        scene_detect_cursor scenes{*video.frames(), config.threshold};
+        scene_detect_cursor scenes{make_color_source(loader, video.name), config.threshold};
         while(auto scene = scenes.read()) loader.saveScene(video.name, index++, *scene);
-        metadata.sceneCount = index;
+        saveMetadata.sceneCount = index;
     }
     if (strategy->shouldBaggifyScenes()
         && (metadata != db_metadata)
@@ -440,7 +462,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
     {
         saveMetadata.sceneHash = db_metadata.sceneHash;
         size_t index = 0;
-        scene_bag_adapter adapter{video.getScenes(), make_frame_bag_source(loader, video.name), *sceneVocab};
+        scene_bag_adapter adapter{make_scene_source(loader, video.name), make_frame_bag_source(loader, video.name), *sceneVocab};
         while(auto scene = adapter.read()) loader.saveScene(video.name, index++, *scene);
     }
 

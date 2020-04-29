@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <memory>
 #include "database_iface.hpp"
+#include "vocab_type.hpp"
 
 #define HBINS 32
 #define SBINS 30
@@ -41,6 +42,7 @@ struct SIFTVideo : public IVideo
     SIFTVideo(const std::string& filename = "", std::function<void(cv::UMat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
 
     std::unique_ptr<ICursor<Frame>> frames() const;
+    std::unique_ptr<ICursor<Frame>> frames(const Vocab<Frame>&) const;
     std::unique_ptr<ICursor<cv::UMat>> images() const;
     std::unique_ptr<ICursor<cv::Mat>> color() const;
 };

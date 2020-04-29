@@ -122,6 +122,12 @@ auto inline make_frame_source(const FileLoader& loader, const std::string& video
     }}};
 }
 
+auto inline make_sift_source(const FileLoader& loader, const std::string& videoName) {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
+        return loader.readFrameFeatures(videoName, index++);
+    }}};
+}
+
 auto inline make_frame_bag_source(const FileLoader& loader, const std::string& videoName) {
     return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
         return loader.readFrameBag(videoName, index++);

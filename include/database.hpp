@@ -86,7 +86,6 @@ public:
 class DatabaseVideo : public IVideo
 {
     const FileDatabase &db;
-    StrategyType loadStrategy;
 
 public:
     DatabaseVideo() = delete;
