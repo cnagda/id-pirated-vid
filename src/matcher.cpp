@@ -5,6 +5,7 @@
 #include "matcher.hpp"
 #include "sw.hpp"
 #include "vocabulary.hpp"
+#include <type_traits>
 
 std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<float>& distances, int min_scene_length)
 {
@@ -256,22 +257,33 @@ double boneheadedSimilarity(IVideo &v1, IVideo &v2, std::function<double(Frame, 
     return total / len;
 }*/
 
-template<typename SceneRead>
-std::optional<MatchInfo> internal_findMatch(SceneRead&& reader, const FileDatabase &db)
+template<typename Reader>
+std::optional<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &db)
 {
+    typedef typename decltype(reader.read())::value_type value_type;
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
 
     MatchInfo match{};
     std::vector<cv::Mat> targetScenes;
-    while(auto scene = reader.read()) targetScenes.push_back(scene->frameBag);
+
+    if constexpr(std::is_same_v<value_type, SerializableScene>)
+        while(auto scene = reader.read()) targetScenes.push_back(scene->frameBag);
+    else if constexpr(std::is_same_v<value_type, Frame>)
+        while(auto frame = reader.read()) targetScenes.push_back(frame->frameDescriptor);
 
     for (auto v2 : db.listVideos())
     {
         std::cout << "Calculating match for " << v2 << std::endl;
         std::vector<cv::Mat> knownScenes;
         auto v = db.loadVideo(v2);
-        auto scenes = v->getScenes();
-        while(auto scene = scenes->read()) knownScenes.push_back(scene->frameBag);
+
+        if constexpr(std::is_same_v<value_type, SerializableScene>) {
+            auto scenes = v->getScenes();
+            while(auto scene = scenes->read()) knownScenes.push_back(scene->frameBag);
+        } else if constexpr(std::is_same_v<value_type, Frame>) {
+            auto frames = v->frames();
+            while(auto frame = frames->read()) knownScenes.push_back(frame->frameDescriptor);
+        }
 
         auto &&alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 3, 2);
         std::cout << targetScenes.size() << " " << knownScenes.size() << std::endl;
@@ -300,6 +312,14 @@ std::optional<MatchInfo> findMatch(QueryVideo& video, const FileDatabase &db) {
 
 std::optional<MatchInfo> findMatch(QueryVideo&& video, const FileDatabase &db) {
     return internal_findMatch(*video.getScenes(), db);
+}
+
+std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<Frame>> frames, const FileDatabase &db) {
+    return internal_findMatch(*frames, db);
+}
+
+std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<SerializableScene>> scenes, const FileDatabase &db) {
+    return internal_findMatch(*scenes, db);
 }
 
 double ColorComparator::operator()(const Frame &f1, const Frame &f2) const

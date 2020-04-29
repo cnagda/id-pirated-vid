@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     if (argc < 3)
     {
         // TODO: better args parsing
-        printf("usage: ./query <Database_Path> <test_video>\n");
+        printf("usage: ./query <Database_Path> <test_video> --frames \n");
         return -1;
     }
 
@@ -38,9 +38,18 @@ int main(int argc, char **argv)
         std::cerr << "Could not open ./results/resultcache.txt" << std::endl;
     }
 
+    auto video = getSIFTVideo(argv[VIDPATH]);
     auto &fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
-    auto video2 = make_query_adapter(getSIFTVideo(argv[VIDPATH]), fd);
-    auto match = findMatch(video2, fd);
+    auto video2 = make_query_adapter(video, fd);
+
+    std::optional<MatchInfo> match;
+    
+    if(argc == 4) {
+        match = findMatch(video.frames(), fd);
+    } else if(argc == 3) {
+        match = findMatch(video2, fd);
+    }
+
     std::string bestmatch = "";
     if (match)
     {

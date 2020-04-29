@@ -82,5 +82,7 @@ QueryVideo make_query_adapter(const DatabaseVideo&);
 
 std::optional<MatchInfo> findMatch(QueryVideo& target, const FileDatabase &db);
 std::optional<MatchInfo> findMatch(QueryVideo&& target, const FileDatabase &db);
+std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<Frame>>, const FileDatabase &db);
+std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<SerializableScene>>, const FileDatabase &db);
 
 #endif
