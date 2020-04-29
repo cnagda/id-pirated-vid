@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+      with:
+        ref: pipeline-rewrite
     - name: deps
       run: |
         sudo apt-get update
@@ -308,6 +310,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+      with:
+        ref: pipeline-rewrite
     - name: deps
       run: |
         sudo apt-get update
@@ -453,6 +457,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+      with:
+        ref: pipeline-rewrite
     - name: deps
       run: |
         sudo apt-get update
@@ -511,6 +517,8 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
+        with:
+          ref: pipeline-rewrite
         
       - name: Download artifacts
         uses: actions/download-artifact@v1
