@@ -59,7 +59,7 @@ TEST_F(DatabaseFixture, NotInDatabase)
     {
         std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;
     }
-    EXPECT_FALSE(match.has_value());
+    EXPECT_LT(match->matchConfidence, 6);
 }
 
 TEST_F(DatabaseFixture, InDatabase)
