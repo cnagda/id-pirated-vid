@@ -6,6 +6,12 @@
 #include <opencv2/core/types.hpp>
 #include <opencv2/core/mat.hpp>
 #include <algorithm>
+#include <memory>
+#include "database_iface.hpp"
+#include "vocab_type.hpp"
+
+#define HBINS 32
+#define SBINS 30
 
 inline bool keyPointEqual(const cv::KeyPoint &a, const cv::KeyPoint &b)
 {
@@ -27,19 +33,19 @@ inline bool matEqual(const cv::Mat &a, const cv::Mat &b)
 struct Frame;
 struct SerializableScene;
 
-struct SIFTVideo
+struct SIFTVideo : public IVideo
 {
-    using size_type = std::vector<Frame>::size_type;
+    std::string filename;
+    std::function<void(cv::UMat, Frame)> callback;
+    std::pair<int, int> cropsize;
 
-    std::vector<Frame> SIFTFrames;
-    SIFTVideo() : SIFTFrames(){};
-    SIFTVideo(const std::vector<Frame> &frames) : SIFTFrames(frames){};
-    SIFTVideo(std::vector<Frame> &&frames) : SIFTFrames(frames){};
-    std::vector<Frame> &frames() & { return SIFTFrames; };
-    size_type frameCount() { return SIFTFrames.size(); };
+    SIFTVideo(const std::string& filename = "", std::function<void(cv::UMat, Frame)> callback = nullptr, std::pair<int, int> cropsize = {600, 700});
+
+    std::unique_ptr<ICursor<Frame>> frames() const;
+    std::unique_ptr<ICursor<Frame>> frames(const Vocab<Frame>&) const;
+    std::unique_ptr<ICursor<cv::UMat>> images() const;
+    std::unique_ptr<ICursor<cv::Mat>> color() const;
 };
-
-typedef SIFTVideo::size_type v_size;
 
 struct Frame
 {
@@ -64,31 +70,33 @@ struct Frame
                matEqual(frameDescriptor, f2.frameDescriptor) &&
                matEqual(colorHistogram, f2.colorHistogram);
     }
+
+    bool operator!=(const Frame& f) const {
+        return !(*this == f);
+    }
+
     static const std::string vocab_name;
 };
 
 struct SerializableScene
 {
     cv::Mat frameBag;
-    v_size startIdx, endIdx;
+    size_t startIdx, endIdx;
     const static std::string vocab_name;
 
-    SerializableScene() : frameBag(), startIdx(), endIdx(){};
-    SerializableScene(v_size startIdx, v_size endIdx) : startIdx(startIdx), endIdx(endIdx), frameBag(){};
-    SerializableScene(const cv::Mat &matrix, v_size startIdx, v_size endIdx) : startIdx(startIdx), endIdx(endIdx), frameBag(matrix){};
+    SerializableScene() = default;
+    SerializableScene(std::pair<size_t, size_t> pair) : SerializableScene(pair.first, pair.second) {}
+    SerializableScene(size_t startIdx, size_t endIdx) : startIdx(startIdx), endIdx(endIdx) {};
+    SerializableScene(const cv::Mat &matrix, size_t startIdx, size_t endIdx) : startIdx(startIdx), endIdx(endIdx), frameBag(matrix){};
 
-    template <typename Video>
-    inline auto getFrameRange(Video &&video) const
-    {
-        auto &frames = video.frames();
-        return getFrameRange(frames.begin(),
-                             typename std::iterator_traits<decltype(frames.begin())>::iterator_category());
+    bool operator==(const SerializableScene& scene) const {
+        return startIdx == scene.startIdx &&
+            endIdx == scene.endIdx &&
+            matEqual(frameBag, scene.frameBag);
     }
 
-    template <typename It>
-    inline auto getFrameRange(It begin, std::random_access_iterator_tag) const
-    {
-        return std::make_pair(begin + startIdx, begin + endIdx);
+    bool operator!=(const SerializableScene& scene) const {
+        return !(*this == scene);
     }
 };
 

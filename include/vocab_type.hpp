@@ -6,13 +6,10 @@
 class ContainerVocab {
 private:
     cv::Mat desc;
-    std::string hash;
 public:
     ContainerVocab() = default;
-    ContainerVocab(const cv::Mat& descriptors) : desc(descriptors), hash() {};
-    std::string getHash() const {
-        return hash;
-    }
+    ContainerVocab(const cv::Mat& descriptors) : desc(descriptors) {};
+
     cv::Mat descriptors() const {
         return desc;
     }

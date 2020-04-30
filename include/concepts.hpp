@@ -33,4 +33,15 @@ struct is_frame_iterator<It,
 template <typename T>
 inline constexpr bool is_frame_iterator_v = is_frame_iterator<T>::value;
 
+template <typename T, typename = void>
+struct has_arrow : std::false_type {};
+                   template <typename T>
+                   struct has_arrow<T, std::void_t<decltype(std::declval<T>().operator->())>>
+    : std::true_type
+{
+};
+
+template <typename T>
+inline constexpr bool has_arrow_v = has_arrow<T>::value;
+
 #endif

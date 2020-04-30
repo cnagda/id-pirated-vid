@@ -8,6 +8,9 @@
 namespace fs = std::experimental::filesystem;
 
 void clearDir(fs::path path);
+std::string getAlphas(const std::string &input);
+void createFolder(const std::string &folder_name);
+std::string to_string(const fs::path &);
 
 template <class T, class RankType>
 struct ordered_adapter
@@ -29,22 +32,22 @@ private:
 public:
     FileLoader(const std::string& path) : rootDir(path) {};
 
-    std::optional<Frame> readFrame(const std::string &videoName, v_size index) const;
-    std::optional<cv::Mat> readFrameFeatures(const std::string &videoName, v_size index) const;
-    std::optional<cv::Mat> readFrameColorHistogram(const std::string &videoName, v_size index) const;
-    std::optional<cv::Mat> readFrameBag(const std::string &videoName, v_size index) const;
+    std::optional<Frame> readFrame(const std::string &videoName, size_t index) const;
+    std::optional<cv::Mat> readFrameFeatures(const std::string &videoName, size_t index) const;
+    std::optional<cv::Mat> readFrameColorHistogram(const std::string &videoName, size_t index) const;
+    std::optional<cv::Mat> readFrameBag(const std::string &videoName, size_t index) const;
 
-    std::optional<SerializableScene> readScene(const std::string &videoName, v_size index) const;
+    std::optional<SerializableScene> readScene(const std::string &videoName, size_t index) const;
 
-    bool saveFrame(const std::string &videoName, v_size index, const Frame &frame) const;
-    bool saveFrameFeatures(const std::string &videoName, v_size index, const cv::Mat &mat) const;
-    bool saveFrameColorHistogram(const std::string &videoName, v_size index, const cv::Mat &mat) const;
-    bool saveFrameBag(const std::string &videoName, v_size index, const cv::Mat &mat) const;
+    bool saveFrame(const std::string &videoName, size_t index, const Frame &frame) const;
+    bool saveFrameFeatures(const std::string &videoName, size_t index, const cv::Mat &mat) const;
+    bool saveFrameColorHistogram(const std::string &videoName, size_t index, const cv::Mat &mat) const;
+    bool saveFrameBag(const std::string &videoName, size_t index, const cv::Mat &mat) const;
 
-    bool saveScene(const std::string &videoName, v_size index, const SerializableScene &scene) const;
+    bool saveScene(const std::string &videoName, size_t index, const SerializableScene &scene) const;
 
     template <typename Range>
-    bool saveRange(Range &&range, const std::string &video, v_size offset) const
+    bool saveRange(Range &&range, const std::string &video, size_t offset) const
     {
         return std::all_of(std::begin(range), std::end(range), [this, &video, &offset](const auto &element) mutable {
             if constexpr (std::is_convertible_v<decltype(element), SerializableScene>)
@@ -63,32 +66,23 @@ public:
     void clearScenes(const std::string &videoName) const;
 };
 
-// TODO think of how to use these, templated
-/* Example strategies
-class IVideoLoadStrategy {
-public:
-    virtual std::unique_ptr<IVideo> operator()(const std::string& findKey) const = 0;
-    virtual ~IVideoLoadStrategy() = default;
-};
-
- */
 
 class AggressiveStorageStrategy : public IVideoStorageStrategy
 {
 public:
-    inline StrategyType getType() const { return Eager; };
-    inline bool shouldBaggifyFrames(IVideo &video) override { return true; };
-    inline bool shouldComputeScenes(IVideo &video) override { return true; };
-    inline bool shouldBaggifyScenes(IVideo &video) override { return true; };
+    inline StrategyType getType() const override { return Eager; };
+    inline bool shouldBaggifyFrames() const override { return true; };
+    inline bool shouldComputeScenes() const override { return true; };
+    inline bool shouldBaggifyScenes() const override { return true; };
 };
 
 class LazyStorageStrategy : public IVideoStorageStrategy
 {
 public:
-    inline StrategyType getType() const { return Lazy; };
-    inline bool shouldBaggifyFrames(IVideo &video) override { return false; };
-    inline bool shouldComputeScenes(IVideo &video) override { return false; };
-    inline bool shouldBaggifyScenes(IVideo &video) override { return false; };
+    inline StrategyType getType() const override { return Lazy; };
+    inline bool shouldBaggifyFrames() const override { return false; };
+    inline bool shouldComputeScenes() const override { return false; };
+    inline bool shouldBaggifyScenes() const override { return false; };
 };
 
 struct AggressiveLoadStrategy
@@ -102,18 +96,54 @@ struct LazyLoadStrategy
 };
 
 // converts a functor to the concept required by get_distances
-template<typename F> struct distance_adapter {
+template<typename F> struct read_adapter {
     F f;
-    distance_adapter(F&& f) : f(f) {}
-    distance_adapter(const F& f) : f(f) {}
+    read_adapter(F&& f) : f(f) {}
+    read_adapter(const F& f) : f(f) {}
 
-    auto read() { return f(); }
+    constexpr auto read() { return f(); }
 };
 
-auto inline make_distance_source(const FileLoader& loader, const std::string& videoName) {
-    return distance_adapter{[&loader, &videoName, index = 0]() mutable {
+template <typename Read>
+using read_value_t = typename decltype(std::declval<Read>().read())::value_type;
+
+template <typename Read>
+struct cursor_adapter : public ICursor<read_value_t<Read>>
+{
+    Read reader;
+    cursor_adapter(Read &&r) : reader(std::move(r)) {}
+    cursor_adapter(const Read &r) : reader(r) {}
+    constexpr std::optional<read_value_t<Read>> read() override { return reader.read(); }
+};
+
+auto inline make_frame_source(const FileLoader& loader, const std::string& videoName) {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
+        return loader.readFrame(videoName, index++);
+    }}};
+}
+
+auto inline make_sift_source(const FileLoader& loader, const std::string& videoName) {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
+        return loader.readFrameFeatures(videoName, index++);
+    }}};
+}
+
+auto inline make_frame_bag_source(const FileLoader& loader, const std::string& videoName) {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
+        return loader.readFrameBag(videoName, index++);
+    }}};
+}
+
+auto inline make_scene_source(const FileLoader& loader, const std::string& videoName) {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
+        return loader.readScene(videoName, index++);
+    }}};
+}
+
+auto inline make_color_source(const FileLoader& loader, const std::string& videoName) {
+    return cursor_adapter{read_adapter{[&loader, &videoName, index = 0]() mutable {
         return loader.readFrameColorHistogram(videoName, index++);
-    }};
+    }}};
 }
 
 #endif

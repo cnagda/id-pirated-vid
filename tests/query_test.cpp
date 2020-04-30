@@ -27,15 +27,11 @@ protected:
                                             RuntimeArguments{200, 20, 30});
 
         {
-            auto video = make_video_adapter(
-                getSIFTVideo("../coffee.mp4"), "coffee.mp4");
-            db->saveVideo(video);
+            db->saveVideo(getSIFTVideo("../coffee.mp4"));
         }
 
         {
-            auto video = make_video_adapter(
-                getSIFTVideo("../crab.mp4"), "crab.mp4");
-            db->saveVideo(video);
+            db->saveVideo(getSIFTVideo("../crab.mp4"));
         }
 
         saveVocabulary(constructFrameVocabulary(*db, 200), *db);
@@ -57,22 +53,37 @@ std::unique_ptr<FileDatabase> DatabaseFixture::db;
 
 TEST_F(DatabaseFixture, NotInDatabase)
 {
-    auto video = make_query_adapter(*db, getSIFTVideo("../sample.mp4"), "sample.mp4");
+    auto video = make_query_adapter(getSIFTVideo("../sample.mp4"), *db);
     auto match = findMatch(video, *db);
     if (match)
     {
         std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;
     }
-    EXPECT_FALSE(match.has_value());
+    EXPECT_LT(match->matchConfidence, 6);
 }
 
 TEST_F(DatabaseFixture, InDatabase)
 {
     auto video = db->loadVideo(db->listVideos()[0]);
-    auto match = findMatch(*video, *db);
-    ASSERT_TRUE(match.has_value());
+    ASSERT_TRUE(video);
+    auto match = findMatch(make_query_adapter(*video), *db);
+    ASSERT_TRUE(match);
     auto topMatch = match.value();
+    auto scenes = read_all(*video->getScenes());
     EXPECT_EQ(topMatch.video, video->name);
     EXPECT_EQ(topMatch.startFrame, 0);
-    EXPECT_EQ(topMatch.endFrame, video->getScenes().size());
+    EXPECT_EQ(topMatch.endFrame, scenes.size());
+}
+
+
+TEST_F(DatabaseFixture, InDatabaseQueryAdapter)
+{
+    auto video = make_query_adapter(getSIFTVideo("../coffee.mp4"), *db);
+    auto match = findMatch(video, *db);
+    ASSERT_TRUE(match);
+    auto topMatch = match.value();
+    auto scenes = read_all(*db->loadVideo("coffee.mp4")->getScenes());
+    EXPECT_EQ(topMatch.video, video.name);
+    EXPECT_EQ(topMatch.startFrame, 0);
+    EXPECT_EQ(topMatch.endFrame, scenes.size());
 }

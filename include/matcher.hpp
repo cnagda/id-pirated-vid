@@ -62,9 +62,27 @@ public:
     double operator()(const cv::Mat &, const cv::Mat &) const;
 };
 
-double boneheadedSimilarity(IVideo &v1, IVideo &v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter);
+class QueryVideo : public IVideo
+{
+    std::unique_ptr<ICursor<SerializableScene>> scenes;
+
+public:
+    QueryVideo(const IVideo &source, std::unique_ptr<ICursor<SerializableScene>> scenes)
+        : IVideo(source), scenes(std::move(scenes)){};
+
+    std::unique_ptr<ICursor<SerializableScene>> getScenes() { return std::move(scenes); };
+};
 
 class FileDatabase;
-std::optional<MatchInfo> findMatch(IVideo &target, FileDatabase &db);
+class DatabaseVideo;
+class SIFTVideo;
+
+QueryVideo make_query_adapter(const SIFTVideo&, const FileDatabase&);
+QueryVideo make_query_adapter(const DatabaseVideo&);
+
+std::optional<MatchInfo> findMatch(QueryVideo& target, const FileDatabase &db);
+std::optional<MatchInfo> findMatch(QueryVideo&& target, const FileDatabase &db);
+std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<Frame>>, const FileDatabase &db);
+std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<SerializableScene>>, const FileDatabase &db);
 
 #endif

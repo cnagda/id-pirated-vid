@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     if (argc < 3)
     {
         // TODO: better args parsing
-        printf("usage: ./query <Database_Path> <test_video>\n");
+        printf("usage: ./query <Database_Path> <test_video> --frames \n");
         return -1;
     }
 
@@ -38,10 +38,18 @@ int main(int argc, char **argv)
         std::cerr << "Could not open ./results/resultcache.txt" << std::endl;
     }
 
+    auto video = getSIFTVideo(argv[VIDPATH]);
     auto &fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
-    std::string videoname = fs::path(argv[VIDPATH]).filename().string();
-    auto video2 = make_query_adapter(fd, getSIFTVideo(argv[VIDPATH]), "totallydifferenttestvid.mp4");
-    auto match = findMatch(video2, fd);
+    auto video2 = make_query_adapter(video, fd);
+
+    std::optional<MatchInfo> match;
+    
+    if(argc == 4) {
+        match = findMatch(video.frames(), fd);
+    } else if(argc == 3) {
+        match = findMatch(video2, fd);
+    }
+
     std::string bestmatch = "";
     if (match)
     {
@@ -57,7 +65,7 @@ int main(int argc, char **argv)
                 count++;
                 std::cout << "Alignment " << count << ", Score: " << a.score << std::endl;
                 std::cout << "Scene range in " << match->video << ": [" << a.startKnown << ", " << a.endKnown << ")" << std::endl;
-                std::cout << "Scene range in " << videoname << ": [" << a.startUnknown << ", " << a.endUnknown << ")" << std::endl
+                std::cout << "Scene range in " << video2.name << ": [" << a.startUnknown << ", " << a.endUnknown << ")" << std::endl
                           << std::endl;
             }
         }

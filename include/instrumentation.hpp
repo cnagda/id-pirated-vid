@@ -10,15 +10,12 @@
 
 namespace fs = std::experimental::filesystem;
 
-template <typename T>
-using optional_ref = std::optional<std::reference_wrapper<T>>;
-
 struct FrameSimilarityInfo
 {
     double similarity;
     IVideo::size_type f1Idx, f2Idx;
-    const optional_ref<IVideo> v1;
-    const optional_ref<IVideo> v2;
+    const std::optional<IVideo> v1;
+    const std::optional<IVideo> v2;
 };
 
 typedef std::string Label;
@@ -55,10 +52,7 @@ public:
     {
         if (info.v1 && info.v2)
         {
-            auto &v1_ = info.v1->get();
-            auto &v2_ = info.v2->get();
-            auto &known = (v1_.name == target.name) ? v2_ : v1_;
-
+            auto& known = (info.v1->name == target.name) ? *info.v2 : *info.v1;
             videoTracker[known.name].push_back({info.f1Idx, info.similarity});
         }
     }
@@ -68,7 +62,7 @@ public:
         for (auto &[name, points] : videoTracker)
         {
             std::vector<Point2f> dataCopy(points);
-            std::sort(dataCopy.begin(), dataCopy.end(), [](Point2f p1, Point2f p2) { return p1.x < p2.x; });
+            std::sort(dataCopy.begin(), dataCopy.end(), [](auto p1, auto p2) { return p1.x < p2.x; });
             out.push_back({name, dataCopy});
         }
 

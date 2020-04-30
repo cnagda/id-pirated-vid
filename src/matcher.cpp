@@ -5,8 +5,7 @@
 #include "matcher.hpp"
 #include "sw.hpp"
 #include "vocabulary.hpp"
-#include <boost/range/adaptors.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
+#include <type_traits>
 
 std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<float>& distances, int min_scene_length)
 {
@@ -62,8 +61,8 @@ Vocab<Frame> constructFrameVocabulary(const FileDatabase &database, unsigned int
     for (auto video : database.listVideos())
     {
         auto v = database.loadVideo(video);
-        auto &frames = v->frames();
-        for (auto i = frames.begin(); i < frames.end(); i += speedinator)
+        auto frames = v->frames();
+        while(auto i = frames->read())
             descriptors.push_back(i->descriptors);
     }
     cv::UMat copy;
@@ -86,8 +85,8 @@ Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase &database, 
     for (auto video : database.listVideos())
     {
         auto v = database.loadVideo(video);
-        auto &frames = v->frames();
-        for (auto i = frames.begin(); i < frames.end(); i += speedinator)
+        auto frames = v->frames();
+        while(auto i = frames->read())
             descriptors.push_back(getFrameDescriptor(*i, d));
     }
 
@@ -160,8 +159,8 @@ Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, 
     for (auto video : database.listVideos())
     {
         auto v = database.loadVideo(video);
-        auto &frames = v->frames();
-        for (auto i = frames.begin(); i < frames.end(); i += speedinator)
+        auto frames = v->frames();
+        while(auto i = frames->read())
         {
             descriptor_levels[0].push_back(i->descriptors);
             // limit largest kmeans run
@@ -209,8 +208,8 @@ Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase
     for (auto video : database.listVideos())
     {
         auto v = database.loadVideo(video);
-        auto &frames = v->frames();
-        for (auto i = frames.begin(); i < frames.end(); i += speedinator){
+        auto frames = v->frames();
+        while(auto i = frames->read()){
             descriptor_levels.push_back(loadFrameDescriptor(*i, d));
 			if(descriptor_levels[0].rows >= N){
 				overflow(descriptor_levels, K, N, 0);
@@ -233,7 +232,7 @@ Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase
     // can return empty matrix if data has fewer than K descriptors
     return Vocab<SerializableScene>(descriptor_levels.back());
 }
-
+/*
 double boneheadedSimilarity(IVideo &v1, IVideo &v2, std::function<double(Frame, Frame)> comparator, SimilarityReporter reporter)
 {
     auto frames1 = v1.frames();
@@ -241,43 +240,50 @@ double boneheadedSimilarity(IVideo &v1, IVideo &v2, std::function<double(Frame, 
 
     double total = 0;
 
-    auto len = std::min(frames1.size(), frames2.size());
+    auto len = std::min(v1.frameCount(), v2.frameCount());
 
     for (decltype(len) i = 0; i < len; i++)
     {
-        auto t = comparator(frames1[i], frames2[i]);
+        auto f1 = frames1->read();
+        auto f2 = frames2->read();
+        auto t = comparator(f1, f2);
         if (reporter)
             reporter(FrameSimilarityInfo{t, i, i,
-                                         std::ref(v1), std::ref(v2)});
+                                         v1, v2});
 
         total += (t != -1) ? t : 0;
     }
 
     return total / len;
-}
+}*/
 
-std::optional<MatchInfo> findMatch(IVideo &target, FileDatabase &db)
+template<typename Reader>
+std::optional<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &db)
 {
+    typedef typename decltype(reader.read())::value_type value_type;
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
-    auto deref = [&target, &db](auto i) { return loadSceneDescriptor(i, target, db); };
 
     MatchInfo match{};
     std::vector<cv::Mat> targetScenes;
-    boost::push_back(targetScenes, target.getScenes() | boost::adaptors::transformed(deref));
+
+    if constexpr(std::is_same_v<value_type, SerializableScene>)
+        while(auto scene = reader.read()) targetScenes.push_back(scene->frameBag);
+    else if constexpr(std::is_same_v<value_type, Frame>)
+        while(auto frame = reader.read()) targetScenes.push_back(frame->frameDescriptor);
 
     for (auto v2 : db.listVideos())
     {
-        if (v2 == target.name)
-        {
-            continue;
-        }
-
         std::cout << "Calculating match for " << v2 << std::endl;
         std::vector<cv::Mat> knownScenes;
         auto v = db.loadVideo(v2);
 
-        auto deref = [&v, &db](auto i) { return loadSceneDescriptor(i, *v, db); };
-        boost::push_back(knownScenes, v->getScenes() | boost::adaptors::transformed(deref));
+        if constexpr(std::is_same_v<value_type, SerializableScene>) {
+            auto scenes = v->getScenes();
+            while(auto scene = scenes->read()) knownScenes.push_back(scene->frameBag);
+        } else if constexpr(std::is_same_v<value_type, Frame>) {
+            auto frames = v->frames();
+            while(auto frame = frames->read()) knownScenes.push_back(frame->frameDescriptor);
+        }
 
         auto &&alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 3, 2);
         std::cout << targetScenes.size() << " " << knownScenes.size() << std::endl;
@@ -298,4 +304,44 @@ std::optional<MatchInfo> findMatch(IVideo &target, FileDatabase &db)
     }
 
     return std::nullopt;
+}
+
+std::optional<MatchInfo> findMatch(QueryVideo& video, const FileDatabase &db) {
+    return internal_findMatch(*video.getScenes(), db);
+}
+
+std::optional<MatchInfo> findMatch(QueryVideo&& video, const FileDatabase &db) {
+    return internal_findMatch(*video.getScenes(), db);
+}
+
+std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<Frame>> frames, const FileDatabase &db) {
+    return internal_findMatch(*frames, db);
+}
+
+std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<SerializableScene>> scenes, const FileDatabase &db) {
+    return internal_findMatch(*scenes, db);
+}
+
+double ColorComparator::operator()(const Frame &f1, const Frame &f2) const
+{
+    return operator()(f1.colorHistogram, f2.colorHistogram);
+}
+double ColorComparator::operator()(const cv::Mat &f1, const cv::Mat &f2) const
+{
+    if (f1.rows != HBINS || f1.cols != SBINS)
+    {
+        std::cerr
+            << "rows: " << f1.rows
+            << " cols: " << f1.cols << std::endl;
+        throw std::runtime_error("color histogram is wrong size");
+    }
+
+    if (f1.size() != f2.size())
+    {
+        throw std::runtime_error("colorHistograms not matching");
+    }
+
+    auto subbed = f1 - f2;
+    auto val = cv::sum(subbed)[0];
+    return std::abs(val);
 }

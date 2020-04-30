@@ -2,36 +2,24 @@
 #include "imgproc.hpp"
 #include <opencv2/xfeatures2d.hpp>
 #include <vector>
-#include "vocabulary.hpp"
 #include "matcher.hpp"
 #include <cassert>
+#include <iostream>
+#include "vocabulary.hpp"
 
-#define HBINS 32
-#define SBINS 30
-
-ordered_mat VideoFrameSource::operator()(tbb::flow_control& fc)
-{
-    ordered_mat image;
-
-    if (cap.read(image.data))
-    {
-        image.rank = counter++;
-        return image;
-    }
-
-    fc.stop();
-    return image;
-}
-
-ordered_mat& ScaleImage::operator()(ordered_mat& image) const
+ordered_umat& ScaleImage::operator()(ordered_umat& image) const
 {
     image.data = scaleToTarget(image.data, cropsize.first, cropsize.second);
     return image;
 }
+cv::UMat& ScaleImage::operator()(cv::UMat& image) const
+{
+    return image = scaleToTarget(image, cropsize.first, cropsize.second);
+}
 
 ExtractSIFT::ExtractSIFT() : detector(cv::xfeatures2d::SiftFeatureDetector::create(500)) {}
 
-ordered_mat ExtractSIFT::operator()(const ordered_mat& image) const
+ordered_mat ExtractSIFT::operator()(const ordered_umat& image) const
 {
     cv::Mat descriptors;
     std::vector<cv::KeyPoint> keyPoints;
@@ -40,11 +28,34 @@ ordered_mat ExtractSIFT::operator()(const ordered_mat& image) const
     return {image.rank, descriptors};
 }
 
-ordered_mat ExtractColorHistogram::operator()(const ordered_mat& image) const
+
+cv::Mat ExtractSIFT::operator()(const cv::UMat& image) const
+{
+    cv::Mat descriptors;
+    std::vector<cv::KeyPoint> keyPoints;
+    detector->detectAndCompute(image, cv::noArray(), keyPoints, descriptors);
+
+    return descriptors;
+}
+
+Frame ExtractSIFT::withKeyPoints(const cv::UMat& image) const
+{
+    Frame frame{};
+    detector->detectAndCompute(image, cv::noArray(), frame.keyPoints, frame.descriptors);
+
+    return frame;
+}
+
+ordered_mat ExtractColorHistogram::operator()(const ordered_umat& image) const
+{
+    return {image.rank, operator()(image.data)};
+}
+
+cv::Mat ExtractColorHistogram::operator()(const cv::UMat& image) const
 {
     cv::Mat colorHistogram;
     cv::UMat hsv;
-    cv::cvtColor(image.data, hsv, cv::COLOR_BGR2HSV);
+    cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
 
     std::vector<int> histSize{HBINS, SBINS};
     // hue varies from 0 to 179, see cvtColor
@@ -57,12 +68,17 @@ ordered_mat ExtractColorHistogram::operator()(const ordered_mat& image) const
                  true);
     cv::normalize(colorHistogram, colorHistogram, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
 
-    return {image.rank, colorHistogram};
+    return colorHistogram;
 }
 
 ordered_mat ExtractFrame::operator()(const ordered_mat& frame) const
 {
-    return {frame.rank, baggify(frame.data, frameVocab.descriptors())};
+    return {frame.rank, operator()(frame.data)};
+}
+
+cv::Mat ExtractFrame::operator()(const cv::Mat& frame) const
+{
+    return baggify(frame, frameVocab.descriptors());
 }
 
 void SaveFrameSink::operator()(const ordered_frame& frame) const

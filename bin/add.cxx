@@ -7,7 +7,6 @@
 #include "database.hpp"
 #include "matcher.hpp"
 #include "imgproc.hpp"
-#include <future>
 #include "scene_detector.hpp"
 
 #define DBPATH 1
@@ -52,44 +51,45 @@ int main(int argc, char **argv)
 
     if (!isUnspecified(argv[VIDPATH]))
     {
-        auto video = make_video_adapter(getSIFTVideo(argv[VIDPATH], [DEBUG](UMat image, Frame frame) {
-                                            Mat output;
-                                            auto descriptors = frame.descriptors;
-                                            auto keyPoints = frame.keyPoints;
+        auto video = getSIFTVideo(argv[VIDPATH], [DEBUG](UMat image, Frame frame) {
+            Mat output;
+            auto descriptors = frame.descriptors;
+            auto keyPoints = frame.keyPoints;
 
-                                            if (DEBUG)
-                                            {
-                                                drawKeypoints(image, keyPoints, output);
-                                                cout << "size: " << output.total() << endl;
-                                                imshow("Display window", output);
+            if (DEBUG)
+            {
+                drawKeypoints(image, keyPoints, output);
+                cout << "size: " << output.total() << endl;
+                imshow("Display window", output);
 
-                                                waitKey(0);
+                waitKey(0);
 
-                                                auto im2 = scaleToTarget(image, 500, 700);
-                                                imshow("Display window", im2);
+                auto im2 = scaleToTarget(image, 500, 700);
+                imshow("Display window", im2);
 
-                                                waitKey(0);
-                                            }
-                                        }),
-                                        fs::path(argv[VIDPATH]).filename().string());
+                waitKey(0);
+            }
+        });
 
-        db->saveVideo(video);
+        auto saved = db->saveVideo(video);
         // get distances
-        auto distances = get_distances(make_distance_source(db->getFileLoader(), video.name), ColorComparator{});
+        auto distances = get_distances(make_color_source(db->getFileLoader(), saved->name), ColorComparator{});
 
         std::cout << "distances size: " << distances.size() << std::endl;
 
         // make graph
         TimeSeries data;
         data.name = "data";
-        for(int i = 0; i < distances.size(); i++){
+        for (int i = 0; i < distances.size(); i++)
+        {
             data.data.push_back({0, distances[i]});
         }
-        EmmaExporter().exportTimeseries(video.name + "_timeseries", "Frame number", "Distance", {data});
+        EmmaExporter().exportTimeseries(saved->name + "_timeseries", "Frame number", "Distance", {data});
         // get scenes
         auto scenes = hierarchicalScenes(distances, 30);
-        std::cout << video.name << " scenes: " << std::endl;
-        for(auto& a : scenes){
+        std::cout << saved->name << " scenes: " << std::endl;
+        for (auto &a : scenes)
+        {
             std::cout << a.first << ", " << a.second << std::endl;
         }
     }
@@ -117,60 +117,10 @@ int main(int argc, char **argv)
 
     if (shouldRecalculateFrames)
     {
-        auto vocab = loadVocabulary<Vocab<Frame>>(*db);
-        auto sceneVocab = loadVocabulary<Vocab<SerializableScene>>(*db);
-
-        if (!vocab)
+        for (auto& v : db->listVideos())
         {
-            throw std::runtime_error("no frame vocab");
-        }
-
-        for (auto entry : fs::directory_iterator(argv[DBPATH]))
-        {
-            if (fs::is_directory(entry) && fs::exists(entry.path() / "scenes"))
-            {
-                fs::remove_all(entry.path() / "scenes");
-            }
-        }
-
-        std::shared_ptr db_shared(std::move(db));
-
-        auto func = [fvocab = vocab->descriptors(), &sceneVocab](auto v, auto db) -> void {
             auto video = db->loadVideo(v);
-            try
-            {
-                for (Frame &frame : video->frames())
-                {
-                    frame.frameDescriptor = getFrameDescriptor(frame, fvocab);
-                }
-
-                auto &scenes = video->getScenes();
-
-                if (sceneVocab)
-                {
-                    for (SerializableScene &scene : scenes)
-                    {
-                        scene.frameBag = getSceneDescriptor(scene, *video, *db);
-                    }
-                }
-                db->saveVideo(*video);
-            }
-            catch (...)
-            {
-                std::cerr << "not enough info to compute scenes" << std::endl;
-            }
-        };
-
-        std::vector<std::future<void>> runners;
-
-        for (auto v : db_shared->listVideos())
-        {
-            runners.push_back(std::async(std::launch::async, func, v, db_shared));
-        }
-
-        for (auto &i : runners)
-        {
-            i.wait();
+            db->saveVideo(*video);
         }
     }
 

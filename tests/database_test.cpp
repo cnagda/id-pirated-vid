@@ -3,6 +3,7 @@
 #include <experimental/filesystem>
 #include "database.hpp"
 #include "vocabulary.hpp"
+#include "matcher.hpp"
 
 using namespace std;
 using namespace cv;
@@ -123,18 +124,17 @@ TEST_F(DatabaseSuite, FileDatabase)
                     std::make_unique<LazyStorageStrategy>(),
                     LazyLoadStrategy{},
                     RuntimeArguments{200, 20, 0.2});
-    auto video = make_video_adapter(input, "sample.mp4");
 
-    auto vid = db.saveVideo(video)->frames();
+    auto vid = read_all(*db.saveVideo(input)->frames());
     auto loaded_ptr = db.loadVideo("sample.mp4");
 
     ASSERT_TRUE(loaded_ptr);
 
-    auto &loaded = loaded_ptr->frames();
+    auto loaded = read_all(*loaded_ptr->frames());
     cout << "size: " << vid.size() << endl;
 
     EXPECT_TRUE(vid.size() > 0);
-    EXPECT_TRUE(vid.size() == loaded.size());
+    EXPECT_TRUE(vid.size() ==loaded.size());
     EXPECT_TRUE(equal(vid.begin(), vid.end(), loaded.begin()));
 }
 
@@ -145,32 +145,89 @@ TEST_F(DatabaseSuite, EagerDatabase)
                     AggressiveLoadStrategy{},
                     RuntimeArguments{200, 20, 30});
 
-    auto in = make_video_adapter(input, "sample.mp4");
-    auto in_saved = db.saveVideo(in);
+    auto in_saved = db.saveVideo(input);
     saveVocabulary(constructFrameVocabulary(db, db.getConfig().KFrames, 10), db);
 
     auto vid = db.saveVideo(*in_saved);
-    EXPECT_GT(vid->getScenes().size(), 0);
-    EXPECT_TRUE(vid->getScenes()[0].frameBag.empty());
+    auto scenes = read_all(*vid->getScenes());
+    ASSERT_GT(scenes.size(), 0);
+    EXPECT_TRUE(scenes[0].frameBag.empty());
 
     saveVocabulary(constructSceneVocabulary(db, db.getConfig().KScenes), db);
 
     auto vid_3 = db.saveVideo(*vid);
 
-    EXPECT_FALSE(vid_3->getScenes()[0].frameBag.empty());
+    auto scene = vid_3->getScenes()->read();
+    ASSERT_TRUE(scene);
+    EXPECT_FALSE(scene->frameBag.empty());
 
     auto loaded_ptr = db.loadVideo("sample.mp4");
 
     ASSERT_TRUE(loaded_ptr);
 
-    auto &loaded = loaded_ptr->frames();
-    cout << "size: " << vid->frames().size() << endl;
+    auto loaded = read_all(*loaded_ptr->frames());
+    auto frames = read_all(*vid->frames());
 
-    EXPECT_GT(vid->frames().size(), 0);
-    EXPECT_EQ(vid->frames().size(), loaded.size());
-    EXPECT_TRUE(equal(vid->frames().begin(), vid->frames().end(), loaded.begin()));
+    EXPECT_GT(frames.size(), 0);
+    EXPECT_EQ(frames.size(), loaded.size());
+    EXPECT_TRUE(equal(frames.begin(), frames.end(), loaded.begin()));
 
-    EXPECT_GT(vid->getScenes().size(), 0);
-    EXPECT_EQ(vid->getScenes().size(), loaded_ptr->getScenes().size());
-    // EXPECT_TRUE(equal(vid->getScenes().begin(), vid->getScenes().end(), loaded_ptr->getScenes().begin()));
+    auto loaded_scenes = read_all(*loaded_ptr->getScenes());
+
+    EXPECT_TRUE(equal(scenes.begin(), scenes.end(), loaded_scenes.begin(), loaded_scenes.end(), [](auto& a, auto& b){
+        return a.startIdx == b.startIdx && a.endIdx == b.endIdx;
+    }));
+}
+
+TEST_F(DatabaseSuite, QueryAdapter)
+{
+    FileDatabase db(to_string(fs::current_path() / "database_test_dir"),
+                    std::make_unique<AggressiveStorageStrategy>(),
+                    AggressiveLoadStrategy{},
+                    RuntimeArguments{200, 20, 30});
+
+    auto in_saved = db.saveVideo(input);
+    ASSERT_TRUE(in_saved);
+
+    saveVocabulary(constructFrameVocabulary(db, db.getConfig().KFrames, 10), db);
+    saveVocabulary(constructSceneVocabulary(db, db.getConfig().KScenes), db);
+
+    auto loaded_ptr = db.loadVideo("sample.mp4");
+
+    ASSERT_TRUE(loaded_ptr);
+
+    auto loaded = read_all(*loaded_ptr->frames());
+    ASSERT_GT(loaded.size(), 0);
+
+    auto loaded_scenes = read_all(*loaded_ptr->getScenes());
+    ASSERT_GT(loaded_scenes.size(), 0);
+
+    auto vocab = loadVocabulary<Vocab<Frame>>(db);
+    ASSERT_TRUE(vocab);
+
+    auto original_frames = read_all(*input.frames(*vocab));
+
+    EXPECT_TRUE(equal(original_frames.begin(), original_frames.end(), loaded.begin(), loaded.end(), [](auto &a, auto &b) {
+        if(!matEqual(a.descriptors, b.descriptors)) {
+            std::cout << "SIFT descriptors don't match" << std::endl;
+            return false;
+        }
+        if(cosineSimilarity(a.frameDescriptor, b.frameDescriptor) < 0.95) {
+            std::cout << a.frameDescriptor << std::endl;
+            std::cout << b.frameDescriptor << std::endl;
+            std::cout << "frame bag doesn't match" << std::endl;
+            return false;
+        }
+        if(!matEqual(a.colorHistogram, b.colorHistogram)) {
+            std::cout << "color histogram doesn't match" << std::endl;
+            return false;
+        }
+
+        return true;
+    }));
+
+    auto original_scenes = read_all(*make_query_adapter(input, db).getScenes());
+    EXPECT_TRUE(equal(original_scenes.begin(), original_scenes.end(), loaded_scenes.begin(), loaded_scenes.end(), [](auto &a, auto &b) {
+        return (a.startIdx == b.startIdx && a.endIdx == b.endIdx && cosineSimilarity(a.frameBag, b.frameBag) > 0.95);
+    }));
 }

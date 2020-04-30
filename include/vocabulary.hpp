@@ -8,7 +8,6 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/features2d.hpp>
 #include <string>
-#include <boost/iterator/transform_iterator.hpp>
 #include <type_traits>
 #include "vocab_type.hpp"
 #include "video.hpp"
@@ -16,15 +15,13 @@
 struct SerializableScene;
 class FileDatabase;
 
-#define FRAMES_PER_SCENE 45
-
 template <typename Matrix>
 cv::Mat constructVocabulary(Matrix &&descriptors, unsigned int K, cv::Mat labels = cv::Mat())
 {
     //cv::BOWKMeansTrainer trainer(K);
     cv::Mat retval;
 
-    kmeans(descriptors, K, labels, cv::TermCriteria(), 1, cv::KMEANS_PP_CENTERS, retval);
+    cv::kmeans(descriptors, K, labels, cv::TermCriteria(), 1, cv::KMEANS_PP_CENTERS, retval);
 
     std::cout << "About to return" << std::endl;
 
@@ -163,34 +160,6 @@ template <class Vocab>
 inline cv::Mat getFrameDescriptor(const Frame &frame, Vocab &&vocab)
 {
     return baggify(frame.descriptors, std::forward<Vocab>(vocab));
-}
-
-template <class Video, class DB>
-cv::Mat getSceneDescriptor(const SerializableScene &scene, Video &&video, DB &&database)
-{
-    auto frames = scene.getFrameRange(std::forward<Video>(video));
-    auto vocab = loadVocabulary<Vocab<Frame>>(std::forward<DB>(database));
-    auto frameVocab = loadVocabulary<Vocab<SerializableScene>>(std::forward<DB>(database));
-    if (!vocab | !frameVocab)
-    {
-        return scene.frameBag;
-    }
-    auto access = [vocab = vocab->descriptors()](auto frame) { return loadFrameDescriptor(frame, vocab); };
-    return baggify(
-        boost::make_transform_iterator(frames.first, access),
-        boost::make_transform_iterator(frames.second, access),
-        frameVocab->descriptors());
-}
-
-template <class Video, class DB>
-cv::Mat loadSceneDescriptor(SerializableScene &scene, Video &&video, DB &&db)
-{
-    if (scene.frameBag.empty())
-    {
-        scene.frameBag = getSceneDescriptor(scene, std::forward<Video>(video), std::forward<DB>(db));
-    }
-
-    return scene.frameBag;
 }
 
 template <typename Vocab>
