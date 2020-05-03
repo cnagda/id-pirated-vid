@@ -39,14 +39,7 @@ ortho_dist = 90 // slotwidth
 if(90 % slotwidth != 0):
     print("Error, bad number of intervals. Needs to be divisible by 90 or something. Not entirely sure, math is hard")
 # stores lines as tuples (x0, y0, dx=b, dy=a) based on angle
-#organized_lines = [[]] * intervals
 organized_lines = [[] for i in range(intervals)]
-
-#print(organized_lines)
-
-def pl():
-    for i in range(0, len(organized_lines)):
-        print(str(len(organized_lines[i])) + " ")
 
 if lines is not None:
     for i in range(0, len(lines)):
@@ -69,20 +62,10 @@ if lines is not None:
             angle += 360
 
         slot = round(angle / slotwidth) % intervals
-#        print("slot: " + str(slot))
-#        pl()
-#        print(organized_lines[slot])
         organized_lines[slot].append((x0, y0, b, a))
-#        print(organized_lines[slot])
-#        print(organized_lines)
 
 for i in range(0, len(organized_lines)):
-    #print(i)
-    #print(ortho_dist)
-    #print(intervals)
     next = (i + ortho_dist) % intervals
-    #print(type(i))
-    #print(type(next))
     if(len(organized_lines[i]) >= 2 and len(organized_lines[next]) >= 2):
         print(str(i) + " (" + str(i * slotwidth) + " degrees) matches " + str(next) + " (" + str(next * slotwidth) + " degrees)")
         print("lengths are " + str(len(organized_lines[i])) + " and " + str(len(organized_lines[next])))
