@@ -101,7 +101,6 @@ template<typename F> struct read_adapter {
     size_t counter = 0;
 
     read_adapter(F&& f) : f(f) {}
-    read_adapter(const F& f) : f(f) {}
 
     constexpr auto read() { return f(counter++); }
     constexpr void skip(unsigned int n) { counter += n; }
@@ -114,9 +113,7 @@ template <typename Read>
 struct cursor_adapter : public ICursor<read_value_t<Read>>
 {
     Read reader;
-    cursor_adapter(Read &&r) : reader(std::move(r)) {}
-    cursor_adapter(const Read &r) : reader(r) {}
-
+    cursor_adapter(Read &&r) : reader{std::forward<Read>(r)} {}
     constexpr std::optional<read_value_t<Read>> read() override { return reader.read(); }
     constexpr void skip(unsigned int n) override { reader.skip(n); }
 };

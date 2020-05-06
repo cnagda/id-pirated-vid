@@ -6,6 +6,7 @@
 #include "sw.hpp"
 #include "vocabulary.hpp"
 #include <type_traits>
+#include <opencv2/imgproc.hpp>
 
 std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<float>& distances, int min_scene_length)
 {
@@ -325,20 +326,12 @@ std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<SerializableScene>> s
     return internal_findMatch(*scenes, db);
 }
 
-double ColorComparator::operator()(const Frame &f1, const Frame &f2) const
+double ColorComparator2D::operator()(const Frame &f1, const Frame &f2) const
 {
     return operator()(f1.colorHistogram, f2.colorHistogram);
 }
-double ColorComparator::operator()(const cv::Mat &f1, const cv::Mat &f2) const
+double ColorComparator2D::operator()(const cv::Mat &f1, const cv::Mat &f2) const
 {
-    if (f1.rows != HBINS || f1.cols != SBINS)
-    {
-        std::cerr
-            << "rows: " << f1.rows
-            << " cols: " << f1.cols << std::endl;
-        throw std::runtime_error("color histogram is wrong size");
-    }
-
     if (f1.size() != f2.size())
     {
         throw std::runtime_error("colorHistograms not matching");
@@ -347,4 +340,18 @@ double ColorComparator::operator()(const cv::Mat &f1, const cv::Mat &f2) const
     auto subbed = f1 - f2;
     auto val = cv::sum(subbed)[0];
     return std::abs(val);
+}
+
+double ColorIntersectComparator::operator()(const Frame &f1, const Frame &f2) const
+{
+    return operator()(f1.colorHistogram, f2.colorHistogram);
+}
+double ColorIntersectComparator::operator()(const cv::Mat &f1, const cv::Mat &f2) const
+{
+    if (f1.size() != f2.size())
+    {
+        throw std::runtime_error("colorHistograms not matching");
+    }
+
+    return 1 - cv::compareHist(f1, f2, cv::HISTCMP_INTERSECT);
 }
