@@ -151,9 +151,9 @@ public:
     scene_detect_cursor() : iterator(scenes.begin()) {}
 
     template <typename Read> 
-    scene_detect_cursor(Read&& reader, double threshold)
+    scene_detect_cursor(Read&& reader, unsigned int min_scenes)
     {
-        scenes = thresholdScenes(get_distances(reader, ColorIntersectComparator{}), threshold);
+        scenes = hierarchicalScenes(get_distances(reader, ColorComparator2D{}), min_scenes);
         std::cout << "Detected scenes: " << scenes.size() << std::endl;
         iterator = scenes.begin();
     }
@@ -200,7 +200,7 @@ public:
 class ColorSource : public ICursor<cv::Mat> {
     CaptureSource source;
     ScaleImage scale;
-    ExtractLUVColorHistogram color;
+    Extract2DColorHistogram color;
     size_t counter = 0;
 
 public:
@@ -231,7 +231,7 @@ class FrameSource : public ICursor<Frame>
     CaptureSource source;
     std::function<void(UMat, Frame)> callback;
     ScaleImage scale;
-    ExtractLUVColorHistogram color;
+    Extract2DColorHistogram color;
     ExtractSIFT sift;
     size_t counter = 0;
 
@@ -417,7 +417,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
 
     ScaleImage scale(video.cropsize);
     ExtractSIFT sift;
-    ExtractLUVColorHistogram color;
+    Extract2DColorHistogram color;
     SaveFrameSink saveFrame(video.name, getFileLoader());
 
     std::atomic<size_t> frameCount = 0;
