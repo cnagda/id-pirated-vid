@@ -8,12 +8,14 @@ template <typename T>
 struct ICursor
 {
     virtual std::optional<T> read() = 0;
+    virtual void skip(unsigned int n) = 0;
 };
 
 template <typename T>
 struct NullCursor : public ICursor<T>
 {
-    inline std::optional<T> read() override { return std::nullopt; }
+    inline constexpr std::optional<T> read() override { return std::nullopt; }
+    inline constexpr void skip(unsigned int n) override {}
 };
 
 template<typename T>
