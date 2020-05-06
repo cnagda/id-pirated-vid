@@ -200,7 +200,7 @@ public:
 class ColorSource : public ICursor<cv::Mat> {
     CaptureSource source;
     ScaleImage scale;
-    ExtractLABColorHistogram color;
+    ExtractLUVColorHistogram color;
     size_t counter = 0;
 
 public:
@@ -231,7 +231,7 @@ class FrameSource : public ICursor<Frame>
     CaptureSource source;
     std::function<void(UMat, Frame)> callback;
     ScaleImage scale;
-    ExtractLABColorHistogram color;
+    ExtractLUVColorHistogram color;
     ExtractSIFT sift;
     size_t counter = 0;
 
@@ -417,7 +417,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
 
     ScaleImage scale(video.cropsize);
     ExtractSIFT sift;
-    ExtractLABColorHistogram color;
+    ExtractLUVColorHistogram color;
     SaveFrameSink saveFrame(video.name, getFileLoader());
 
     std::atomic<size_t> frameCount = 0;

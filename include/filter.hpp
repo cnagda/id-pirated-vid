@@ -49,10 +49,10 @@ public:
     cv::Mat operator()(const cv::UMat&) const;
 };
 
-class ExtractLABColorHistogram
+class ExtractLUVColorHistogram
 {
 public:
-    ExtractLABColorHistogram() {}
+    ExtractLUVColorHistogram() {}
 
     ordered_mat operator()(const ordered_umat&) const;
     cv::Mat operator()(const cv::UMat&) const;

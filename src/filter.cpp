@@ -72,16 +72,16 @@ cv::Mat Extract2DColorHistogram::operator()(const cv::UMat& image) const
 }
 
 
-ordered_mat ExtractLABColorHistogram::operator()(const ordered_umat& image) const
+ordered_mat ExtractLUVColorHistogram::operator()(const ordered_umat& image) const
 {
     return {image.rank, operator()(image.data)};
 }
 
-cv::Mat ExtractLABColorHistogram::operator()(const cv::UMat& image) const
+cv::Mat ExtractLUVColorHistogram::operator()(const cv::UMat& image) const
 {
     cv::Mat colorHistogram;
     cv::UMat lab;
-    cv::cvtColor(image, lab, cv::COLOR_BGR2Lab);
+    cv::cvtColor(image, lab, cv::COLOR_BGR2Luv);
 
     std::vector<int> histSize{8, 8, 8};
     // hue varies from 0 to 179, see cvtColor
