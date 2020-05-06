@@ -48,6 +48,14 @@ public:
     frame_bag_adapter(Read &&r, const Vocab<Frame> &v) : reader(std::move(r)), vocab(v) {}
     frame_bag_adapter(const Read &r, const Vocab<Frame> &v) : reader(r), vocab(v) {}
 
+    constexpr void skip(unsigned int n) override {
+        if constexpr(has_arrow_v<Read>) {
+            reader->skip(n);
+        } else {
+            reader.skip(n);
+        }
+    }
+
     constexpr std::optional<Frame> read() override
     {
         if constexpr(has_arrow_v<Read>) {
@@ -80,6 +88,14 @@ public:
     scene_bag_adapter(const SceneRead &s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), vocab(v) {}
     scene_bag_adapter(SceneRead &&s, const FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), vocab(v) {}
 
+    constexpr void skip(unsigned int n) override {
+        if constexpr(has_arrow_v<SceneRead>) {
+            scene_reader->skip(n);
+        } else {
+            scene_reader.skip(n);
+        }
+    }
+
     constexpr std::optional<SerializableScene> read() override
     {
         std::optional<SerializableScene> val;
@@ -90,14 +106,15 @@ public:
         }
         if (val) {
             std::vector<cv::Mat> frames;
-            while(f_index < val->startIdx) {
-                if constexpr(has_arrow_v<FrameRead>) {
-                    frame_reader->read();
-                } else {
-                    frame_reader.read();
-                }
-                f_index++;
+            if constexpr(has_arrow_v<FrameRead>) {
+                frame_reader->skip(val->startIdx - f_index);
+            } else {
+                frame_reader.skip(val->startIdx - f_index);
             }
+            
+
+            f_index = val->startIdx;
+
             while(f_index < val->endIdx) {
                 if constexpr(has_arrow_v<FrameRead>) {
                     auto val = frame_reader->read();
@@ -154,6 +171,10 @@ public:
         }
         return SerializableScene{*iterator++};
     }
+
+    constexpr void skip(unsigned int n) override {
+        iterator += n;
+    }
 };
 
 
@@ -174,6 +195,10 @@ public:
         }
 
         return std::nullopt;
+    }
+
+    void skip(unsigned int n) override {
+        for(unsigned int i = 0; i < n; i++) cap.grab();
     }
 };
 
@@ -199,6 +224,10 @@ public:
             return color(*image);
         }
         return std::nullopt;
+    }
+
+    void skip(unsigned int n) override {
+        source.skip(n);
     }
 };
 
@@ -237,6 +266,9 @@ public:
             return Frame{descriptors, cv::Mat(), colorHistogram};
         }
         return std::nullopt;
+    }
+    void skip(unsigned int n) override {
+        source.skip(n);
     }
 };
 

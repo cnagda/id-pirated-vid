@@ -113,7 +113,11 @@ struct cursor_adapter : public ICursor<read_value_t<Read>>
     Read reader;
     cursor_adapter(Read &&r) : reader(std::move(r)) {}
     cursor_adapter(const Read &r) : reader(r) {}
+
     constexpr std::optional<read_value_t<Read>> read() override { return reader.read(); }
+    constexpr void skip(unsigned int n) override {
+        for(unsigned int i = 0; i < n; i++) read();
+    }
 };
 
 auto inline make_frame_source(const FileLoader& loader, const std::string& videoName) {
