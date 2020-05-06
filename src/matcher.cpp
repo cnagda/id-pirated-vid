@@ -160,17 +160,19 @@ Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, 
     {
         auto v = database.loadVideo(video);
         auto frames = v->frames();
-        unsigned int counter = 0;
+        // unsigned int counter = 0;
         while(auto i = frames->read())
         {
-            counter++;
-            if (counter % speedinator != 0) {  continue;  }
+            // counter++;
+            // if (counter % speedinator != 0) {  continue;  }
             descriptor_levels[0].push_back(i->descriptors);
             // limit largest kmeans run
             if (descriptor_levels[0].rows >= N)
             {
                 overflow(descriptor_levels, K, N, 0);
             }
+
+            frames ->skip(speedinator);
         }
     }
 
