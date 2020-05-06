@@ -167,7 +167,7 @@ public:
         return SerializableScene{*iterator++};
     }
 
-    constexpr void skip(unsigned int n) override {
+    void skip(unsigned int n) override {
         iterator += n;
     }
 };

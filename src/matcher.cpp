@@ -21,20 +21,15 @@ std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std:
     std::vector<int> retval;
     std::sort(sorted_distances.begin(), sorted_distances.end(), [](auto l, auto r) { return l.first > r.first; });
 
-    int index = -1;
-    std::pair<float, int> current;
-
     // iterate over distances from lagest to smallest
-    while (index < (int)distances.size() - 1)
+    for(auto current: sorted_distances)
     {
-        index++;
-        current = sorted_distances[index];
         if (excluded[current.second])
         {
             continue;
         }
 
-        retval.push_back(current.second);
+        retval.push_back(current.second + 1);
 
         int low = std::max(current.second - min_scene_length, 0);
         int high = std::min(current.second + min_scene_length, (int)distances.size());

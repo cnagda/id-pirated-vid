@@ -93,7 +93,7 @@ cv::Mat ExtractLABColorHistogram::operator()(const cv::UMat& image) const
                  colorHistogram, histSize, ranges,
                  true);
     
-    //cv::normalize(colorHistogram, colorHistogram, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
+    cv::normalize(colorHistogram, colorHistogram, 1, 0, cv::NORM_L1);
 
     return colorHistogram;
 }
