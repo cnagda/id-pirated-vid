@@ -41,7 +41,8 @@ cv2.waitKey(0)
 cv2.destroyAllWindows()
 
 #edges = cv2.Canny(img,300,400)
-edges = cv2.Canny(img,100,200)
+#edges = cv2.Canny(img,100,200)
+edges = cv2.Canny(img,10,200)
 #edges = cv2.Canny(img,100,200, 7)
 
 cv2.imshow('edges', edges)

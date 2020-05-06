@@ -181,15 +181,30 @@ class Attack:
         print("mirror")
         return self.vid.fx(vfx.mirror_x)
 
+
     def pic_in_pic(self, large, small, duration):
         print("pic_in_pic")
-        othervid = large.fx(vfx.loop, duration=duration)
-        newvid = small.resize(0.35).fx(vfx.loop, duration=duration)
+
+        min_h = min(large.h, small.h)
+        othervid = large.resize(height=min_h).fx(vfx.loop, duration=duration)
+        newvid = small.resize(height=min_h).resize(0.35).fx(vfx.loop, duration=duration)
         newvid = CompositeVideoClip(
-            [othervid, newvid.set_position(("right", "top"))],
-            size=(large.w, large.h)
+            [othervid, newvid.set_position(("right", "top"))]
         )
         return newvid
+
+
+    # This is the former pic in pic when all videos were the same resolution
+    # Now that we have a mix of resolutions, it doesn't work
+    # def pic_in_pic(self, large, small, duration):
+    #     print("pic_in_pic")
+    #     othervid = large.fx(vfx.loop, duration=duration)
+    #     newvid = small.resize(0.35).fx(vfx.loop, duration=duration)
+    #     newvid = CompositeVideoClip(
+    #         [othervid, newvid.set_position(("right", "top"))],
+    #         size=(large.w, large.h)
+    #     )
+    #     return newvid
 
     def pic_in_pic_small(self):
         return self.pic_in_pic(self.base_video, self.vid, self.vid.duration)
@@ -227,10 +242,10 @@ class Attack:
             self.fps = self.vid.fps
             video = attack_function()
             video.write_videofile(vidpath, fps=self.fps, audio=False, verbose=False)
-            inserted_video = self.insert_clip(video)
-            insertname = vidname + "_inserted"
-            insertpath = os.path.join(self.destdir, insertname + ".mp4")
-            inserted_video.write_videofile(insertpath, audio=False)
+            # inserted_video = self.insert_clip(video)
+            # insertname = vidname + "_inserted"
+            # insertpath = os.path.join(self.destdir, insertname + ".mp4")
+            # inserted_video.write_videofile(insertpath, audio=False)
             del self.vid.reader
             del self.vid
 

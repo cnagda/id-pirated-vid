@@ -6,6 +6,9 @@ import os
 import pickle
 
 # NOTE: MUST BE RUN FROM ROOT FOLDER
+# Also, for this to work properly for now, DB names can't have underscores
+# Attack video naming scheme: NameInDB_kindofattack.*
+
 def main():
 
     # Read command-line args
@@ -52,9 +55,9 @@ def main():
             result = file.read()
         success = 0
         outstr = "Failure"
-        # Name is assumed to be first part of video name with .mpg
-        pirated_from = vidname.split("_")[0] + ".mpg"
-        if result == pirated_from:
+        # Name is assumed to contain a single extension ie .mpg
+        pirated_from = vidname.split("_")[0]
+        if result.split(".")[0] == pirated_from:
             success = 1
             outstr = "Success"
         # print(outstr)
