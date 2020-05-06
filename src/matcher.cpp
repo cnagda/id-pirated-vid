@@ -8,10 +8,25 @@
 #include <type_traits>
 #include <opencv2/imgproc.hpp>
 
-std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<float>& distances, int min_scene_length)
+std::vector<std::pair<unsigned int, unsigned int>> thresholdScenes(const std::vector<double>& distances, double threshold) {
+    std::vector<std::pair<unsigned int, unsigned int>> retval;
+
+    unsigned int last = 0;
+    for(unsigned int i = 0; i < distances.size(); i++) {
+        if(distances[i] > threshold) {
+            retval.emplace_back(last, i + 1);
+            last = i + 1;
+        }
+    }
+    retval.emplace_back(last, distances.size() + 1);
+
+    return retval;
+}
+
+std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<double>& distances, int min_scene_length)
 {
     std::vector<bool> excluded(distances.size(), 0);
-    std::vector<std::pair<float, int>> sorted_distances;
+    std::vector<std::pair<double, int>> sorted_distances;
 
     for (int i = 0; i < distances.size(); i++)
     {

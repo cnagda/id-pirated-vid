@@ -55,7 +55,7 @@ cv::Mat Extract2DColorHistogram::operator()(const cv::UMat& image) const
 {
     cv::Mat colorHistogram;
     cv::UMat hsv;
-    cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
+    cv::cvtColor(image, hsv, cv::COLOR_RGB2HSV);
 
     std::vector<int> histSize{HBINS, SBINS};
     // hue varies from 0 to 179, see cvtColor
@@ -81,7 +81,7 @@ cv::Mat ExtractLUVColorHistogram::operator()(const cv::UMat& image) const
 {
     cv::Mat colorHistogram;
     cv::UMat lab;
-    cv::cvtColor(image, lab, cv::COLOR_BGR2Luv);
+    cv::cvtColor(image, lab, cv::COLOR_RGB2Luv);
 
     std::vector<int> histSize{8, 8, 8};
     // hue varies from 0 to 179, see cvtColor

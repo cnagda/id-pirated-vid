@@ -54,9 +54,9 @@ auto flatScenes(Video &video, Cmp &&comp, double threshold)
 } */
 
 template<typename Cmp, typename Source>
-std::vector<float> get_distances(Source&& fl, Cmp&& comp)
+std::vector<double> get_distances(Source&& fl, Cmp&& comp)
 {
-    std::vector<float> retval;
+    std::vector<double> retval;
     auto prev = fl.read();
 
     while (auto current = fl.read())
@@ -68,7 +68,8 @@ std::vector<float> get_distances(Source&& fl, Cmp&& comp)
     return retval;
 }
 
-std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<float>& distances, int min_scene_length);
+std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<double>& distances, int min_scene_length);
+std::vector<std::pair<unsigned int, unsigned int>> thresholdScenes(const std::vector<double>& distances, double threshold);
 
 template <class Video, typename Cmp>
 auto convolutionalDetector(Video &video, Cmp &&comp, double threshold, unsigned int windowSize = 10)

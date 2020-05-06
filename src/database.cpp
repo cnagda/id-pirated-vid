@@ -151,9 +151,9 @@ public:
     scene_detect_cursor() : iterator(scenes.begin()) {}
 
     template <typename Read> 
-    scene_detect_cursor(Read&& reader, unsigned int min_scenes)
+    scene_detect_cursor(Read&& reader, double threshold)
     {
-        scenes = hierarchicalScenes(get_distances(reader, ColorIntersectComparator{}), min_scenes);
+        scenes = thresholdScenes(get_distances(reader, ColorIntersectComparator{}), threshold);
         std::cout << "Detected scenes: " << scenes.size() << std::endl;
         iterator = scenes.begin();
     }
