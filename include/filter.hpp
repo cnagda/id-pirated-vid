@@ -7,7 +7,6 @@
 #include "video.hpp"
 #include <opencv2/features2d.hpp>
 #include "storage.hpp"
-#include "vocabulary.hpp"
 #include <memory>
 #include <string>
 
