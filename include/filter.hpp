@@ -49,12 +49,14 @@ public:
     cv::Mat operator()(const cv::UMat&) const;
 };
 
+class BOWExtractor;
+
 class ExtractFrame
 {
-    Vocab<Frame> frameVocab;
+    std::unique_ptr<BOWExtractor> extractor;
 
 public:
-    ExtractFrame(const Vocab<Frame> &frameVocab) : frameVocab(frameVocab) {}
+    ExtractFrame(const Vocab<Frame> &frameVocab);
 
     ordered_mat operator()(const ordered_mat&) const;
     cv::Mat operator()(const cv::Mat&) const;

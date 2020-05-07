@@ -42,11 +42,11 @@ template <typename Read>
 class frame_bag_adapter : public ICursor<Frame>
 {
     Read reader;
-    Vocab<Frame> vocab;
+    BOWExtractor extractor;
 
 public:
-    frame_bag_adapter(Read &&r, const Vocab<Frame> &v) : reader(std::move(r)), vocab(v) {}
-    frame_bag_adapter(const Read &r, const Vocab<Frame> &v) : reader(r), vocab(v) {}
+    frame_bag_adapter(Read &&r, const Vocab<Frame> &v) : reader(std::move(r)), extractor(v) {}
+    frame_bag_adapter(const Read &r, const Vocab<Frame> &v) : reader(r), extractor(v) {}
 
     constexpr void skip(unsigned int n) override {
         if constexpr(has_arrow_v<Read>) {
@@ -60,12 +60,12 @@ public:
     {
         if constexpr(has_arrow_v<Read>) {
             if (auto val = reader->read()) {
-                val->frameDescriptor = getFrameDescriptor(*val, vocab.descriptors());
+                val->frameDescriptor = getFrameDescriptor(*val, extractor);
                 return val;
             }
         } else {
             if (auto val = reader.read()) {
-                val->frameDescriptor = getFrameDescriptor(*val, vocab.descriptors());
+                val->frameDescriptor = getFrameDescriptor(*val, extractor);
                 return val;
             }
         }
@@ -135,7 +135,7 @@ public:
             }
 
             std::cout << "bagging scene of length: " << frames.size() << std::endl;
-            val->frameBag = baggify(frames.begin(), frames.end(), vocab.descriptors());
+            val->frameBag = baggify(frames.begin(), frames.end(), BOWExtractor{vocab});
             return val;
         }
         return std::nullopt;

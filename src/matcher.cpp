@@ -78,7 +78,7 @@ Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase &database, 
     {
         throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");
     }
-    auto d = vocab->descriptors();
+    auto d = BOWExtractor(vocab->descriptors());
 
     cv::Mat descriptors;
 
@@ -203,7 +203,7 @@ Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase
     {
         throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");
     }
-    auto d = vocab->descriptors();
+    auto d = BOWExtractor(vocab->descriptors());
 
     //cv::Mat descriptors;
 
@@ -325,6 +325,11 @@ std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<Frame>> frames, const
 
 std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<SerializableScene>> scenes, const FileDatabase &db) {
     return internal_findMatch(*scenes, db);
+}
+
+double BOWComparator::operator()(Frame &f1, Frame &f2)
+{
+    return frameSimilarity(f1, f2, [this](Frame &f) { return loadFrameDescriptor(f, extractor); });
 }
 
 double ColorComparator::operator()(const Frame &f1, const Frame &f2) const

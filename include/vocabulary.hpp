@@ -47,20 +47,29 @@ Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase &database, 
 Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, unsigned int K, unsigned int N, unsigned int speedinator);
 Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase &database, unsigned int K, unsigned int N, unsigned int speedinator);
 
-template <typename Matrix, typename Vocab>
-cv::Mat baggify(Matrix &&f, Vocab &&vocab)
+class BOWExtractor {
+    cv::BOWImgDescriptorExtractor extractor;
+
+public:
+    template<typename V>
+    BOWExtractor(V&& vocab) : extractor(cv::FlannBasedMatcher::create()) {
+        if constexpr(std::is_base_of_v<ContainerVocab, std::decay_t<V>>) {
+            extractor.setVocabulary(vocab.descriptors());
+        }
+        else {
+            extractor.setVocabulary(std::forward<V>(vocab));
+        }
+    }
+
+    template<typename Input, typename Output>
+    auto compute(Input&& input, Output&& output) {
+        return extractor.compute(std::forward<Input>(input), std::forward<Output>(output));
+    }
+};
+
+template <typename Matrix, typename Extractor>
+cv::Mat baggify(Matrix &&f, Extractor &&extractor)
 {
-    cv::BOWImgDescriptorExtractor extractor(cv::FlannBasedMatcher::create());
-
-    if constexpr (std::is_invocable_v<Vocab>)
-    {
-        extractor.setVocabulary(vocab());
-    }
-    else
-    {
-        extractor.setVocabulary(vocab);
-    }
-
     cv::Mat output;
 
     if (!f.empty())
@@ -75,19 +84,19 @@ cv::Mat baggify(Matrix &&f, Vocab &&vocab)
     return output;
 }
 
-template <typename It, typename Vocab>
-cv::Mat baggify(It rangeBegin, It rangeEnd, Vocab &&vocab)
+template <typename It, typename Extractor>
+cv::Mat baggify(It rangeBegin, It rangeEnd, Extractor &&extractor)
 {
     cv::Mat accumulator;
     for (auto i = rangeBegin; i != rangeEnd; ++i)
         accumulator.push_back(*i);
-    return baggify(accumulator, std::forward<Vocab>(vocab));
+    return baggify(accumulator, std::forward<Extractor>(extractor));
 }
 
-template <typename It, typename Vocab>
-inline cv::Mat baggify(std::pair<It, It> pair, Vocab &&vocab)
+template <typename It, typename Extractor>
+inline cv::Mat baggify(std::pair<It, It> pair, Extractor &&extractor)
 {
-    return baggify(pair.first, pair.second, std::forward<Vocab>(vocab));
+    return baggify(pair.first, pair.second, std::forward<Extractor>(extractor));
 }
 
 template <typename V, typename Db>
@@ -134,47 +143,43 @@ std::optional<V> loadOrComputeVocab(Db &&db, int K)
 }
 
 // Tries to read cached value of frame descriptor, or else will build and cache it
-template <class Vocab>
-cv::Mat loadFrameDescriptor(Frame &frame, Vocab &&vocab)
+template <class Extractor>
+cv::Mat loadFrameDescriptor(Frame &frame, Extractor &&extractor)
 {
     if (frame.frameDescriptor.empty())
     {
-        frame.frameDescriptor = getFrameDescriptor(frame, std::forward<Vocab>(vocab));
+        frame.frameDescriptor = getFrameDescriptor(frame, std::forward<Extractor>(extractor));
     }
     return frame.frameDescriptor;
 }
 
 // Same as above, but does not save to cache
-template <class Vocab>
-cv::Mat loadFrameDescriptor(const Frame &frame, Vocab &&vocab)
+template <class Extractor>
+cv::Mat loadFrameDescriptor(const Frame &frame, Extractor &&extractor)
 {
     if (frame.frameDescriptor.empty())
     {
-        return getFrameDescriptor(frame, std::forward<Vocab>(vocab));
+        return getFrameDescriptor(frame, std::forward<Extractor>(extractor));
     }
     return frame.frameDescriptor;
 }
 
 // get a descriptor from frame's sift data
-template <class Vocab>
-inline cv::Mat getFrameDescriptor(const Frame &frame, Vocab &&vocab)
+template <class Extractor>
+inline cv::Mat getFrameDescriptor(const Frame &frame, Extractor &&extractor)
 {
-    return baggify(frame.descriptors, std::forward<Vocab>(vocab));
+    return baggify(frame.descriptors, std::forward<Extractor>(extractor));
 }
 
-template <typename Vocab>
 class BOWComparator
 {
-    static_assert(std::is_constructible_v<Vocab, Vocab>,
-                  "Vocab must be constructible");
-    const Vocab vocab;
+    BOWExtractor extractor;
 
 public:
-    BOWComparator(const Vocab &vocab) : vocab(vocab){};
-    double operator()(Frame &f1, Frame &f2) const
-    {
-        return frameSimilarity(f1, f2, [this](Frame &f) { return loadFrameDescriptor(f, vocab); });
-    }
+    template <typename Vocab>
+    BOWComparator(Vocab&& vocab) : extractor(std::forward<Vocab>(vocab)){};
+
+    double operator()(Frame &f1, Frame &f2);
 };
 
 #endif
