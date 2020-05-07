@@ -7,6 +7,7 @@
 #include "video.hpp"
 #include <opencv2/features2d.hpp>
 #include "storage.hpp"
+#include "vocabulary.hpp"
 #include <memory>
 #include <string>
 
@@ -49,11 +50,9 @@ public:
     cv::Mat operator()(const cv::UMat&) const;
 };
 
-class BOWExtractor;
-
 class ExtractFrame
 {
-    std::unique_ptr<BOWExtractor> extractor;
+    Vocab<Frame> vocab;
 
 public:
     ExtractFrame(const Vocab<Frame> &frameVocab);

@@ -332,6 +332,14 @@ double BOWComparator::operator()(Frame &f1, Frame &f2)
     return frameSimilarity(f1, f2, [this](Frame &f) { return loadFrameDescriptor(f, extractor); });
 }
 
+double BOWComparator::operator()(Frame &f1, Frame &f2) const
+{
+    return frameSimilarity(f1, f2, [this](Frame &f) { 
+        BOWExtractor copy{extractor};
+        return loadFrameDescriptor(f, copy); 
+    });
+}
+
 double ColorComparator::operator()(const Frame &f1, const Frame &f2) const
 {
     return operator()(f1.colorHistogram, f2.colorHistogram);

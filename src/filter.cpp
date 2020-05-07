@@ -71,7 +71,7 @@ cv::Mat ExtractColorHistogram::operator()(const cv::UMat& image) const
     return colorHistogram;
 }
 
-ExtractFrame::ExtractFrame(const Vocab<Frame> &frameVocab) : extractor(std::make_unique<BOWExtractor>(frameVocab)) {}
+ExtractFrame::ExtractFrame(const Vocab<Frame> &frameVocab) : vocab(frameVocab) {}
 
 ordered_mat ExtractFrame::operator()(const ordered_mat& frame) const
 {
@@ -80,7 +80,7 @@ ordered_mat ExtractFrame::operator()(const ordered_mat& frame) const
 
 cv::Mat ExtractFrame::operator()(const cv::Mat& frame) const
 {
-    return baggify(frame, *extractor);
+    return baggify(frame, BOWExtractor{vocab});
 }
 
 void SaveFrameSink::operator()(const ordered_frame& frame) const

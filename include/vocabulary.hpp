@@ -51,14 +51,14 @@ class BOWExtractor {
     cv::BOWImgDescriptorExtractor extractor;
 
 public:
-    template<typename V>
-    BOWExtractor(V&& vocab) : extractor(cv::FlannBasedMatcher::create()) {
-        if constexpr(std::is_base_of_v<ContainerVocab, std::decay_t<V>>) {
-            extractor.setVocabulary(vocab.descriptors());
-        }
-        else {
-            extractor.setVocabulary(std::forward<V>(vocab));
-        }
+    BOWExtractor(const BOWExtractor& w) : extractor(cv::FlannBasedMatcher::create()) {
+        extractor.setVocabulary(w.extractor.getVocabulary());
+    }
+    BOWExtractor(const ContainerVocab& vocab) : extractor(cv::FlannBasedMatcher::create()) {
+        extractor.setVocabulary(vocab.descriptors());
+    }
+    BOWExtractor(const cv::Mat& mat) : extractor(cv::FlannBasedMatcher::create()) {
+        extractor.setVocabulary(mat);
     }
 
     template<typename Input, typename Output>
@@ -179,6 +179,7 @@ public:
     template <typename Vocab>
     BOWComparator(Vocab&& vocab) : extractor(std::forward<Vocab>(vocab)){};
 
+    double operator()(Frame &f1, Frame &f2) const;
     double operator()(Frame &f1, Frame &f2);
 };
 
