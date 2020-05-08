@@ -24,7 +24,4 @@ public:
     typedef T vocab_type;
 };
 
-template <typename T>
-const std::string Vocab<T>::vocab_name = T::vocab_name;
-
 #endif

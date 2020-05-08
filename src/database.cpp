@@ -302,6 +302,9 @@ SIFTVideo getSIFTVideo(const std::string &filepath, std::function<void(UMat, Fra
 const std::string SerializableScene::vocab_name = "SceneVocab.mat";
 const std::string Frame::vocab_name = "FrameVocab.mat";
 
+template <typename T>
+const std::string Vocab<T>::vocab_name = T::vocab_name;
+
 std::unique_ptr<ICursor<Frame>> DatabaseVideo::frames() const
 {
     auto frame_source = make_frame_source(db.getFileLoader(), name);
