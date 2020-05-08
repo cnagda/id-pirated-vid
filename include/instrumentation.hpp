@@ -5,10 +5,10 @@
 #include <memory>
 #include <optional>
 #include "database_iface.hpp"
-#include <experimental/filesystem>
+#include "fs_compat.hpp"
 #include <functional>
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 struct FrameSimilarityInfo
 {

@@ -18,8 +18,6 @@
 using namespace cv;
 using namespace std;
 
-namespace fs = std::experimental::filesystem;
-
 int isUnspecified(std::string arg)
 {
     return (arg == "-1");

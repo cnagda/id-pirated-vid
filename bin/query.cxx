@@ -3,12 +3,11 @@
 #include <string>
 #include "database.hpp"
 #include "matcher.hpp"
-#include <experimental/filesystem>
+#include "fs_compat.hpp"
 
 #define DBPATH 1
 #define VIDPATH 2
 
-namespace fs = std::experimental::filesystem;
 using namespace std;
 
 bool file_exists(const string &fname)

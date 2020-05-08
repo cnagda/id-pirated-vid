@@ -12,7 +12,6 @@
 #include "vocab_type.hpp"
 #include "video.hpp"
 
-struct SerializableScene;
 class FileDatabase;
 
 template <typename Matrix>

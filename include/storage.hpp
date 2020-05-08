@@ -2,10 +2,10 @@
 #define STORAGE_HPP
 
 #include "database_iface.hpp"
-#include <experimental/filesystem>
 #include "video.hpp"
+#include "fs_compat.hpp"
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 void clearDir(fs::path path);
 std::string getAlphas(const std::string &input);

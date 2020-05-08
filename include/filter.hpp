@@ -24,8 +24,8 @@ class ScaleImage
 public:
     ScaleImage(std::pair<std::uint16_t, std::uint16_t> cropsize) : cropsize(cropsize) {}
 
-    ordered_umat& operator()(ordered_umat&) const;
-    cv::UMat& operator()(cv::UMat&) const;
+    ordered_umat operator()(const ordered_umat&) const;
+    cv::UMat operator()(const cv::UMat&) const;
 };
 
 class ExtractSIFT

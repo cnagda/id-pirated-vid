@@ -13,7 +13,6 @@ public:
     cv::Mat descriptors() const {
         return desc;
     }
-    static const std::string vocab_name;
 };
 
 template<typename T>
@@ -24,5 +23,8 @@ public:
     static const std::string vocab_name;
     typedef T vocab_type;
 };
+
+template <typename T>
+const std::string Vocab<T>::vocab_name = T::vocab_name;
 
 #endif

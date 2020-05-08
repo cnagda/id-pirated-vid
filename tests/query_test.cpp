@@ -1,11 +1,8 @@
 #include "gtest/gtest.h"
 #include <iostream>
-#include <experimental/filesystem>
 #include "database.hpp"
 #include "matcher.hpp"
 #include "vocabulary.hpp"
-
-namespace fs = std::experimental::filesystem;
 
 class DatabaseFixture : public ::testing::Test
 {

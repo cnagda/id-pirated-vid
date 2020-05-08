@@ -2,13 +2,11 @@
 #define DATABASE_H
 #include <vector>
 #include <memory>
-#include <experimental/filesystem>
+#include "fs_compat.hpp"
 #include <optional>
 #include "database_iface.hpp"
 #include "vocab_type.hpp"
 #include "storage.hpp"
-
-namespace fs = std::experimental::filesystem;
 
 struct RuntimeArguments
 {

@@ -9,6 +9,7 @@ struct ICursor
 {
     virtual std::optional<T> read() = 0;
     virtual void skip(unsigned int n) = 0;
+    virtual ~ICursor() = default;
 };
 
 template <typename T>

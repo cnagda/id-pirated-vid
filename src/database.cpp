@@ -1,5 +1,5 @@
 #include "database.hpp"
-#include <experimental/filesystem>
+#include "fs_compat.hpp"
 #include <memory>
 #include "vocabulary.hpp"
 #include "matcher.hpp"
@@ -17,7 +17,6 @@
 
 using namespace std;
 using namespace cv;
-namespace fs = std::experimental::filesystem;
 
 size_t getHash(ifstream &input)
 {
@@ -48,7 +47,7 @@ public:
     frame_bag_adapter(Read &&r, const Vocab<Frame> &v) : reader(std::move(r)), extractor(v) {}
     frame_bag_adapter(const Read &r, const Vocab<Frame> &v) : reader(r), extractor(v) {}
 
-    constexpr void skip(unsigned int n) override {
+    void skip(unsigned int n) override {
         if constexpr(has_arrow_v<Read>) {
             reader->skip(n);
         } else {
@@ -56,7 +55,7 @@ public:
         }
     }
 
-    constexpr std::optional<Frame> read() override
+    std::optional<Frame> read() override
     {
         if constexpr(has_arrow_v<Read>) {
             if (auto val = reader->read()) {
@@ -88,7 +87,7 @@ public:
     scene_bag_adapter(const SceneRead &s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), vocab(v) {}
     scene_bag_adapter(SceneRead &&s, const FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), vocab(v) {}
 
-    constexpr void skip(unsigned int n) override {
+    void skip(unsigned int n) override {
         if constexpr(has_arrow_v<SceneRead>) {
             scene_reader->skip(n);
         } else {
@@ -96,7 +95,7 @@ public:
         }
     }
 
-    constexpr std::optional<SerializableScene> read() override
+    std::optional<SerializableScene> read() override
     {
         std::optional<SerializableScene> val;
         if constexpr(has_arrow_v<SceneRead>) {
@@ -163,7 +162,7 @@ public:
         iterator = scenes.begin();
     }
 
-    constexpr std::optional<SerializableScene> read() override
+    std::optional<SerializableScene> read() override
     {
         if (iterator == scenes.end())
         {
@@ -172,7 +171,7 @@ public:
         return SerializableScene{*iterator++};
     }
 
-    constexpr void skip(unsigned int n) override {
+    void skip(unsigned int n) override {
         iterator += n;
     }
 };
@@ -303,9 +302,6 @@ SIFTVideo getSIFTVideo(const std::string &filepath, std::function<void(UMat, Fra
 const std::string SerializableScene::vocab_name = "SceneVocab.mat";
 const std::string Frame::vocab_name = "FrameVocab.mat";
 
-template <typename T>
-const std::string Vocab<T>::vocab_name = T::vocab_name;
-
 std::unique_ptr<ICursor<Frame>> DatabaseVideo::frames() const
 {
     auto frame_source = make_frame_source(db.getFileLoader(), name);
@@ -432,12 +428,12 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
             return source(fc);
         }) &
         tbb::make_filter<ordered_umat, ordered_umat>(tbb::filter::parallel, scale) & 
-        tbb::make_filter<ordered_umat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto& mat) {
+        tbb::make_filter<ordered_umat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto mat) {
             Frame f;
             f.descriptors = sift(mat).data;
             return make_pair(f, mat);
         }) &
-        tbb::make_filter<std::pair<Frame, ordered_umat>, ordered_frame>(tbb::filter::parallel, [&](auto& pair) {
+        tbb::make_filter<std::pair<Frame, ordered_umat>, ordered_frame>(tbb::filter::parallel, [&](auto pair) {
             pair.first.colorHistogram = color(pair.second).data;
             return ordered_frame{pair.second.rank, pair.first};
         }) &
@@ -473,7 +469,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
             tbb::make_filter<void, ordered_frame>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc) {
                 return frame_source(fc);
             }) &
-            tbb::make_filter<ordered_frame, ordered_frame>(tbb::filter::parallel, [&](auto& frame){
+            tbb::make_filter<ordered_frame, ordered_frame>(tbb::filter::parallel, [&](auto frame){
                 frame.data.frameDescriptor = extractFrame(frame.data.descriptors);
                 return frame;
             }) &
@@ -486,7 +482,10 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         saveMetadata.threshold = config.threshold;
         loader.clearScenes(video.name);
         size_t index = 0;
-        scene_detect_cursor scenes{make_color_source(loader, video.name), config.threshold};
+
+        scene_detect_cursor scenes{make_color_source(loader, video.name), 
+            static_cast<unsigned int>(config.threshold)};
+
         while(auto scene = scenes.read()) loader.saveScene(video.name, index++, *scene);
         saveMetadata.sceneCount = index;
     }
@@ -588,7 +587,9 @@ QueryVideo make_query_adapter(const SIFTVideo &video, const FileDatabase &db)
         throw std::runtime_error("no scene vocab available");
     }
 
-    scene_bag_adapter adapter{scene_detect_cursor{*video.color(), threshold}, frame_bag_adapter{video.frames(), *frame_vocab}, *scene_vocab};
+    scene_bag_adapter adapter{
+        scene_detect_cursor{*video.color(), static_cast<unsigned int>(threshold)}, 
+        frame_bag_adapter{video.frames(), *frame_vocab}, *scene_vocab};
 
     return QueryVideo{video, std::make_unique<decltype(adapter)>(std::move(adapter))};
 }

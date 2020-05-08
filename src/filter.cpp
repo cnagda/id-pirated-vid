@@ -7,14 +7,13 @@
 #include <iostream>
 #include "vocabulary.hpp"
 
-ordered_umat& ScaleImage::operator()(ordered_umat& image) const
+ordered_umat ScaleImage::operator()(const ordered_umat& image) const
 {
-    image.data = scaleToTarget(image.data, cropsize.first, cropsize.second);
-    return image;
+    return {image.rank, scaleToTarget(image.data, cropsize.first, cropsize.second)};
 }
-cv::UMat& ScaleImage::operator()(cv::UMat& image) const
-{
-    return image = scaleToTarget(image, cropsize.first, cropsize.second);
+
+cv::UMat ScaleImage::operator()(const cv::UMat& image) const {
+    return scaleToTarget(image, cropsize.first, cropsize.second);
 }
 
 ExtractSIFT::ExtractSIFT() : detector(cv::xfeatures2d::SiftFeatureDetector::create(500)) {}

@@ -1,8 +1,6 @@
 #include "instrumentation.hpp"
-#include <experimental/filesystem>
+#include "fs_compat.hpp"
 #include <fstream>
-
-namespace fs = std::experimental::filesystem;
 
 void EmmaExporter::exportTimeseries(const Label &title, const Label &xaxis, const Label &yaxis, const std::vector<TimeSeries> &data) const
 {

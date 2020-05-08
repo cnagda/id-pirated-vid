@@ -1,13 +1,11 @@
 #include "gtest/gtest.h"
 #include <iostream>
-#include <experimental/filesystem>
 #include "database.hpp"
 #include "vocabulary.hpp"
 #include "matcher.hpp"
 
 using namespace std;
 using namespace cv;
-namespace fs = experimental::filesystem;
 
 #ifdef CLEAN_NAMES
 TEST(DatabaseSuite, getAlphas)

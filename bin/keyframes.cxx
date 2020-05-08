@@ -5,7 +5,6 @@
 #include "subset.hpp"
 #include <chrono>
 
-namespace fs = std::experimental::filesystem;
 using namespace cv;
 using namespace std;
 using namespace chrono;
