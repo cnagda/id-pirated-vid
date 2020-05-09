@@ -96,14 +96,25 @@ struct LazyLoadStrategy
 };
 
 // converts a functor to the concept required by get_distances
-template<typename F> struct read_adapter {
+template<typename F> struct read_index_adapter {
     F f;
     size_t counter = 0;
 
-    read_adapter(F&& f) : f(f) {}
+    read_index_adapter(F&& f) : f(f) {}
 
     constexpr auto read() { return f(counter++); }
     constexpr void skip(unsigned int n) { counter += n; }
+};
+
+// converts a functor to the concept required by get_distances
+template<typename F> struct read_adapter {
+    F f;
+    read_adapter(F&& f) : f(f) {}
+
+    constexpr auto read() { return f(); }
+    constexpr void skip(unsigned int n) { 
+        for(unsigned int i = 0; i < n; i++) read();
+    }
 };
 
 template <typename Read>
@@ -119,31 +130,31 @@ struct cursor_adapter : public ICursor<read_value_t<Read>>
 };
 
 auto inline make_frame_source(const FileLoader& loader, const std::string& videoName) {
-    return cursor_adapter{read_adapter{[&loader, &videoName](auto index) mutable {
+    return cursor_adapter{read_index_adapter{[&loader, &videoName](auto index) mutable {
         return loader.readFrame(videoName, index);
     }}};
 }
 
 auto inline make_sift_source(const FileLoader& loader, const std::string& videoName) {
-    return cursor_adapter{read_adapter{[&loader, &videoName](auto index) mutable {
+    return cursor_adapter{read_index_adapter{[&loader, &videoName](auto index) mutable {
         return loader.readFrameFeatures(videoName, index);
     }}};
 }
 
 auto inline make_frame_bag_source(const FileLoader& loader, const std::string& videoName) {
-    return cursor_adapter{read_adapter{[&loader, &videoName](auto index) mutable {
+    return cursor_adapter{read_index_adapter{[&loader, &videoName](auto index) mutable {
         return loader.readFrameBag(videoName, index);
     }}};
 }
 
 auto inline make_scene_source(const FileLoader& loader, const std::string& videoName) {
-    return cursor_adapter{read_adapter{[&loader, &videoName](auto index) mutable {
+    return cursor_adapter{read_index_adapter{[&loader, &videoName](auto index) mutable {
         return loader.readScene(videoName, index);
     }}};
 }
 
 auto inline make_color_source(const FileLoader& loader, const std::string& videoName) {
-    return cursor_adapter{read_adapter{[&loader, &videoName](auto index) mutable {
+    return cursor_adapter{read_index_adapter{[&loader, &videoName](auto index) mutable {
         return loader.readFrameColorHistogram(videoName, index);
     }}};
 }
