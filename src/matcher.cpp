@@ -30,13 +30,12 @@ std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std:
 
     for (int i = 0; i < distances.size(); i++)
     {
-        sorted_distances.push_back({distances[i], i});
+        sorted_distances.emplace_back(distances[i], i);
     }
 
-    std::vector<std::pair<unsigned int, unsigned int>> retval;
+    std::vector<int> retval;
     std::sort(sorted_distances.begin(), sorted_distances.end(), [](auto l, auto r) { return l.first > r.first; });
 
-    unsigned int last = 0;
     // iterate over distances from lagest to smallest
     for(auto current: sorted_distances)
     {
@@ -45,8 +44,7 @@ std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std:
             continue;
         }
 
-        retval.emplace_back(last, current.second + 1);
-        last = current.second + 1;
+        retval.push_back(current.second + 1);
 
         int low = std::max(current.second - min_scene_length, 0);
         int high = std::min(current.second + min_scene_length, (int)distances.size());
@@ -58,9 +56,15 @@ std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std:
         }
     }
 
-    retval.emplace_back(last, distances.size());
+    retval.push_back(distances.size() + 1);
 
-    return retval;
+    // return cutoffs from left to right
+    std::sort(retval.begin(), retval.end());
+
+    std::vector<std::pair<unsigned int, unsigned int>> v;
+    std::transform(retval.begin(), retval.end(), std::back_inserter(v), [last = 0](auto I) mutable { auto r = std::make_pair(last, I); last = I; return r; });
+
+    return v;
 }
 
 Vocab<Frame> constructFrameVocabulary(const FileDatabase &database, unsigned int K, unsigned int speedinator)

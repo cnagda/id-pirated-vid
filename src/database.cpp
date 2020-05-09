@@ -456,12 +456,6 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         ExtractFrame extractFrame(*vocab);
         SaveFrameSink saveFrame(video.name, getFileLoader());
 
-        auto source = make_frame_source(loader, video.name);
-        while(auto frame = source.read()) {
-            frame->frameDescriptor = extractFrame(frame->descriptors);
-            loader.saveFrame(video.name, 0, *frame);
-        }
-
         tbb::parallel_pipeline(16,
             tbb::make_filter<void, ordered_frame>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc) {
                 return frame_source(fc);
