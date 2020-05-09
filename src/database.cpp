@@ -459,7 +459,9 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
 
     cursor_adapter frames{read_adapter{[&, index = 0]() mutable -> std::optional<cv::Mat> {
         auto frame = source.read();
-        index++;
+        if(index++ % 40 == 0) {
+            std::cout << "bag frame: " << index - 1 << std::endl;
+        }
         if(frame) {
             auto computed = baggify(*frame, extractor);
             if(willExtractScenes)
