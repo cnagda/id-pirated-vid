@@ -457,9 +457,9 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
 
         size_t index = 0;
         while(auto frame = source.read()) {
-            loader.saveFrameFeatures(video.name, index, baggify(*frame, extractor));
+            loader.saveFrameBag(video.name, index, baggify(*frame, extractor));
             if(index++ % 40 == 0) {
-                std::cout << "bag frame: " << index << std::endl;
+                std::cout << "bag frame: " << index - 1 << std::endl;
             }
         }
             
