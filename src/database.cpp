@@ -452,19 +452,17 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         && vocab)
     {
         saveMetadata.frameHash = db_metadata.frameHash;
-        auto frame_source = make_cursor_source(make_frame_source(loader, video.name));
-        ExtractFrame extractFrame(*vocab);
-        SaveFrameSink saveFrame(video.name, getFileLoader());
+        auto source = make_sift_source(loader, video.name);
+        BOWExtractor extractor(*vocab);
 
-        tbb::parallel_pipeline(16,
-            tbb::make_filter<void, ordered_frame>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc) {
-                return frame_source(fc);
-            }) &
-            tbb::make_filter<ordered_frame, ordered_frame>(tbb::filter::parallel, [&](auto frame){
-                frame.data.frameDescriptor = extractFrame(frame.data.descriptors);
-                return frame;
-            }) &
-            tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, saveFrame));
+        size_t index = 0;
+        while(auto frame = source.read()) {
+            loader.saveFrameFeatures(video.name, index, baggify(*frame, extractor));
+            if(index++ % 40 == 0) {
+                std::cout << "bag frame: " << index << std::endl;
+            }
+        }
+            
     }
     if (strategy->shouldComputeScenes() 
         && metadata.threshold != db_metadata.threshold
