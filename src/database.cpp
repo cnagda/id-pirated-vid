@@ -214,8 +214,7 @@ public:
                 std::cout << "video frame: " << counter - 1 << std::endl;
             }
             
-            scale(*image);
-            return color(*image);
+            return color(scale(*image));
         }
         return std::nullopt;
     }
