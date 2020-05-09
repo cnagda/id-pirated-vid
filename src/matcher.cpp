@@ -73,7 +73,7 @@ Vocab<Frame> constructFrameVocabulary(const FileDatabase &database, unsigned int
 
 Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase &database, unsigned int K, unsigned int speedinator)
 {
-    auto vocab = loadVocabulary<Vocab<Frame>>(database);
+    auto vocab = loadVocabulary<Frame>(database);
     if (!vocab)
     {
         throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");
@@ -198,7 +198,7 @@ Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase
         throw std::runtime_error("constructFrameVocabularyHierarchical: error, K > N");
     }
 
-    auto vocab = loadVocabulary<Vocab<Frame>>(database);
+    auto vocab = loadVocabulary<Frame>(database);
     if (!vocab)
     {
         throw std::runtime_error("trying to construct frame vocab but sift vocab is empty");

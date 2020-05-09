@@ -20,8 +20,10 @@ class Vocab : public ContainerVocab {
 public:
     using ContainerVocab::ContainerVocab;
     Vocab(const ContainerVocab& v) : ContainerVocab(v) {};
-    static const std::string vocab_name;
-    typedef T vocab_type;
+    static const char* const vocab_name;
 };
+
+template <typename T>
+const char* const Vocab<T>::vocab_name = T::vocab_name;
 
 #endif

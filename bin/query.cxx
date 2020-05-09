@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     // namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
     //
     // auto myvocab = loadVocabulary<Vocab<IScene>>(fd)->descriptors();
-    // auto myframevocab = loadVocabulary<Vocab<Frame>>(fd)->descriptors();
+    // auto myframevocab = loadVocabulary<Frame>(fd)->descriptors();
     //
     // auto videopaths = fd.loadVideo();
     // bool first = 1;

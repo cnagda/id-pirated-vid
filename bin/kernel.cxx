@@ -46,8 +46,8 @@ int main(int argc, char **argv)
     auto db = database_factory(argv[DBPATH], -1, -1, threshold);
     std::string videoName(fs::path(argv[VIDPATH]).filename());
 
-    auto frameVocab = loadVocabulary<Vocab<Frame>>(*db);
-    auto sceneVocab = loadVocabulary<Vocab<SerializableScene>>(*db);
+    auto frameVocab = loadVocabulary<Frame>(*db);
+    auto sceneVocab = loadVocabulary<SerializableScene>(*db);
 
     VideoFrameSource source(argv[VIDPATH]);
     ScaleImage scale({600, 700});

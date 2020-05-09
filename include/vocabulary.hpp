@@ -104,21 +104,21 @@ bool saveVocabulary(V &&vocab, Db &&db)
     return db.saveVocab(std::forward<V>(vocab), std::remove_reference_t<V>::vocab_name);
 }
 
-template <typename V, typename Db>
-std::optional<V> loadVocabulary(Db &&db)
+template <typename T, typename Db>
+std::optional<Vocab<T>> loadVocabulary(Db &&db)
 {
-    auto v = db.loadVocab(V::vocab_name);
+    auto v = db.loadVocab(T::vocab_name);
     if (v)
     {
-        return V(v.value());
+        return Vocab<T>(v.value());
     }
     return std::nullopt;
 }
 
-template <typename V, typename Db>
-std::optional<V> loadOrComputeVocab(Db &&db, int K)
+template <typename T, typename Db>
+std::optional<Vocab<T>> loadOrComputeVocab(Db &&db, int K)
 {
-    auto vocab = loadVocabulary<V>(std::forward<Db>(db));
+    auto vocab = loadVocabulary<T>(std::forward<Db>(db));
     if (!vocab)
     {
         if (K == -1)
@@ -126,16 +126,16 @@ std::optional<V> loadOrComputeVocab(Db &&db, int K)
             return std::nullopt;
         }
 
-        V v;
-        if constexpr (std::is_same_v<typename V::vocab_type, Frame>)
+        Vocab<T> v;
+        if constexpr (std::is_same_v<T, Frame>)
         {
             v = constructFrameVocabulary(db, K, 10);
         }
-        else if constexpr (std::is_base_of_v<typename V::vocab_type, SerializableScene>)
+        else if constexpr (std::is_base_of_v<T, SerializableScene>)
         {
             v = constructSceneVocabulary(db, K);
         }
-        saveVocabulary(std::forward<V>(v), std::forward<Db>(db));
+        saveVocabulary(v, std::forward<Db>(db));
         return v;
     }
     return vocab.value();

@@ -200,7 +200,7 @@ TEST_F(DatabaseSuite, QueryAdapter)
     auto loaded_scenes = read_all(*loaded_ptr->getScenes());
     ASSERT_GT(loaded_scenes.size(), 0);
 
-    auto vocab = loadVocabulary<Vocab<Frame>>(db);
+    auto vocab = loadVocabulary<Frame>(db);
     ASSERT_TRUE(vocab);
 
     auto original_frames = read_all(*input.frames(*vocab));

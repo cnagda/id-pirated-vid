@@ -299,16 +299,10 @@ SIFTVideo getSIFTVideo(const std::string &filepath, std::function<void(UMat, Fra
     return {filepath, callback, cropsize};
 }
 
-const std::string SerializableScene::vocab_name = "SceneVocab.mat";
-const std::string Frame::vocab_name = "FrameVocab.mat";
-
-template <typename T>
-const std::string Vocab<T>::vocab_name = T::vocab_name;
-
 std::unique_ptr<ICursor<Frame>> DatabaseVideo::frames() const
 {
     auto frame_source = make_frame_source(db.getFileLoader(), name);
-    auto vocab = loadVocabulary<Vocab<Frame>>(db);
+    auto vocab = loadVocabulary<Frame>(db);
 
     if (db.loadStrategy == Eager &&
         db.loadMetadata().frameHash != loadMetadata().frameHash &&
@@ -326,7 +320,7 @@ std::unique_ptr<ICursor<Frame>> DatabaseVideo::frames() const
 std::unique_ptr<ICursor<SerializableScene>> DatabaseVideo::getScenes() const
 {
     auto scene_source = make_scene_source(db.getFileLoader(), name);
-    auto vocab = loadVocabulary<Vocab<SerializableScene>>(db);
+    auto vocab = loadVocabulary<SerializableScene>(db);
     if (db.loadStrategy == Eager &&
         db.loadMetadata() != loadMetadata() &&
         vocab)
@@ -452,8 +446,8 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
 
 std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
 {
-    auto vocab = loadVocabulary<Vocab<Frame>>(*this);
-    auto sceneVocab = loadVocabulary<Vocab<SerializableScene>>(*this);
+    auto vocab = loadVocabulary<Frame>(*this);
+    auto sceneVocab = loadVocabulary<SerializableScene>(*this);
     auto metadata = video.loadMetadata();
     VideoMetadata saveMetadata{metadata};
 
@@ -577,8 +571,8 @@ QueryVideo make_query_adapter(const SIFTVideo &video, const FileDatabase &db)
         throw std::runtime_error("no min_scenes provided");
     }
 
-    auto frame_vocab = loadVocabulary<Vocab<Frame>>(db);
-    auto scene_vocab = loadVocabulary<Vocab<SerializableScene>>(db);
+    auto frame_vocab = loadVocabulary<Frame>(db);
+    auto scene_vocab = loadVocabulary<SerializableScene>(db);
 
     if (!frame_vocab)
     {

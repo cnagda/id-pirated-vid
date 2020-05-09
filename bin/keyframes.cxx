@@ -25,7 +25,7 @@ int main(int argc, char **argv)
     namedWindow("Display window", WINDOW_NORMAL); // Create a window for display.
 
     auto &fd = *database_factory(argv[1], -1, -1, -1).release();
-    auto myvocab = loadVocabulary<Vocab<Frame>>(fd);
+    auto myvocab = loadVocabulary<Frame>(fd);
     // key frame stuff
     std::cout << "Key frame stuff" << std::endl;
     auto comp = BOWComparator(myvocab->descriptors());

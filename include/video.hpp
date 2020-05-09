@@ -75,14 +75,14 @@ struct Frame
         return !(*this == f);
     }
 
-    static const std::string vocab_name;
+    static constexpr const char* const vocab_name = "FrameVocab.mat";
 };
 
 struct SerializableScene
 {
     cv::Mat frameBag;
     size_t startIdx, endIdx;
-    const static std::string vocab_name;
+    static constexpr const char* const vocab_name = "SceneVocab.mat";
 
     SerializableScene() = default;
     SerializableScene(std::pair<size_t, size_t> pair) : SerializableScene(pair.first, pair.second) {}
