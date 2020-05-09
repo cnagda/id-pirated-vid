@@ -144,9 +144,22 @@ TEST_F(DatabaseSuite, EagerDatabase)
                     RuntimeArguments{200, 20, 30});
 
     auto in_saved = db.saveVideo(input);
+    {
+        auto frames = read_all(*in_saved->frames());
+        ASSERT_GT(frames.size(), 0);
+        EXPECT_TRUE(frames[0].frameDescriptor.empty());
+    }
+    
     saveVocabulary(constructFrameVocabulary(db, db.getConfig().KFrames, 10), db);
 
     auto vid = db.saveVideo(*in_saved);
+
+    {
+        auto frames = read_all(*vid->frames());
+        ASSERT_GT(frames.size(), 0);
+        EXPECT_FALSE(frames[0].frameDescriptor.empty());
+    }
+
     auto scenes = read_all(*vid->getScenes());
     ASSERT_GT(scenes.size(), 0);
     EXPECT_TRUE(scenes[0].frameBag.empty());
