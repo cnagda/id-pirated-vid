@@ -45,16 +45,16 @@ Frame ExtractSIFT::withKeyPoints(const cv::UMat& image) const
     return frame;
 }
 
-ordered_mat ExtractColorHistogram::operator()(const ordered_umat& image) const
+ordered_mat Extract2DColorHistogram::operator()(const ordered_umat& image) const
 {
     return {image.rank, operator()(image.data)};
 }
 
-cv::Mat ExtractColorHistogram::operator()(const cv::UMat& image) const
+cv::Mat Extract2DColorHistogram::operator()(const cv::UMat& image) const
 {
     cv::Mat colorHistogram;
     cv::UMat hsv;
-    cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
+    cv::cvtColor(image, hsv, cv::COLOR_RGB2HSV);
 
     std::vector<int> histSize{HBINS, SBINS};
     // hue varies from 0 to 179, see cvtColor
@@ -71,6 +71,32 @@ cv::Mat ExtractColorHistogram::operator()(const cv::UMat& image) const
 }
 
 ExtractFrame::ExtractFrame(const Vocab<Frame> &frameVocab) : vocab(frameVocab) {}
+
+ordered_mat ExtractLUVColorHistogram::operator()(const ordered_umat& image) const
+{
+    return {image.rank, operator()(image.data)};
+}
+
+cv::Mat ExtractLUVColorHistogram::operator()(const cv::UMat& image) const
+{
+    cv::Mat colorHistogram;
+    cv::UMat lab;
+    cv::cvtColor(image, lab, cv::COLOR_RGB2Luv);
+
+    std::vector<int> histSize{8, 8, 8};
+    // hue varies from 0 to 179, see cvtColor
+    std::vector<float> ranges{0, 100, -127, 127, -127, 127};
+    // we compute the histogram from the 0-th and 1-st channels
+    std::vector<int> channels{0, 1, 2};
+
+    cv::calcHist(std::vector{lab}, channels, cv::Mat(), // do not use mask
+                 colorHistogram, histSize, ranges,
+                 true);
+    
+    cv::normalize(colorHistogram, colorHistogram, 1, 0, cv::NORM_L1);
+
+    return colorHistogram;
+}
 
 ordered_mat ExtractFrame::operator()(const ordered_mat& frame) const
 {

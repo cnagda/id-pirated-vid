@@ -22,7 +22,7 @@ class VideoFrameSource {
     size_t counter = 0;
 
 public:
-    VideoFrameSource(const std::string& path) : cap(path, cv::CAP_ANY) {}
+    VideoFrameSource(const std::string& path) : cap(path) {}
     ordered_umat operator()(tbb::flow_control& fc) {
         cv::UMat image;
         if(cap.read(image)) {
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     VideoFrameSource source(argv[VIDPATH]);
     ScaleImage scale({600, 700});
     ExtractSIFT sift;
-    ExtractColorHistogram color;
+    Extract2DColorHistogram color;
     auto frame = frameVocab ? make_unique<ExtractFrame>(frameVocab.value()) : nullptr;
     SaveFrameSink saveFrame(videoName, db->getFileLoader());
 

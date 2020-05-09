@@ -6,11 +6,27 @@
 #include "sw.hpp"
 #include "vocabulary.hpp"
 #include <type_traits>
+#include <opencv2/imgproc.hpp>
 
-std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<float>& distances, int min_scene_length)
+std::vector<std::pair<unsigned int, unsigned int>> thresholdScenes(const std::vector<double>& distances, double threshold) {
+    std::vector<std::pair<unsigned int, unsigned int>> retval;
+
+    unsigned int last = 0;
+    for(unsigned int i = 0; i < distances.size(); i++) {
+        if(distances[i] > threshold) {
+            retval.emplace_back(last, i + 1);
+            last = i + 1;
+        }
+    }
+    retval.emplace_back(last, distances.size() + 1);
+
+    return retval;
+}
+
+std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<double>& distances, int min_scene_length)
 {
     std::vector<bool> excluded(distances.size(), 0);
-    std::vector<std::pair<float, int>> sorted_distances;
+    std::vector<std::pair<double, int>> sorted_distances;
 
     for (int i = 0; i < distances.size(); i++)
     {
@@ -20,20 +36,15 @@ std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std:
     std::vector<int> retval;
     std::sort(sorted_distances.begin(), sorted_distances.end(), [](auto l, auto r) { return l.first > r.first; });
 
-    int index = -1;
-    std::pair<float, int> current;
-
     // iterate over distances from lagest to smallest
-    while (index < (int)distances.size() - 1)
+    for(auto current: sorted_distances)
     {
-        index++;
-        current = sorted_distances[index];
         if (excluded[current.second])
         {
             continue;
         }
 
-        retval.push_back(current.second);
+        retval.push_back(current.second + 1);
 
         int low = std::max(current.second - min_scene_length, 0);
         int high = std::min(current.second + min_scene_length, (int)distances.size());
@@ -340,20 +351,12 @@ double BOWComparator::operator()(Frame &f1, Frame &f2) const
     });
 }
 
-double ColorComparator::operator()(const Frame &f1, const Frame &f2) const
+double ColorComparator2D::operator()(const Frame &f1, const Frame &f2) const
 {
     return operator()(f1.colorHistogram, f2.colorHistogram);
 }
-double ColorComparator::operator()(const cv::Mat &f1, const cv::Mat &f2) const
+double ColorComparator2D::operator()(const cv::Mat &f1, const cv::Mat &f2) const
 {
-    if (f1.rows != HBINS || f1.cols != SBINS)
-    {
-        std::cerr
-            << "rows: " << f1.rows
-            << " cols: " << f1.cols << std::endl;
-        throw std::runtime_error("color histogram is wrong size");
-    }
-
     if (f1.size() != f2.size())
     {
         throw std::runtime_error("colorHistograms not matching");
@@ -362,4 +365,18 @@ double ColorComparator::operator()(const cv::Mat &f1, const cv::Mat &f2) const
     auto subbed = f1 - f2;
     auto val = cv::sum(subbed)[0];
     return std::abs(val);
+}
+
+double ColorIntersectComparator::operator()(const Frame &f1, const Frame &f2) const
+{
+    return operator()(f1.colorHistogram, f2.colorHistogram);
+}
+double ColorIntersectComparator::operator()(const cv::Mat &f1, const cv::Mat &f2) const
+{
+    if (f1.size() != f2.size())
+    {
+        throw std::runtime_error("colorHistograms not matching");
+    }
+
+    return 1 - cv::compareHist(f1, f2, cv::HISTCMP_INTERSECT);
 }

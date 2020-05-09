@@ -45,7 +45,7 @@ class frame_bag_adapter : public ICursor<Frame>
 
 public:
     frame_bag_adapter(Read &&r, const Vocab<Frame> &v) : reader(std::move(r)), extractor(v) {}
-    frame_bag_adapter(const Read &r, const Vocab<Frame> &v) : reader(r), extractor(v) {}
+    frame_bag_adapter(Read &r, const Vocab<Frame> &v) : reader(r), extractor(v) {}
 
     void skip(unsigned int n) override {
         if constexpr(has_arrow_v<Read>) {
@@ -83,9 +83,9 @@ class scene_bag_adapter : public ICursor<SerializableScene>
 
 public:
     scene_bag_adapter(SceneRead &&s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(std::move(f)), vocab(v) {}
-    scene_bag_adapter(const SceneRead &s, const FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(f), vocab(v) {}
-    scene_bag_adapter(const SceneRead &s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), vocab(v) {}
-    scene_bag_adapter(SceneRead &&s, const FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), vocab(v) {}
+    scene_bag_adapter(SceneRead &s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(f), vocab(v) {}
+    scene_bag_adapter(SceneRead &s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), vocab(v) {}
+    scene_bag_adapter(SceneRead &&s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), vocab(v) {}
 
     void skip(unsigned int n) override {
         if constexpr(has_arrow_v<SceneRead>) {
@@ -141,7 +141,6 @@ public:
     }
 };
 
-template <typename Read>
 class scene_detect_cursor : ICursor<SerializableScene>
 {
     std::vector<std::pair<unsigned int, unsigned int>> scenes;
@@ -149,15 +148,11 @@ class scene_detect_cursor : ICursor<SerializableScene>
 
 public:
     scene_detect_cursor() : iterator(scenes.begin()) {}
-    scene_detect_cursor(Read &reader, unsigned int min_scenes)
+
+    template <typename Read> 
+    scene_detect_cursor(Read&& reader, unsigned int min_scenes)
     {
-        scenes = hierarchicalScenes(get_distances(reader, ColorComparator{}), min_scenes);
-        std::cout << "Detected scenes: " << scenes.size() << std::endl;
-        iterator = scenes.begin();
-    }
-    scene_detect_cursor(Read &&reader, unsigned int min_scenes)
-    {
-        scenes = hierarchicalScenes(get_distances(reader, ColorComparator{}), min_scenes);
+        scenes = hierarchicalScenes(get_distances(reader, ColorComparator2D{}), min_scenes);
         std::cout << "Detected scenes: " << scenes.size() << std::endl;
         iterator = scenes.begin();
     }
@@ -182,7 +177,7 @@ class CaptureSource : public ICursor<cv::UMat>
     VideoCapture cap;
 
 public:
-    CaptureSource(const std::string &filename) : cap(filename, cv::CAP_ANY) {}
+    CaptureSource(const std::string &filename) : cap(filename) {}
 
     std::optional<cv::UMat> read() override
     {
@@ -204,7 +199,7 @@ public:
 class ColorSource : public ICursor<cv::Mat> {
     CaptureSource source;
     ScaleImage scale;
-    ExtractColorHistogram color;
+    Extract2DColorHistogram color;
     size_t counter = 0;
 
 public:
@@ -235,7 +230,7 @@ class FrameSource : public ICursor<Frame>
     CaptureSource source;
     std::function<void(UMat, Frame)> callback;
     ScaleImage scale;
-    ExtractColorHistogram color;
+    Extract2DColorHistogram color;
     ExtractSIFT sift;
     size_t counter = 0;
 
@@ -415,7 +410,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
 
     ScaleImage scale(video.cropsize);
     ExtractSIFT sift;
-    ExtractColorHistogram color;
+    Extract2DColorHistogram color;
     SaveFrameSink saveFrame(video.name, getFileLoader());
 
     std::atomic<size_t> frameCount = 0;
@@ -461,6 +456,12 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         auto frame_source = make_cursor_source(make_frame_source(loader, video.name));
         ExtractFrame extractFrame(*vocab);
         SaveFrameSink saveFrame(video.name, getFileLoader());
+
+        auto source = make_frame_source(loader, video.name);
+        while(auto frame = source.read()) {
+            frame->frameDescriptor = extractFrame(frame->descriptors);
+            loader.saveFrame(video.name, 0, *frame);
+        }
 
         tbb::parallel_pipeline(16,
             tbb::make_filter<void, ordered_frame>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc) {

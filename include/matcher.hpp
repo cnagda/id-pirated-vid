@@ -55,7 +55,15 @@ namespace cv
 class Mat;
 }
 
-class ColorComparator
+class ColorComparator2D
+{
+public:
+    double operator()(const Frame &f1, const Frame &f2) const;
+    double operator()(const cv::Mat &, const cv::Mat &) const;
+};
+
+
+class ColorIntersectComparator
 {
 public:
     double operator()(const Frame &f1, const Frame &f2) const;

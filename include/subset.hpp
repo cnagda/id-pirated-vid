@@ -27,7 +27,7 @@ visualizeSubset(std::string fname, It begin, It end) {
 
     namedWindow("Display window", WINDOW_NORMAL );
 
-    VideoCapture cap(fname, CAP_ANY);
+    VideoCapture cap(fname);
 
     int count = -1;
     int index = 0;

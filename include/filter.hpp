@@ -40,10 +40,19 @@ public:
     Frame withKeyPoints(const cv::UMat&) const;
 };
 
-class ExtractColorHistogram
+class Extract2DColorHistogram
 {
 public:
-    ExtractColorHistogram() {}
+    Extract2DColorHistogram() {}
+
+    ordered_mat operator()(const ordered_umat&) const;
+    cv::Mat operator()(const cv::UMat&) const;
+};
+
+class ExtractLUVColorHistogram
+{
+public:
+    ExtractLUVColorHistogram() {}
 
     ordered_mat operator()(const ordered_umat&) const;
     cv::Mat operator()(const cv::UMat&) const;
