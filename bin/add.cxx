@@ -80,7 +80,7 @@ int main(int argc, char **argv)
         data.name = "data";
         for (int i = 0; i < distances.size(); i++)
         {
-            data.data.push_back({0, distances[i]});
+            data.data.push_back({0, static_cast<float>(distances[i])});
         }
         EmmaExporter().exportTimeseries(saved->name + "_timeseries", "Frame number", "Distance", {data});
         // get scenes
