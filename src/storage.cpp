@@ -166,9 +166,9 @@ std::optional<Frame> FileLoader::readFrame(const std::string &videoName, size_t 
     auto def = cv::Mat();
     ifstream stream(rootDir / videoName / "frames" / (to_string(index) + ".keypoints"), fstream::binary);
 
-    auto features = readFrameFeatures(videoName, index);
-    auto bag = readFrameBag(videoName, index);
-    auto color = readFrameColorHistogram(videoName, index);
+    auto features = readFrame(videoName, index, Features);
+    auto bag = readFrame(videoName, index, Descriptor);
+    auto color = readFrame(videoName, index, ColorHistogram);
     if (!(stream.is_open() || bag || features || color))
     {
         return std::nullopt;
@@ -194,17 +194,15 @@ std::optional<cv::Mat> FileLoader::readFrameData(const std::string &videoName, c
     return readMat(stream);
 }
 
-std::optional<cv::Mat> FileLoader::readFrameFeatures(const std::string &videoName, size_t index) const
+std::optional<cv::Mat> FileLoader::readFrame(const std::string &videoName, size_t index, FrameDataType type) const
 {
-    return readFrameData(videoName, to_string(index) + ".sift");
-}
-std::optional<cv::Mat> FileLoader::readFrameColorHistogram(const std::string &videoName, size_t index) const
-{
-    return readFrameData(videoName, to_string(index) + ".color");
-}
-std::optional<cv::Mat> FileLoader::readFrameBag(const std::string &videoName, size_t index) const
-{
-    return readFrameData(videoName, to_string(index) + ".bag");
+    switch(type) {
+        case ColorHistogram: return readFrameData(videoName, to_string(index) + ".color");
+        case Descriptor: return readFrameData(videoName, to_string(index) + ".bag");
+        case Features: return readFrameData(videoName, to_string(index) + ".sift");
+    }
+
+    return std::nullopt;
 }
 
 std::optional<SerializableScene> FileLoader::readScene(const std::string &videoName, size_t index) const
@@ -227,9 +225,9 @@ bool FileLoader::saveFrame(const std::string &video, size_t index, const Frame &
     }
     writeSequential(stream, frame.keyPoints);
 
-    return saveFrameFeatures(video, index, frame.descriptors) &&
-           saveFrameColorHistogram(video, index, frame.colorHistogram) &&
-           saveFrameBag(video, index, frame.frameDescriptor);
+    return saveFrame(video, index, Features, frame.descriptors) &&
+           saveFrame(video, index, ColorHistogram, frame.colorHistogram) &&
+           saveFrame(video, index, Descriptor, frame.frameDescriptor);
 }
 
 bool FileLoader::saveFrameData(const std::string &videoName, const std::string &filename, const cv::Mat &mat) const
@@ -244,19 +242,15 @@ bool FileLoader::saveFrameData(const std::string &videoName, const std::string &
     return true;
 }
 
-bool FileLoader::saveFrameFeatures(const std::string &videoName, size_t index, const cv::Mat &mat) const
+bool FileLoader::saveFrame(const std::string &videoName, size_t index, FrameDataType type, const cv::Mat &mat) const
 {
-    return saveFrameData(videoName, to_string(index) + ".sift", mat);
-}
+    switch(type) {
+        case ColorHistogram: return saveFrameData(videoName, to_string(index) + ".color", mat);
+        case Descriptor: return saveFrameData(videoName, to_string(index) + ".bag", mat);
+        case Features: return saveFrameData(videoName, to_string(index) + ".sift", mat);
+    }
 
-bool FileLoader::saveFrameColorHistogram(const std::string &videoName, size_t index, const cv::Mat &mat) const
-{
-    return saveFrameData(videoName, to_string(index) + ".color", mat);
-}
-
-bool FileLoader::saveFrameBag(const std::string &videoName, size_t index, const cv::Mat &mat) const
-{
-    return saveFrameData(videoName, to_string(index) + ".bag", mat);
+    return false;
 }
 
 bool FileLoader::saveScene(const std::string &video, size_t index, const SerializableScene &scene) const

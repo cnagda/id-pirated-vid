@@ -22,11 +22,11 @@ struct ordered_adapter
     bool operator<(const ordered_adapter &a) const { return rank < a.rank; };
 };
 
-enum FrameDataType{
-    Features
-    ColorHistogram
+enum FrameDataType {
+    Features,
+    ColorHistogram,
     Descriptor
-}
+};
 
 class FileLoader
 {
@@ -39,14 +39,12 @@ public:
     FileLoader(const std::string& path) : rootDir(path) {};
 
     std::optional<Frame> readFrame(const std::string &videoName, size_t index) const;
-    std::optional<cv::Mat> readFramePartial(const std::string& videoName, size_t index, FrameDataType) const;
+    std::optional<cv::Mat> readFrame(const std::string& videoName, size_t index, FrameDataType) const;
 
     std::optional<SerializableScene> readScene(const std::string &videoName, size_t index) const;
 
     bool saveFrame(const std::string &videoName, size_t index, const Frame &frame) const;
-    bool saveFrameFeatures(const std::string &videoName, size_t index, const cv::Mat &mat) const;
-    bool saveFrameColorHistogram(const std::string &videoName, size_t index, const cv::Mat &mat) const;
-    bool saveFrameBag(const std::string &videoName, size_t index, const cv::Mat &mat) const;
+    bool saveFrame(const std::string &videoName, size_t index, FrameDataType, const cv::Mat &mat) const;
 
     bool saveScene(const std::string &videoName, size_t index, const SerializableScene &scene) const;
 
@@ -128,9 +126,9 @@ auto inline make_frame_source(const FileLoader& loader, const std::string& video
     }}};
 }
 
-auto inline make_frame_part_source(const FileLoader& loader, const std::string& videoName, FrameDataType type) {
-    return cursor_adapter{read_adapter{[&loader, &videoName](auto index) mutable {
-        return loader.readFramePartial(videoName, index, type);
+auto inline make_frame_source(const FileLoader& loader, const std::string& videoName, FrameDataType type) {
+    return cursor_adapter{read_adapter{[&](auto index) mutable {
+        return loader.readFrame(videoName, index, type);
     }}};
 }
 

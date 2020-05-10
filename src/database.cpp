@@ -462,7 +462,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         frameCursor = std::make_unique<decltype(source)>(source);
     }
 
-    scene_detect_cursor scenes{make_color_source(loader, video.name), 
+    scene_detect_cursor scenes{make_frame_source(loader, video.name, ColorHistogram), 
         static_cast<unsigned int>(config.threshold)};
 
 

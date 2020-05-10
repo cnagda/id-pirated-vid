@@ -1,17 +1,20 @@
 #include "storage.hpp"
 #include "fs_compat.hpp"
 #include <fstream>
+#include <iostream>
 #include <opencv2/core/mat.hpp>
+
+using namespace std;
 
 cv::Mat oldReadMat(ifstream &fs)
 {
-  int rows, cols, type, channels;
+    int rows, cols, type, channels;
     fs.read((char *)&rows, sizeof(int));     // rows
     fs.read((char *)&cols, sizeof(int));     // cols
     fs.read((char *)&type, sizeof(int));     // type
     fs.read((char *)&channels, sizeof(int)); // channels
 
-    Mat mat(rows, cols, type);
+    cv::Mat mat(rows, cols, type);
     for (int r = 0; r < rows; r++)
     {
         fs.read((char *)(mat.data + r * cols * CV_ELEM_SIZE(type)), CV_ELEM_SIZE(type) * cols);
@@ -21,7 +24,7 @@ cv::Mat oldReadMat(ifstream &fs)
 }
 
 
-void writeMat(const cv::Mat &mat, ofstream &fs)
+void newWriteMat(const cv::Mat &mat, ofstream &fs)
 {
     int type = mat.type(), dims = mat.dims;
     fs.write((char *)&type, sizeof(int));     // type
@@ -52,7 +55,7 @@ SerializableScene OldSceneRead(const std::string &filename)
     fs.read((char *)&startIdx, sizeof(startIdx));
     fs.read((char *)&endIdx, sizeof(endIdx));
 
-    return {oldreadMat(fs), startIdx, endIdx};
+    return {oldReadMat(fs), startIdx, endIdx};
 }
 
 
@@ -78,26 +81,28 @@ int main(int argc, char* argv[]) {
             auto vid_path = entry.path();
             for(auto& item: fs::directory_iterator(entry)) {
                 if(!item.is_directory()) {
-                    fs::copy_file(new_db / vid_path.filename() / item.path().filename());
+                    fs::copy_file(item.path(), new_db / vid_path.filename() / item.path().filename());
                 }
             }
 
             if(fs::exists(vid_path / "frames")) {
                 for(auto& frame: fs::directory_iterator(vid_path / "frames")) {
-                    auto mat = oldReadMat(ifstream(frame.path()));
-                    writeMat(ofstream(new_db / vid_path.filename() / "frames" / frame.path().filename()), mat);
+                    ifstream stream(frame.path());
+                    auto mat = oldReadMat(stream);
+                    ofstream writer(new_db / vid_path.filename() / "frames" / frame.path().filename());
+                    newWriteMat(mat, writer);
                 }
             }
 
             if(fs::exists(vid_path / "scenes")) {
                 for(auto& scene: fs::directory_iterator(vid_path / "scenes")) {
-                    auto scene = OldSceneRead(ifstream(scene.path()));
-                    SceneWrite(new_db / vid_path.filename() / "scenes" / scene.path().filename(), scene);
+                    auto s = OldSceneRead(scene.path());
+                    SceneWrite(new_db / vid_path.filename() / "scenes" / scene.path().filename(), s);
                 }
             }
         } else {
             // some metadata thing
-            fs::copy_file(new_db / entry.path().filename());
+            fs::copy_file(entry.path(), new_db / entry.path().filename());
         }
     }
 
