@@ -79,6 +79,7 @@ int main(int argc, char* argv[]) {
         if(entry.is_directory()) {
             // video directory
             auto vid_path = entry.path();
+            fs::create_directories(new_db / vid_path.filename());
             for(auto& item: fs::directory_iterator(entry)) {
                 if(!item.is_directory()) {
                     fs::copy_file(item.path(), new_db / vid_path.filename() / item.path().filename());
@@ -86,6 +87,7 @@ int main(int argc, char* argv[]) {
             }
 
             if(fs::exists(vid_path / "frames")) {
+                fs::create_directories(new_db / vid_path.filename() / "frames");
                 for(auto& frame: fs::directory_iterator(vid_path / "frames")) {
                     ifstream stream(frame.path());
                     auto mat = oldReadMat(stream);
@@ -95,6 +97,7 @@ int main(int argc, char* argv[]) {
             }
 
             if(fs::exists(vid_path / "scenes")) {
+                fs::create_directories(new_db / vid_path.filename() / "scenes");
                 for(auto& scene: fs::directory_iterator(vid_path / "scenes")) {
                     auto s = OldSceneRead(scene.path());
                     SceneWrite(new_db / vid_path.filename() / "scenes" / scene.path().filename(), s);
