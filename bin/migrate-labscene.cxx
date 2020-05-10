@@ -76,12 +76,12 @@ int main(int argc, char* argv[]) {
     fs::create_directories(new_db);
 
     for(auto& entry: fs::directory_iterator(old_db)) {
-        if(entry.is_directory()) {
+        if(fs::is_directory(entry.path())) {
             // video directory
             auto vid_path = entry.path();
             fs::create_directories(new_db / vid_path.filename());
             for(auto& item: fs::directory_iterator(entry)) {
-                if(!item.is_directory()) {
+                if(!fs::is_directory(item.path())) {
                     fs::copy_file(item.path(), new_db / vid_path.filename() / item.path().filename());
                 }
             }
