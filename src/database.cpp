@@ -12,6 +12,7 @@
 #include <fstream>
 #include <atomic>
 #include "concepts.hpp"
+#include <future>
 
 #define VIDEO_METADATA_FILENAME "metadata.bin"
 
@@ -505,14 +506,17 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         scene_bag_adapter adapter{std::move(sceneCursor), std::move(frameCursor), *sceneVocab};
         while(auto scene = adapter.read()) loader.saveScene(video.name, index++, *scene);
     } else {
-        {
+        auto writeScenes = std::async(std::launch::async, [&](){
             size_t index = 0;
             while(auto scene = sceneCursor->read()) loader.saveScene(video.name, index++, *scene);
-        }
-        {
+        });
+        auto writeFrames = std::async(std::launch::async, [&](){
             size_t index = 0;
             while(auto frame = frameCursor->read()) loader.saveFrameBag(video.name, index++, *frame);
-        }
+        });
+
+        writeScenes.wait();
+        writeFrames.wait();
     }
 
     writeMetadata(saveMetadata, databaseRoot / video.name);
