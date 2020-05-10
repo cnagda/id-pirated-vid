@@ -456,7 +456,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
     std::unique_ptr<ICursor<cv::Mat>> frameCursor{std::make_unique<NullCursor<cv::Mat>>()};
 
     BOWExtractor extractor{vocab.value_or(cv::Mat())};
-    auto source = make_sift_source(loader, video.name);
+    auto source = make_frame_source(loader, video.name, Features);
 
     cursor_adapter frames{read_adapter{[&, index = 0]() mutable -> std::optional<cv::Mat> {
         auto frame = source.read();
@@ -466,7 +466,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         if(frame) {
             auto computed = baggify(*frame, extractor);
             if(willExtractScenes)
-                loader.saveFrameBag(video.name, index - 1, computed);
+                loader.saveFrame(video.name, index - 1, Descriptor, computed);
             return computed;
         }
         return std::nullopt;
@@ -475,11 +475,11 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
     if(willExtractScenes) {
         auto scene = make_scene_source(loader, video.name);
         sceneCursor = std::make_unique<decltype(scene)>(std::move(scene));
-        auto source = make_frame_bag_source(loader, video.name);
+        auto source = make_frame_source(loader, video.name, Descriptor);
         frameCursor = std::make_unique<decltype(source)>(source);
     }
 
-    scene_detect_cursor scenes{make_color_source(loader, video.name), 
+    scene_detect_cursor scenes{make_frame_source(loader, video.name, ColorHistogram), 
         static_cast<unsigned int>(config.threshold)};
 
     if (strategy->shouldBaggifyFrames() 
@@ -512,7 +512,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         });
         auto writeFrames = std::async(std::launch::async, [&](){
             size_t index = 0;
-            while(auto frame = frameCursor->read()) loader.saveFrameBag(video.name, index++, *frame);
+            while(auto frame = frameCursor->read()) loader.saveFrame(video.name, index++, Descriptor, *frame);
         });
 
         writeScenes.wait();
