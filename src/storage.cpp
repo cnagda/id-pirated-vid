@@ -55,50 +55,41 @@ std::vector<T> readSequence(ifstream &fs)
 
 cv::Mat readMat(ifstream &fs)
 {
-    int type = 0, dims = 0;
-    fs.read((char *)&type, sizeof(type));     // type
-    fs.read((char *)&dims, sizeof(dims));     // type
+    int rows, cols, type, channels;
+    fs.read((char *)&rows, sizeof(int));     // rows
+    fs.read((char *)&cols, sizeof(int));     // cols
+    fs.read((char *)&type, sizeof(int));     // type
+    fs.read((char *)&channels, sizeof(int)); // channels
 
-    if(dims <= 2) {
-        int rows = 0, cols = 0;
-        fs.read((char *)&rows, sizeof(int));     // rows
-        fs.read((char *)&cols, sizeof(int));     // cols
-
-        Mat mat(rows, cols, type);
-        fs.read(mat.ptr<char>(), mat.total()*mat.elemSize());
-
-        return mat;
-    } else {
-        std::vector<int> sizes(dims);
-        fs.read((char*)&sizes[0], dims * sizeof(int));
-
-        Mat mat(dims, &sizes[0], type);
-
-        fs.read(mat.ptr<char>(), mat.total()*mat.elemSize());
-
-        return mat;
+    Mat mat(rows, cols, type);
+    for (int r = 0; r < rows; r++)
+    {
+        fs.read((char *)(mat.data + r * cols * CV_ELEM_SIZE(type)), CV_ELEM_SIZE(type) * cols);
     }
+
+    return mat;
 }
 
 void writeMat(const cv::Mat &mat, ofstream &fs)
 {
-    int type = mat.type(), dims = mat.dims;
+    int type = mat.type();
+    int channels = mat.channels();
+    fs.write((char *)&mat.rows, sizeof(int)); // rows
+    fs.write((char *)&mat.cols, sizeof(int)); // cols
     fs.write((char *)&type, sizeof(int));     // type
-    fs.write((char *)&dims, sizeof(int));     // type
+    fs.write((char *)&channels, sizeof(int)); // channels
 
-    if(dims <= 2) {
-        fs.write((char *)&mat.rows, sizeof(int)); // rows
-        fs.write((char *)&mat.cols, sizeof(int)); // cols
-    } else {
-        fs.write((char*)mat.size.p, dims * sizeof(int));
-    }
-
+    // Data
     if (mat.isContinuous())
     {
-        fs.write(mat.ptr<char>(), mat.total()*mat.elemSize());
-    } else {
-        for(int r = 0; r < mat.rows; r++) {
-            fs.write(mat.ptr<char>(r), mat.cols * mat.elemSize());
+        fs.write(mat.ptr<char>(0), (mat.dataend - mat.datastart));
+    }
+    else
+    {
+        int rowsz = CV_ELEM_SIZE(type) * mat.cols;
+        for (int r = 0; r < mat.rows; ++r)
+        {
+            fs.write(mat.ptr<char>(r), rowsz);
         }
     }
 }
