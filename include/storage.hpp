@@ -121,19 +121,19 @@ struct cursor_adapter : public ICursor<read_value_t<Read>>
 };
 
 auto inline make_frame_source(const FileLoader& loader, const std::string& videoName) {
-    return cursor_adapter{read_adapter{[&loader, &videoName](auto index) mutable {
+    return cursor_adapter{read_adapter{[=](auto index) mutable {
         return loader.readFrame(videoName, index);
     }}};
 }
 
 auto inline make_frame_source(const FileLoader& loader, const std::string& videoName, FrameDataType type) {
-    return cursor_adapter{read_adapter{[&](auto index) mutable {
+    return cursor_adapter{read_adapter{[=](auto index) mutable {
         return loader.readFrame(videoName, index, type);
     }}};
 }
 
 auto inline make_scene_source(const FileLoader& loader, const std::string& videoName) {
-    return cursor_adapter{read_adapter{[&loader, &videoName](auto index) mutable {
+    return cursor_adapter{read_adapter{[=](auto index) mutable {
         return loader.readScene(videoName, index);
     }}};
 }
