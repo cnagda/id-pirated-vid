@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 
         auto saved = db->saveVideo(video);
         // get distances
-        auto distances = get_distances(make_color_source(db->getFileLoader(), saved->name), ColorComparator2D{});
+        auto distances = get_distances(make_frame_source(db->getFileLoader(), saved->name, ColorHistogram), ColorComparator2D{});
 
         std::cout << "distances size: " << distances.size() << std::endl;
 

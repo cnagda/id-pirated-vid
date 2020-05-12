@@ -452,12 +452,12 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         && vocab)
     {
         saveMetadata.frameHash = db_metadata.frameHash;
-        auto source = make_sift_source(loader, video.name);
+        auto source = make_frame_source(loader, video.name, Features);
         BOWExtractor extractor(*vocab);
 
         size_t index = 0;
         while(auto frame = source.read()) {
-            loader.saveFrameBag(video.name, index, baggify(*frame, extractor));
+            loader.saveFrame(video.name, index, Descriptor, baggify(*frame, extractor));
             if(index++ % 40 == 0) {
                 std::cout << "bag frame: " << index - 1 << std::endl;
             }
@@ -472,7 +472,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         loader.clearScenes(video.name);
         size_t index = 0;
 
-        scene_detect_cursor scenes{make_color_source(loader, video.name), 
+        scene_detect_cursor scenes{make_frame_source(loader, video.name, ColorHistogram), 
             static_cast<unsigned int>(config.threshold)};
 
         while(auto scene = scenes.read()) loader.saveScene(video.name, index++, *scene);
@@ -484,7 +484,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
     {
         saveMetadata.sceneHash = db_metadata.sceneHash;
         size_t index = 0;
-        scene_bag_adapter adapter{make_scene_source(loader, video.name), make_frame_bag_source(loader, video.name), *sceneVocab};
+        scene_bag_adapter adapter{make_scene_source(loader, video.name), make_frame_source(loader, video.name, Descriptor), *sceneVocab};
         while(auto scene = adapter.read()) loader.saveScene(video.name, index++, *scene);
     }
 
