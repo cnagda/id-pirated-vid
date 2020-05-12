@@ -224,12 +224,13 @@ class Attack:
     def insert_clip(self, video):
         nonpirated_length = math.floor(self.base_video.duration)
         pirated_length = video.duration
-        split_point = randrange(8,nonpirated_length)
-        start_clip = randrange(math.floor(pirated_length * 2 / 5), math.floor(pirated_length * 3 / 5))
-        clip_length = randrange(3, 6)
-        clip1 = self.base_video.subclip(t_start=split_point)
+        split_point_one = randrange(8,math.floor(nonpirated_length * 3 / 5))
+        split_point_two = randrange(math.floor(nonpirated_length / 2), math.floor(nonpirated_length * 4 / 5))
+        start_clip = randrange(math.floor(pirated_length * 1 / 5), math.floor(pirated_length * 2 / 5))
+        clip_length = randrange(6, 10)
+        clip1 = self.base_video.subclip(t_start=split_point_two)
         clip2 = video.subclip(t_start=start_clip, t_end=start_clip + clip_length)
-        clip3 = self.base_video.subclip(t_start=6, t_end=split_point)
+        clip3 = self.base_video.subclip(t_start=6, t_end=split_point_one)
         return concatenate_videoclips([clip1,clip2,clip3])
 
 
@@ -242,10 +243,10 @@ class Attack:
             self.fps = self.vid.fps
             video = attack_function()
             video.write_videofile(vidpath, fps=self.fps, audio=False, verbose=False)
-            # inserted_video = self.insert_clip(video)
-            # insertname = vidname + "_inserted"
-            # insertpath = os.path.join(self.destdir, insertname + ".mp4")
-            # inserted_video.write_videofile(insertpath, audio=False)
+            inserted_video = self.insert_clip(video)
+            insertname = vidname + "_inserted"
+            insertpath = os.path.join(self.destdir, insertname + ".mp4")
+            inserted_video.write_videofile(insertpath, audio=False)
             del self.vid.reader
             del self.vid
 
@@ -255,23 +256,23 @@ class Attack:
         self.destdir = destdir
         self.base_video = VideoFileClip(basepath)
         self.attack_functions = [
-            # self.projection,
-            # self.exact_match,
-            # self.snowflakes,
-            # self.scale_up,
-            # self.scale_down_black,
-            # self.scale_down_noise,
-            # self.frame_rate_up,
-            # self.frame_rate_down,
-            # self.recolor_grey,
-            # self.recolor_dark,
-            # self.rotate_90,
-            # self.rotate_180,
-            # self.mirror,
+            self.projection,
+            self.exact_match,
+            self.snowflakes,
+            self.scale_up,
+            self.scale_down_black,
+            self.scale_down_noise,
+            self.frame_rate_up,
+            self.frame_rate_down,
+            self.recolor_grey,
+            self.recolor_dark,
+            self.rotate_90,
+            self.rotate_180,
+            self.mirror,
             self.pic_in_pic_large,
             self.pic_in_pic_small,
-            # self.speed_up,
-            # self.speed_down
+            self.speed_up,
+            self.speed_down
         ]
 
 
