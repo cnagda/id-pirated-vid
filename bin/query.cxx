@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 
     if (!fs::create_directories(fs::current_path() / "results"))
     {
-        std::cerr << "Could not create ./results" << std::endl;
+        // std::cerr << "Could not create ./results" << std::endl;
     }
 
     std::ofstream f(fs::current_path() / "results" / "resultcache.txt", ios::out | ios::trunc);
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     auto video2 = make_query_adapter(video, fd);
 
     std::optional<MatchInfo> match;
-    
+
     if(argc == 4) {
         match = findMatch(video.frames(), fd);
     } else if(argc == 3) {

@@ -48,6 +48,9 @@ public:
 
     bool saveScene(const std::string &videoName, size_t index, const SerializableScene &scene) const;
 
+    size_t countFrames(const std::string& video) const;
+    size_t countScenes(const std::string& video) const;
+
     template <typename Range>
     bool saveRange(Range &&range, const std::string &video, size_t offset) const
     {

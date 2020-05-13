@@ -275,6 +275,24 @@ void FileLoader::clearScenes(const std::string &video) const
     clearDir(rootDir / video / "scenes");
 }
 
+size_t FileLoader::countFrames(const std::string& video) const {
+    size_t count = 0;
+    for(auto& entry : fs::directory_iterator(rootDir / video / "frames")) {
+        if(entry.path().extension() == ".sift")
+            count++;
+    }
+
+    return count;
+}
+size_t FileLoader::countScenes(const std::string& video) const {
+    size_t count = 0;
+    for(auto& entry : fs::directory_iterator(rootDir / video / "scenes")) {
+        count++;
+    }
+
+    return count;
+}
+
 void clearDir(fs::path path)
 {
     if (fs::exists(path))

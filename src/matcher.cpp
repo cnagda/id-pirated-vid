@@ -106,6 +106,8 @@ Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase &database, 
     cv::UMat copy;
     descriptors.copyTo(copy);
 
+    std::cout << "Constructing Scene Vocabulary. Processing " << descriptors.rows << " frame descriptors" << std::endl;
+
     return Vocab<SerializableScene>(constructVocabulary(copy, K));
 }
 
@@ -116,18 +118,18 @@ void overflow(std::vector<cv::Mat> &descriptor_levels, unsigned int K, unsigned 
     //    descriptor_levels[level].push_back();
     //}
 
-    std::cout << "Enter overflow at level " << level << ", shape is: ";
+    // std::cout << "Enter overflow at level " << level << ", shape is: ";
     for (auto &a : descriptor_levels)
     {
-        std::cout << a.rows << ">";
+        // std::cout << a.rows << ">";
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
 
     // throw away leftovers
     if (descriptor_levels[level].rows < K)
     {
         descriptor_levels[level] = cv::Mat();
-        std::cout << "Early return" << std::endl;
+        // std::cout << "Early return" << std::endl;
         return;
     }
 
@@ -148,12 +150,12 @@ void overflow(std::vector<cv::Mat> &descriptor_levels, unsigned int K, unsigned 
         overflow(descriptor_levels, K, N, level + 1);
     }
 
-    std::cout << "Exit overflow at level " << level << ", shape is: ";
+    // std::cout << "Exit overflow at level " << level << ", shape is: ";
     for (auto &a : descriptor_levels)
     {
-        std::cout << a.rows << ">";
+        // std::cout << a.rows << ">";
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
 }
 
 // N is maximum size on which to perform clustering
@@ -167,6 +169,7 @@ Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, 
     //cv::Mat descriptors;
 
     std::vector<cv::Mat> descriptor_levels(1);
+    unsigned int total_rows = 0;
 
     // collect features and reduce with kmeans as needed
     for (auto video : database.listVideos())
@@ -182,6 +185,9 @@ Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, 
             // limit largest kmeans run
             if (descriptor_levels[0].rows >= N)
             {
+                total_rows += descriptor_levels[0].rows;
+                std::cout << "Constructing Frame Vocabulary. Processing " << total_rows << " SIFT features\r";
+                std::cout.flush();
                 overflow(descriptor_levels, K, N, 0);
             }
 
@@ -195,10 +201,13 @@ Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, 
         // if K == 2000 and at lowest level this is the vocabulary
         if (descriptor_levels[i].rows != K || i != descriptor_levels.size() - 1)
         {
+            total_rows += descriptor_levels[i].rows;
+            std::cout << "Constructing Frame Vocabulary. Processing " << total_rows << " SIFT features\r";
+            std::cout.flush();
             overflow(descriptor_levels, K, N, i);
         }
     }
-
+    std::cout << std::endl;
     // can return empty matrix if data has fewer than K descriptors
     return Vocab<Frame>(descriptor_levels.back());
 }
@@ -304,15 +313,17 @@ std::optional<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase 
         }
 
         auto &&alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 3, 2);
-        std::cout << targetScenes.size() << " " << knownScenes.size() << std::endl;
+        // std::cout << targetScenes.size() << " " << knownScenes.size() << std::endl;
         if (alignments.size() > 0)
         {
             auto &a = alignments[0];
-            std::cout << "Highest score: " << a.score << std::endl;
+            std::cout << "Score: " << a.score << std::endl;
             if (a.score > match.matchConfidence)
             {
                 match = MatchInfo{static_cast<double>(a.score), a.startKnown, a.endKnown, v2, alignments};
             }
+        } else {
+            std::cout << "Score: 0" << std::endl;
         }
     }
 
@@ -347,9 +358,9 @@ double BOWComparator::operator()(Frame &f1, Frame &f2)
 
 double BOWComparator::operator()(Frame &f1, Frame &f2) const
 {
-    return frameSimilarity(f1, f2, [this](Frame &f) { 
+    return frameSimilarity(f1, f2, [this](Frame &f) {
         BOWExtractor copy{extractor};
-        return loadFrameDescriptor(f, copy); 
+        return loadFrameDescriptor(f, copy);
     });
 }
 

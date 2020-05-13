@@ -111,7 +111,7 @@ public:
             } else {
                 frame_reader.skip(val->startIdx - f_index);
             }
-            
+
 
             f_index = val->startIdx;
 
@@ -134,7 +134,7 @@ public:
                 f_index++;
             }
 
-            std::cout << "bagging scene of length: " << frames.size() << std::endl;
+            // std::cout << "bagging scene of length: " << frames.size() << std::endl;
             val->frameBag = baggify(frames.begin(), frames.end(), BOWExtractor{vocab});
             return val;
         }
@@ -150,11 +150,12 @@ class scene_detect_cursor : public ICursor<SerializableScene>
 public:
     scene_detect_cursor() : iterator(scenes.begin()) {}
 
-    template <typename Read> 
+    template <typename Read>
     scene_detect_cursor(Read&& reader, unsigned int min_scenes)
     {
         scenes = hierarchicalScenes(get_distances(reader, ColorComparator2D{}), min_scenes);
-        std::cout << "Detected scenes: " << scenes.size() << std::endl;
+        std::cout << std::endl;
+        std::cout << "Detected Scenes: " << scenes.size() << std::endl;
         iterator = scenes.begin();
     }
 
@@ -176,9 +177,11 @@ public:
 class CaptureSource : public ICursor<cv::UMat>
 {
     VideoCapture cap;
+    size_t counter = 0;
+    const size_t frameCount;
 
 public:
-    CaptureSource(const std::string &filename) : cap(filename) {}
+    CaptureSource(const std::string &filename) : cap(filename), frameCount(cap.get(cv::CAP_PROP_FRAME_COUNT)) {}
 
     std::optional<cv::UMat> read() override
     {
@@ -186,6 +189,10 @@ public:
 
         if (cap.read(image))
         {
+            if(counter++ % 40 == 0) {
+                std::cout << "Reading Frame " << counter - 1 << "/" << frameCount <<"\r";
+                std::cout.flush();
+            }
             return image;
         }
 
@@ -201,20 +208,15 @@ class ColorSource : public ICursor<cv::Mat> {
     CaptureSource source;
     ScaleImage scale;
     Extract2DColorHistogram color;
-    size_t counter = 0;
 
 public:
-    ColorSource(const std::string &filename, std::pair<int, int> cropsize) 
+    ColorSource(const std::string &filename, std::pair<int, int> cropsize)
             : source(filename), scale(cropsize){};
 
     std::optional<cv::Mat> read() override
     {
         if (auto image = source.read())
         {
-            if(counter++ % 40 == 0) {
-                std::cout << "video frame: " << counter - 1 << std::endl;
-            }
-            
             return color(scale(*image));
         }
         return std::nullopt;
@@ -232,7 +234,6 @@ class FrameSource : public ICursor<Frame>
     ScaleImage scale;
     Extract2DColorHistogram color;
     ExtractSIFT sift;
-    size_t counter = 0;
 
 public:
     FrameSource(const std::string &filename, std::function<void(UMat, Frame)> callback,
@@ -242,19 +243,15 @@ public:
     {
         if (auto image = source.read())
         {
-            if(counter++ % 40 == 0) {
-                std::cout << "video frame: " << counter - 1 << std::endl;
-            }
-            
             auto scaled = scale(*image);
-            
+
             if (callback) {
                 auto frame = sift.withKeyPoints(scaled);
                 frame.colorHistogram = color(scaled);
                 callback(*image, frame);
                 return frame;
             }
-            
+
             auto colorHistogram = color(scaled);
             auto descriptors = sift(scaled);
             return Frame{descriptors, cv::Mat(), colorHistogram};
@@ -412,6 +409,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
     ExtractSIFT sift;
     Extract2DColorHistogram color;
     SaveFrameSink saveFrame(video.name, getFileLoader());
+    // std::cout << std::endl;
 
     std::atomic<size_t> frameCount = 0;
 
@@ -419,7 +417,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
         tbb::make_filter<void, ordered_umat>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc){
             return source(fc);
         }) &
-        tbb::make_filter<ordered_umat, ordered_umat>(tbb::filter::parallel, scale) & 
+        tbb::make_filter<ordered_umat, ordered_umat>(tbb::filter::parallel, scale) &
         tbb::make_filter<ordered_umat, std::pair<Frame, ordered_umat>>(tbb::filter::parallel, [&](auto mat) {
             Frame f;
             f.descriptors = sift(mat).data;
@@ -460,9 +458,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
 
     cursor_adapter frames{read_adapter{[&, index = 0]() mutable -> std::optional<cv::Mat> {
         auto frame = source.read();
-        if(index++ % 40 == 0) {
-            std::cout << "bag frame: " << index - 1 << std::endl;
-        }
+        index++;
         if(frame) {
             auto computed = baggify(*frame, extractor);
             if(willExtractScenes)
@@ -471,7 +467,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         }
         return std::nullopt;
     }}};
-    
+
     if(willExtractScenes) {
         auto scene = make_scene_source(loader, video.name);
         sceneCursor = std::make_unique<decltype(scene)>(std::move(scene));
@@ -479,18 +475,20 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         frameCursor = std::make_unique<decltype(source)>(source);
     }
 
-    scene_detect_cursor scenes{make_frame_source(loader, video.name, ColorHistogram), 
+    scene_detect_cursor scenes{make_frame_source(loader, video.name, ColorHistogram),
         static_cast<unsigned int>(config.threshold)};
 
-    if (strategy->shouldBaggifyFrames() 
-        && metadata.frameHash != db_metadata.frameHash 
+    if (strategy->shouldBaggifyFrames()
+        && metadata.frameHash != db_metadata.frameHash
         && vocab)
     {
         saveMetadata.frameHash = db_metadata.frameHash;
 
         frameCursor = std::make_unique<decltype(frames)>(std::move(frames));
+    } else if (metadata.frameHash == db_metadata.frameHash) {
+        // std::cout << "Note: Frames already exist in database" << std::endl;
     }
-    if (strategy->shouldComputeScenes() 
+    if (strategy->shouldComputeScenes()
         && metadata.threshold != db_metadata.threshold
         && config.threshold != -1)
     {
@@ -498,14 +496,22 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         loader.clearScenes(video.name);
 
         sceneCursor = std::make_unique<decltype(scenes)>(std::move(scenes));
+    } else if (metadata.threshold == db_metadata.threshold) {
+        // std::cout << "Note: DB Scene threshold did not change" << std::endl;
     }
     if (willExtractScenes)
     {
         saveMetadata.sceneHash = db_metadata.sceneHash;
         size_t index = 0;
         scene_bag_adapter adapter{std::move(sceneCursor), std::move(frameCursor), *sceneVocab};
-        while(auto scene = adapter.read()) loader.saveScene(video.name, index++, *scene);
+        while(auto scene = adapter.read()) {
+            std::cout << "Saving Scene: " << index + 1 << "\r";
+            std::cout.flush();
+            loader.saveScene(video.name, index++, *scene);
+        }
+        std::cout << std::endl;
     } else {
+        // std::cout << "Note: Scenes already calculated" << std::endl;
         auto writeScenes = std::async(std::launch::async, [&](){
             size_t index = 0;
             while(auto scene = sceneCursor->read()) loader.saveScene(video.name, index++, *scene);
@@ -608,7 +614,7 @@ QueryVideo make_query_adapter(const SIFTVideo &video, const FileDatabase &db)
     }
 
     scene_bag_adapter adapter{
-        scene_detect_cursor{*video.color(), static_cast<unsigned int>(threshold)}, 
+        scene_detect_cursor{*video.color(), static_cast<unsigned int>(threshold)},
         frame_bag_adapter{video.frames(), *frame_vocab}, *scene_vocab};
 
     return QueryVideo{video, std::make_unique<decltype(adapter)>(std::move(adapter))};
