@@ -7,6 +7,7 @@ import cv2
 import skimage.draw as draw
 import skimage.color as color
 from sklearn.cluster import MeanShift, estimate_bandwidth
+from moviepy.editor import *
 
 print("Args: " +  str(sys.argv))
 if(len(sys.argv) != 2):
@@ -19,6 +20,7 @@ counter = -1
 speedinator = 10
 
 debug = False
+showbox = False
 
 ys = []
 xs = []
@@ -205,10 +207,10 @@ pt2 = (width - 1, my)
 cv2.line(image, pt1, pt2, (255,0,0), 3, cv2.LINE_AA)
 besty = int(my[0])
 
-
-cv2.imshow('image',image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+if(showbox):
+    cv2.imshow('image',image)
+    cv2.waitKey(0)
+    v2.destroyAllWindows()
 
 print("================================================================ END LINE DETECTION ==============================================================================")
 
@@ -294,6 +296,21 @@ print(xh)
 print(yh)
 cv2.rectangle(image, (xl, yl), (xh, yh), (255,0,0), -1)
 
-cv2.imshow('image',image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+if(showbox):
+    cv2.imshow('image',image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+video = VideoFileClip(sys.argv[1])
+boxvideo = video.crop(x1 = xl, y1 = yl, x2 = xh, y2 = yh)
+
+boxvideo.write_videofile("boxvideo.mp4")
+
+def drawrect(frame):
+    cv2.rectangle(frame, (xl, yl), (xh, yh), (0,0,0), -1)
+    return frame
+
+outervideo = video.fl_image(drawrect)
+
+outervideo.write_videofile("outervideo.mp4")
