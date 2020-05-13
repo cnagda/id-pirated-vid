@@ -177,9 +177,11 @@ public:
 class CaptureSource : public ICursor<cv::UMat>
 {
     VideoCapture cap;
+    size_t counter = 0;
+    const size_t frameCount;
 
 public:
-    CaptureSource(const std::string &filename) : cap(filename) {}
+    CaptureSource(const std::string &filename) : cap(filename), frameCount(cap.get(cv::CAP_PROP_FRAME_COUNT)) {}
 
     std::optional<cv::UMat> read() override
     {
@@ -187,6 +189,10 @@ public:
 
         if (cap.read(image))
         {
+            if(counter++ % 40 == 0) {
+                std::cout << "Reading Frame " << counter - 1 << "/" << frameCount <<"\r";
+                std::cout.flush();
+            }
             return image;
         }
 
@@ -202,7 +208,6 @@ class ColorSource : public ICursor<cv::Mat> {
     CaptureSource source;
     ScaleImage scale;
     Extract2DColorHistogram color;
-    size_t counter = 0;
 
 public:
     ColorSource(const std::string &filename, std::pair<int, int> cropsize)
@@ -212,11 +217,6 @@ public:
     {
         if (auto image = source.read())
         {
-            if(counter++ % 40 == 0) {
-                std::cout << "Reading Frame Color Data: " << counter - 1 << "\r";
-                std::cout.flush();
-            }
-
             return color(scale(*image));
         }
         return std::nullopt;
@@ -234,7 +234,6 @@ class FrameSource : public ICursor<Frame>
     ScaleImage scale;
     Extract2DColorHistogram color;
     ExtractSIFT sift;
-    size_t counter = 0;
 
 public:
     FrameSource(const std::string &filename, std::function<void(UMat, Frame)> callback,
@@ -244,11 +243,6 @@ public:
     {
         if (auto image = source.read())
         {
-            if(counter++ % 40 == 0) {
-                std::cout << "Reading Frame SIFT Data: " << counter - 1 << "\r";
-                std::cout.flush();
-            }
-
             auto scaled = scale(*image);
 
             if (callback) {
@@ -464,9 +458,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
 
     cursor_adapter frames{read_adapter{[&, index = 0]() mutable -> std::optional<cv::Mat> {
         auto frame = source.read();
-        if(index++ % 40 == 0) {
-            // std::cout << "bag frame: " << index - 1 << std::endl;
-        }
+        index++;
         if(frame) {
             auto computed = baggify(*frame, extractor);
             if(willExtractScenes)

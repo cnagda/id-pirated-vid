@@ -110,10 +110,5 @@ cv::Mat ExtractFrame::operator()(const cv::Mat& frame) const
 
 void SaveFrameSink::operator()(const ordered_frame& frame) const
 {
-    if(frame.rank % 40 == 0) {
-        std::cout << "Saving Frame: " << frame.rank <<"\r";
-        std::cout.flush();
-    }
-
     loader.saveFrame(video, frame.rank, frame.data);
 }
