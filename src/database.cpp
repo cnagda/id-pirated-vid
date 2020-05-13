@@ -12,6 +12,7 @@
 #include <fstream>
 #include <atomic>
 #include "concepts.hpp"
+#include <future>
 
 #define VIDEO_METADATA_FILENAME "metadata.bin"
 
@@ -141,7 +142,7 @@ public:
     }
 };
 
-class scene_detect_cursor : ICursor<SerializableScene>
+class scene_detect_cursor : public ICursor<SerializableScene>
 {
     std::vector<std::pair<unsigned int, unsigned int>> scenes;
     decltype(scenes.begin()) iterator;
@@ -447,22 +448,47 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
 
     auto db_metadata = loadMetadata();
 
+    const bool willExtractScenes = strategy->shouldBaggifyScenes()
+        && (metadata != db_metadata)
+        && sceneVocab;
+
+    std::unique_ptr<ICursor<SerializableScene>> sceneCursor{std::make_unique<NullCursor<SerializableScene>>()};
+    std::unique_ptr<ICursor<cv::Mat>> frameCursor{std::make_unique<NullCursor<cv::Mat>>()};
+
+    BOWExtractor extractor{vocab.value_or(cv::Mat())};
+    auto source = make_frame_source(loader, video.name, Features);
+
+    cursor_adapter frames{read_adapter{[&, index = 0]() mutable -> std::optional<cv::Mat> {
+        auto frame = source.read();
+        if(index++ % 40 == 0) {
+            std::cout << "bag frame: " << index - 1 << std::endl;
+        }
+        if(frame) {
+            auto computed = baggify(*frame, extractor);
+            if(willExtractScenes)
+                loader.saveFrame(video.name, index - 1, Descriptor, computed);
+            return computed;
+        }
+        return std::nullopt;
+    }}};
+    
+    if(willExtractScenes) {
+        auto scene = make_scene_source(loader, video.name);
+        sceneCursor = std::make_unique<decltype(scene)>(std::move(scene));
+        auto source = make_frame_source(loader, video.name, Descriptor);
+        frameCursor = std::make_unique<decltype(source)>(source);
+    }
+
+    scene_detect_cursor scenes{make_frame_source(loader, video.name, ColorHistogram), 
+        static_cast<unsigned int>(config.threshold)};
+
     if (strategy->shouldBaggifyFrames() 
         && metadata.frameHash != db_metadata.frameHash 
         && vocab)
     {
         saveMetadata.frameHash = db_metadata.frameHash;
-        auto source = make_frame_source(loader, video.name, Features);
-        BOWExtractor extractor(*vocab);
 
-        size_t index = 0;
-        while(auto frame = source.read()) {
-            loader.saveFrame(video.name, index, Descriptor, baggify(*frame, extractor));
-            if(index++ % 40 == 0) {
-                std::cout << "bag frame: " << index - 1 << std::endl;
-            }
-        }
-            
+        frameCursor = std::make_unique<decltype(frames)>(std::move(frames));
     }
     if (strategy->shouldComputeScenes() 
         && metadata.threshold != db_metadata.threshold
@@ -470,22 +496,27 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
     {
         saveMetadata.threshold = config.threshold;
         loader.clearScenes(video.name);
-        size_t index = 0;
 
-        scene_detect_cursor scenes{make_frame_source(loader, video.name, ColorHistogram), 
-            static_cast<unsigned int>(config.threshold)};
-
-        while(auto scene = scenes.read()) loader.saveScene(video.name, index++, *scene);
-        saveMetadata.sceneCount = index;
+        sceneCursor = std::make_unique<decltype(scenes)>(std::move(scenes));
     }
-    if (strategy->shouldBaggifyScenes()
-        && (metadata != db_metadata)
-        && sceneVocab)
+    if (willExtractScenes)
     {
         saveMetadata.sceneHash = db_metadata.sceneHash;
         size_t index = 0;
-        scene_bag_adapter adapter{make_scene_source(loader, video.name), make_frame_source(loader, video.name, Descriptor), *sceneVocab};
+        scene_bag_adapter adapter{std::move(sceneCursor), std::move(frameCursor), *sceneVocab};
         while(auto scene = adapter.read()) loader.saveScene(video.name, index++, *scene);
+    } else {
+        auto writeScenes = std::async(std::launch::async, [&](){
+            size_t index = 0;
+            while(auto scene = sceneCursor->read()) loader.saveScene(video.name, index++, *scene);
+        });
+        auto writeFrames = std::async(std::launch::async, [&](){
+            size_t index = 0;
+            while(auto frame = frameCursor->read()) loader.saveFrame(video.name, index++, Descriptor, *frame);
+        });
+
+        writeScenes.wait();
+        writeFrames.wait();
     }
 
     writeMetadata(saveMetadata, databaseRoot / video.name);
