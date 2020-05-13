@@ -486,7 +486,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
 
         frameCursor = std::make_unique<decltype(frames)>(std::move(frames));
     } else if (metadata.frameHash == db_metadata.frameHash) {
-        std::cout << "Note: Frames already exist in database" << std::endl;
+        // std::cout << "Note: Frames already exist in database" << std::endl;
     }
     if (strategy->shouldComputeScenes()
         && metadata.threshold != db_metadata.threshold
@@ -497,7 +497,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
 
         sceneCursor = std::make_unique<decltype(scenes)>(std::move(scenes));
     } else if (metadata.threshold == db_metadata.threshold) {
-        std::cout << "Note: DB Scene threshold did not change" << std::endl;
+        // std::cout << "Note: DB Scene threshold did not change" << std::endl;
     }
     if (willExtractScenes)
     {
@@ -511,7 +511,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         }
         std::cout << std::endl;
     } else {
-        std::cout << "Note: Scenes already calculated" << std::endl;
+        // std::cout << "Note: Scenes already calculated" << std::endl;
         auto writeScenes = std::async(std::launch::async, [&](){
             size_t index = 0;
             while(auto scene = sceneCursor->read()) loader.saveScene(video.name, index++, *scene);
