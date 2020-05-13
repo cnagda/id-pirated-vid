@@ -73,7 +73,7 @@ int main(int argc, char **argv)
         // get distances
         auto distances = get_distances(make_frame_source(db->getFileLoader(), saved->name, ColorHistogram), ColorComparator2D{});
 
-        std::cout << "distances size: " << distances.size() << std::endl;
+        // std::cout << "distances size: " << distances.size() << std::endl;
 
         // make graph
         TimeSeries data;
@@ -85,11 +85,11 @@ int main(int argc, char **argv)
         EmmaExporter().exportTimeseries(saved->name + "_timeseries", "Frame number", "Distance", {data});
         // get scenes
         auto scenes = hierarchicalScenes(distances, 30);
-        std::cout << saved->name << " scenes: " << std::endl;
-        for (auto &a : scenes)
-        {
-            std::cout << a.first << ", " << a.second << std::endl;
-        }
+        // std::cout << saved->name << " scenes: " << std::endl;
+        // for (auto &a : scenes)
+        // {
+        //     std::cout << a.first << ", " << a.second << std::endl;
+        // }
     }
 
     bool shouldRecalculateFrames = false;
@@ -117,6 +117,7 @@ int main(int argc, char **argv)
     {
         for (auto& v : db->listVideos())
         {
+            std::cout << std::endl << "Recalculating Scenes for " << v;
             auto video = db->loadVideo(v);
             db->saveVideo(*video);
         }

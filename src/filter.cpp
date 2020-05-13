@@ -92,7 +92,7 @@ cv::Mat ExtractLUVColorHistogram::operator()(const cv::UMat& image) const
     cv::calcHist(std::vector{lab}, channels, cv::Mat(), // do not use mask
                  colorHistogram, histSize, ranges,
                  true);
-    
+
     cv::normalize(colorHistogram, colorHistogram, 1, 0, cv::NORM_L1);
 
     return colorHistogram;
@@ -110,8 +110,10 @@ cv::Mat ExtractFrame::operator()(const cv::Mat& frame) const
 
 void SaveFrameSink::operator()(const ordered_frame& frame) const
 {
-    if(frame.rank % 40 == 0)
-        std::cout << "frame: " << frame.rank << std::endl;
+    if(frame.rank % 40 == 0) {
+        std::cout << "Saving Frame: " << frame.rank <<"\r";
+        std::cout.flush();
+    }
 
     loader.saveFrame(video, frame.rank, frame.data);
 }
