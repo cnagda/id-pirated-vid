@@ -79,14 +79,14 @@ class scene_bag_adapter : public ICursor<SerializableScene>
     SceneRead scene_reader;
     FrameRead frame_reader;
 
-    Vocab<SerializableScene> vocab;
+    BOWExtractor extractor;
     size_t f_index = 0;
 
 public:
-    scene_bag_adapter(SceneRead &&s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(std::move(f)), vocab(v) {}
-    scene_bag_adapter(SceneRead &s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(f), vocab(v) {}
-    scene_bag_adapter(SceneRead &s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), vocab(v) {}
-    scene_bag_adapter(SceneRead &&s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), vocab(v) {}
+    scene_bag_adapter(SceneRead &&s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(std::move(f)), extractor(v) {}
+    scene_bag_adapter(SceneRead &s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(f), extractor(v) {}
+    scene_bag_adapter(SceneRead &s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), extractor(v) {}
+    scene_bag_adapter(SceneRead &&s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), extractor(v) {}
 
     void skip(unsigned int n) override {
         if constexpr(has_arrow_v<SceneRead>) {
@@ -135,7 +135,7 @@ public:
             }
 
             // std::cout << "bagging scene of length: " << frames.size() << std::endl;
-            val->frameBag = baggify(frames.begin(), frames.end(), BOWExtractor{vocab});
+            val->frameBag = baggify(frames.begin(), frames.end(), extractor);
             return val;
         }
         return std::nullopt;

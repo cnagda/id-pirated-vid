@@ -241,10 +241,10 @@ Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase
 			if(descriptor_levels[0].rows >= N){
 				overflow(descriptor_levels, K, N, 0);
 			}
+
+            frames ->skip(speedinator);
 		}
     }
-
-    return Vocab<SerializableScene>(constructVocabulary(descriptor_levels.begin(), descriptor_levels.end(), K));
 
     // flush all remaining features to lowest level
     for (int i = 0; i < descriptor_levels.size(); i++)
