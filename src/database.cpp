@@ -151,11 +151,12 @@ public:
     scene_detect_cursor() : iterator(scenes.begin()) {}
 
     template <typename Read>
-    scene_detect_cursor(Read&& reader, unsigned int min_scenes)
+    scene_detect_cursor(Read&& reader, int min_scenes)
     {
-        scenes = hierarchicalScenes(get_distances(reader, ColorComparator2D{}), min_scenes);
-        std::cout << std::endl;
-        std::cout << "Detected Scenes: " << scenes.size() << std::endl;
+        if(min_scenes != -1) {
+            scenes = hierarchicalScenes(get_distances(reader, ColorComparator2D{}), min_scenes);
+            std::cout << "Detected Scenes: " << scenes.size() << std::endl;
+        }
         iterator = scenes.begin();
     }
 
@@ -432,6 +433,8 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
             saveFrame(frame);
         }));
 
+    std::cout << std::endl;
+
     metadata.frameCount = frameCount.load(std::memory_order_relaxed);
     writeMetadata(metadata, video_dir);
     return saveVideo(DatabaseVideo{*this, video.name});
@@ -458,11 +461,13 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
 
     cursor_adapter frames{read_adapter{[&, index = 0]() mutable -> std::optional<cv::Mat> {
         auto frame = source.read();
-        index++;
         if(frame) {
             auto computed = baggify(*frame, extractor);
-            if(willExtractScenes)
-                loader.saveFrame(video.name, index - 1, Descriptor, computed);
+            if(willExtractScenes) {
+                loader.saveFrame(video.name, index, Descriptor, computed);
+            }
+
+            index++;
             return computed;
         }
         return std::nullopt;
@@ -476,7 +481,7 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
     }
 
     scene_detect_cursor scenes{make_frame_source(loader, video.name, ColorHistogram),
-        static_cast<unsigned int>(config.threshold)};
+        static_cast<int>(config.threshold)};
 
     if (strategy->shouldBaggifyFrames()
         && metadata.frameHash != db_metadata.frameHash
@@ -511,18 +516,27 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
         }
         std::cout << std::endl;
     } else {
-        // std::cout << "Note: Scenes already calculated" << std::endl;
+        std::cout << "Note: Not extracting scenes" << std::endl;
         auto writeScenes = std::async(std::launch::async, [&](){
             size_t index = 0;
             while(auto scene = sceneCursor->read()) loader.saveScene(video.name, index++, *scene);
         });
         auto writeFrames = std::async(std::launch::async, [&](){
             size_t index = 0;
-            while(auto frame = frameCursor->read()) loader.saveFrame(video.name, index++, Descriptor, *frame);
+            auto frameCount = loader.countFrames(video.name);
+            while(auto frame = frameCursor->read()) {
+                if(index % 40 == 0) {
+                    std::cout << "Saving Frame: " << index << "/" << frameCount << "\r";
+                    std::cout.flush();
+                }
+
+                loader.saveFrame(video.name, index++, Descriptor, *frame);
+            }
         });
 
         writeScenes.wait();
         writeFrames.wait();
+        std::cout << std::endl;
     }
 
     writeMetadata(saveMetadata, databaseRoot / video.name);
@@ -614,7 +628,7 @@ QueryVideo make_query_adapter(const SIFTVideo &video, const FileDatabase &db)
     }
 
     scene_bag_adapter adapter{
-        scene_detect_cursor{*video.color(), static_cast<unsigned int>(threshold)},
+        scene_detect_cursor{*video.color(), static_cast<int>(threshold)},
         frame_bag_adapter{video.frames(), *frame_vocab}, *scene_vocab};
 
     return QueryVideo{video, std::make_unique<decltype(adapter)>(std::move(adapter))};
