@@ -311,6 +311,7 @@ std::vector<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &d
         std::vector<cv::Mat> knownDescriptors;
         std::vector<std::pair<unsigned int, unsigned int>> db_scenes;
         auto v = db.loadVideo(v2);
+        double frameRate = v->loadMetadata().frameRate;
 
         if constexpr(std::is_same_v<value_type, SerializableScene>) {
             auto scenes = v->getScenes();
@@ -333,13 +334,15 @@ std::vector<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &d
                 if constexpr(std::is_same_v<value_type, SerializableScene>) {
                     match.push_back(MatchInfo{v->name,
                         static_cast<double>(a.score),
+                        frameRate,
                         query_scenes[a.startUnknown].first,
                         query_scenes[a.endUnknown - 1].second,
                         db_scenes[a.startKnown].first,
                         db_scenes[a.endKnown - 1].second});
                 } else if constexpr(std::is_same_v<value_type, Frame>)
                     match.push_back(MatchInfo{v->name, 
-                        static_cast<double>(a.score), 
+                        static_cast<double>(a.score),
+                        frameRate, 
                         a.startUnknown, 
                         a.endUnknown, 
                         a.startKnown, 

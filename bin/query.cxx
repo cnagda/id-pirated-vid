@@ -69,5 +69,22 @@ int main(int argc, char **argv)
     f << bestmatch;
     f.close();
 
+    double queryFrameRate = video.getProperties().frameRate;
+
+    std::vector<MatchInfo> timestampMatches(matches.size());
+    std::transform(matches.begin(), matches.end(), timestampMatches.begin(), [queryFrameRate](auto match){
+        return MatchInfo{
+            match.video,
+            match.confidence,
+            match.knownFrameRate,
+            static_cast<size_t>(match.startQuery / queryFrameRate),
+            static_cast<size_t>(match.endQuery / queryFrameRate),
+            static_cast<size_t>(match.startKnown / match.knownFrameRate),
+            static_cast<size_t>(match.endKnown / match.knownFrameRate)
+        };
+    });
+
+    CSVExporter{"./results"}.exportMatchLogs(video.name + ".csv", timestampMatches);
+
     return 0;
 }

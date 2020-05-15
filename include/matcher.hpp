@@ -5,13 +5,6 @@
 #include "database_iface.hpp"
 #include <vector>
 
-struct MatchInfo
-{
-    std::string video;
-    double confidence;
-    IVideo::size_type startQuery, endQuery, startKnown, endKnown;
-};
-
 template <typename Matrix>
 double cosineSimilarity(Matrix &&b1, Matrix &&b2)
 {

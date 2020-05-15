@@ -11,6 +11,14 @@
 
 namespace fs = std::filesystem;
 
+struct MatchInfo
+{
+    std::string video;
+    double confidence;
+    double knownFrameRate;
+    size_t startQuery, endQuery, startKnown, endKnown;
+};
+
 struct FrameSimilarityInfo
 {
     double similarity;
@@ -63,7 +71,7 @@ public:
 class CSVExporter : public FSExporter
 {
     template<typename It>
-    void writeRow(std::ostream& output, It begin, It end) {
+    void writeRow(std::ostream& output, It begin, It end) const {
         if(begin != end) {
             output << *begin;
         }
@@ -75,7 +83,7 @@ class CSVExporter : public FSExporter
         output << std::endl;
     }
     template<typename It>
-    void writeCSVToDir(const std::string& filename, const std::vector<std::string>& headers, It start, It end) {
+    void writeCSVToDir(const std::string& filename, const std::vector<std::string>& headers, It start, It end) const {
         std::ofstream output(outputDir / filename);
 
         auto n_cols = headers.size();
@@ -89,8 +97,9 @@ class CSVExporter : public FSExporter
         }
     }
 public:
+    using FSExporter::FSExporter;
     const std::string delimiter = ",";
-    void exportMatchLogs();
+    void exportMatchLogs(const std::string& filename, const std::vector<MatchInfo>&) const;
 };
 
 class EmmaExporter : public FSExporter

@@ -40,3 +40,18 @@ std::vector<TimeSeries> VideoMatchingInstrumenter::getTimeSeries() const
 
     return out;
 }
+
+void CSVExporter::exportMatchLogs(const std::string& filename, const std::vector<MatchInfo>& matches) const {
+    std::vector<std::string> headers = {"Database Video", "Confidence", "Start Time", "End Time", "Query Start Time", "Query End Time"};
+    std::vector<std::string> cells;
+    for(const MatchInfo& match: matches) {
+        cells.emplace_back(match.video);
+        cells.emplace_back(std::to_string(match.confidence));
+        cells.emplace_back(std::to_string(match.startKnown));
+        cells.emplace_back(std::to_string(match.endKnown));
+        cells.emplace_back(std::to_string(match.startQuery));
+        cells.emplace_back(std::to_string(match.endQuery));
+    }
+
+    writeCSVToDir(filename, headers, cells.begin(), cells.end());
+}
