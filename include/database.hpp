@@ -47,6 +47,7 @@ struct DatabaseMetadata {
 struct VideoMetadata : public DatabaseMetadata {
     size_t frameCount;
     size_t sceneCount;
+    float frameRate;
 };
 
 

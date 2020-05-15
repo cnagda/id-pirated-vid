@@ -10,11 +10,10 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <fstream>
-#include <atomic>
 #include "concepts.hpp"
 #include <future>
 
-#define VIDEO_METADATA_FILENAME "metadata.bin"
+#define VIDEO_METADATA_FILENAME "metadata.txt"
 
 using namespace std;
 using namespace cv;
@@ -179,10 +178,14 @@ class CaptureSource : public ICursor<cv::UMat>
 {
     VideoCapture cap;
     size_t counter = 0;
-    const size_t frameCount;
 
 public:
-    CaptureSource(const std::string &filename) : cap(filename), frameCount(cap.get(cv::CAP_PROP_FRAME_COUNT)) {}
+    const size_t frameCount;
+    const float frameRate;
+
+    CaptureSource(const std::string &filename) : cap(filename), 
+        frameCount(cap.get(cv::CAP_PROP_FRAME_COUNT)),
+        frameRate(cap.get(cv::CAP_PROP_FPS)) {}
 
     std::optional<cv::UMat> read() override
     {
@@ -394,7 +397,12 @@ auto make_cursor_source(Read&& source)
 void writeMetadata(const VideoMetadata &data, const fs::path &videoDir)
 {
     ofstream stream(videoDir / VIDEO_METADATA_FILENAME);
-    stream.write((char *)&data, sizeof(data));
+    stream << "frameHash: " << data.frameHash << std::endl;
+    stream << "sceneHash: " << data.sceneHash << std::endl;
+    stream << "threshold: " << data.threshold << std::endl;
+    stream << "frameCount: " << data.frameCount << std::endl;
+    stream << "sceneCount: " << data.sceneCount << std::endl;
+    stream << "frameRate: " << data.frameRate << std::endl;
 }
 
 std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
@@ -404,15 +412,15 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
     loader.initVideoDir(video.name);
     loader.clearFrames(video.name);
 
-    auto source = make_cursor_source(video.images());
+    CaptureSource capture(video.filename);
+
+    auto source = make_cursor_source(capture);
 
     ScaleImage scale(video.cropsize);
     ExtractSIFT sift;
     Extract2DColorHistogram color;
     SaveFrameSink saveFrame(video.name, getFileLoader());
     // std::cout << std::endl;
-
-    std::atomic<size_t> frameCount = 0;
 
     tbb::parallel_pipeline(16,
         tbb::make_filter<void, ordered_umat>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc){
@@ -428,14 +436,12 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
             pair.first.colorHistogram = color(pair.second).data;
             return ordered_frame{pair.second.rank, pair.first};
         }) &
-        tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, [&](auto frame) {
-            frameCount.fetch_add(1, std::memory_order_relaxed);
-            saveFrame(frame);
-        }));
+        tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, saveFrame));
 
     std::cout << std::endl;
 
-    metadata.frameCount = frameCount.load(std::memory_order_relaxed);
+    metadata.frameCount = capture.frameCount;
+    metadata.frameRate = capture.frameRate;
     writeMetadata(metadata, video_dir);
     return saveVideo(DatabaseVideo{*this, video.name});
 }
@@ -515,11 +521,14 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
             loader.saveScene(video.name, index++, *scene);
         }
         std::cout << std::endl;
+
+        saveMetadata.sceneCount = index;
     } else {
         std::cout << "Note: Not extracting scenes" << std::endl;
         auto writeScenes = std::async(std::launch::async, [&](){
             size_t index = 0;
             while(auto scene = sceneCursor->read()) loader.saveScene(video.name, index++, *scene);
+            saveMetadata.sceneCount = index;
         });
         auto writeFrames = std::async(std::launch::async, [&](){
             size_t index = 0;
@@ -600,8 +609,14 @@ VideoMetadata DatabaseVideo::loadMetadata() const
 {
     std::ifstream stream(db.databaseRoot / name / VIDEO_METADATA_FILENAME);
     VideoMetadata data{};
+    std::string dummy;
 
-    stream.read((char *)&data, sizeof(data));
+    stream >> dummy >> data.frameHash;
+    stream >> dummy >> data.sceneHash;
+    stream >> dummy >> data.threshold;
+    stream >> dummy >> data.frameCount;
+    stream >> dummy >> data.sceneCount;
+    stream >> dummy >> data.frameRate;
 
     return data;
 }
