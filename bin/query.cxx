@@ -77,10 +77,10 @@ int main(int argc, char **argv)
             match.video,
             match.confidence,
             match.knownFrameRate,
-            static_cast<size_t>(match.startQuery / queryFrameRate),
-            static_cast<size_t>(match.endQuery / queryFrameRate),
-            static_cast<size_t>(match.startKnown / match.knownFrameRate),
-            static_cast<size_t>(match.endKnown / match.knownFrameRate)
+            static_cast<size_t>(match.startQuery / queryFrameRate * 1000.0),
+            static_cast<size_t>(match.endQuery / queryFrameRate * 1000.0),
+            static_cast<size_t>(match.startKnown / match.knownFrameRate * 1000.0),
+            static_cast<size_t>(match.endKnown / match.knownFrameRate * 1000.0)
         };
     });
 
