@@ -282,6 +282,11 @@ std::unique_ptr<ICursor<Frame>> SIFTVideo::frames() const
     return std::make_unique<FrameSource>(filename, callback, cropsize);
 }
 
+InputVideoProperties SIFTVideo::getProperties() const {
+    CaptureSource source(filename);
+    return {source.frameCount, source.frameRate};
+}
+
 std::unique_ptr<ICursor<Frame>> SIFTVideo::frames(const Vocab<Frame>& vocab) const {
     frame_bag_adapter source{FrameSource{filename, callback, cropsize}, vocab};
     return std::make_unique<decltype(source)>(std::move(source));
@@ -407,14 +412,12 @@ void writeMetadata(const VideoMetadata &data, const fs::path &videoDir)
 
 std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
 {
-    VideoMetadata metadata{};
+    VideoMetadata metadata(video.getProperties());
     fs::path video_dir{databaseRoot / video.name};
     loader.initVideoDir(video.name);
     loader.clearFrames(video.name);
 
-    CaptureSource capture(video.filename);
-
-    auto source = make_cursor_source(capture);
+    auto source = make_cursor_source(video.images());
 
     ScaleImage scale(video.cropsize);
     ExtractSIFT sift;
@@ -440,8 +443,6 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
 
     std::cout << std::endl;
 
-    metadata.frameCount = capture.frameCount;
-    metadata.frameRate = capture.frameRate;
     writeMetadata(metadata, video_dir);
     return saveVideo(DatabaseVideo{*this, video.name});
 }

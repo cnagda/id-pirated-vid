@@ -291,28 +291,28 @@ std::optional<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase 
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
 
     MatchInfo match{};
-    std::vector<cv::Mat> targetScenes;
+    std::vector<cv::Mat> targetDescriptors;
 
     if constexpr(std::is_same_v<value_type, SerializableScene>)
-        while(auto scene = reader.read()) targetScenes.push_back(scene->frameBag);
+        while(auto scene = reader.read()) targetDescriptors.push_back(scene->frameBag);
     else if constexpr(std::is_same_v<value_type, Frame>)
-        while(auto frame = reader.read()) targetScenes.push_back(frame->frameDescriptor);
+        while(auto frame = reader.read()) targetDescriptors.push_back(frame->frameDescriptor);
 
     for (auto v2 : db.listVideos())
     {
         std::cout << "Calculating match for " << v2 << std::endl;
-        std::vector<cv::Mat> knownScenes;
+        std::vector<cv::Mat> knownDescriptors;
         auto v = db.loadVideo(v2);
 
         if constexpr(std::is_same_v<value_type, SerializableScene>) {
             auto scenes = v->getScenes();
-            while(auto scene = scenes->read()) knownScenes.push_back(scene->frameBag);
+            while(auto scene = scenes->read()) knownDescriptors.push_back(scene->frameBag);
         } else if constexpr(std::is_same_v<value_type, Frame>) {
             auto frames = v->frames();
-            while(auto frame = frames->read()) knownScenes.push_back(frame->frameDescriptor);
+            while(auto frame = frames->read()) knownDescriptors.push_back(frame->frameDescriptor);
         }
 
-        auto &&alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 3, 2);
+        auto &&alignments = calculateAlignment(knownDescriptors, targetDescriptors, intcomp, 3, 2);
         // std::cout << targetScenes.size() << " " << knownScenes.size() << std::endl;
         if (alignments.size() > 0)
         {
