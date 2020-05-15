@@ -41,103 +41,33 @@ int main(int argc, char **argv)
     auto &fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
     auto video2 = make_query_adapter(video, fd);
 
-    std::optional<MatchInfo> match;
+    std::vector<MatchInfo> matches;
 
     if(argc == 4) {
-        match = findMatch(video.frames(), fd);
+        matches = findMatch(video.frames(), fd);
     } else if(argc == 3) {
-        match = findMatch(video2, fd);
+        matches = findMatch(video2, fd);
     }
 
     std::string bestmatch = "";
-    if (match)
+
+    if(matches.size() > 0) {
+        bestmatch = matches[0].video;
+    }
+
+    int count = 0;
+
+    for(auto a: matches)
     {
-        bestmatch = match->video;
-        std::cout << std::endl
-                  << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl
-                  << std::endl;
-        int count = 0;
-        for (auto a : match->alignments)
-        {
-            if (a.score > (match->matchConfidence / 2.5))
-            {
-                count++;
-                std::cout << "Alignment " << count << ", Score: " << a.score << std::endl;
-                std::cout << "Scene range in " << match->video << ": [" << a.startKnown << ", " << a.endKnown << ")" << std::endl;
-                std::cout << "Scene range in " << video2.name << ": [" << a.startUnknown << ", " << a.endUnknown << ")" << std::endl
-                          << std::endl;
-            }
-        }
+        count++;
+        std::cout << "Alignment " << count << ", Score: " << a.confidence << std::endl;
+        std::cout << "Frame range in " << a.video << ": [" << a.startKnown << ", " << a.endKnown << ")" << std::endl;
+        std::cout << "Frame range in " << video2.name << ": [" << a.startQuery << ", " << a.endQuery << ")" << std::endl
+                    << std::endl;
     }
 
     f << bestmatch;
     f.close();
-
-    // namedWindow("Display window", WINDOW_NORMAL );// Create a window for display.
-    //
-    // auto myvocab = loadVocabulary<Vocab<IScene>>(fd)->descriptors();
-    // auto myframevocab = loadVocabulary<Frame>(fd)->descriptors();
-    //
-    // auto videopaths = fd.loadVideo();
-    // bool first = 1;
-    // Frame firstFrame;
-    //
-    // auto mycomp = BOWComparator(myvocab);
-    //
-    // // for each video, compare first frame to rest of frames
-    // /*for(auto videopath : videopaths){
-    //
-    //     auto video = fd.loadVideo(videopath);
-    //     auto frames = video->frames();
-    //     for(auto& frame : frames){
-    //         if(first){
-    //             first = 0;
-    //             firstFrame = frame;
-    //             std::cout << frameSimilarity(firstFrame, firstFrame, myvocab) << std::endl;
-    //             continue;
-    //         }
-    //         else{
-    //             std::cout << frameSimilarity(firstFrame, frame, myvocab) << std::endl;
-    //         }
-    //
-    //         //Mat mymat = baggify(frame, myvocab);
-    //     }
-    // }*/
-    //
-    // auto intcomp = [](auto& b1, auto& b2) {
-    //     auto a = cosineSimilarity(b1, b2);
-    //     return a > 0.8 ? 3 : -3;
-    // };
-    //
-    // // similarity between each two videos
-    // for(int i = 0; i < videopaths.size() - 1; i++){
-    //     auto& v1 = videopaths[i];
-    //
-    //     auto fb1 = flatScenesBags(*v1, mycomp, 0.2, myframevocab);
-    //
-    //     VideoMatchingInstrumenter instrumenter(*v1);
-    //     auto reporter = getReporter(instrumenter);
-    //     for(int j = i + 1; j < videopaths.size(); j++){
-    //         auto& v2 = videopaths[j];
-    //         std::cout << "Comparing " << v1->name << " to " << v2->name << std::endl;
-    //
-    //         std::cout << "Boneheaded Similarity: " << boneheadedSimilarity(*v1, *v2, mycomp, reporter) << std::endl << std::endl;
-    //
-    //         auto fb2 = flatScenesBags(*v2, mycomp, 0.2, myframevocab);
-    //
-    //         std::cout << "fb1 size: " << fb1.size() << " fb2: " << fb2.size() << std::endl;
-    //         auto&& alignments = calculateAlignment(fb1, fb2, intcomp, 0, 2);
-    //
-    //         std::cout << "Scene sw: " << std::endl;
-    //         for(auto& al : alignments){
-    //             std::cout << static_cast<std::string>(al) << std::endl;
-    //         }
-    //
-    //
-    //     }
-    //
-    //     EmmaExporter().exportTimeseries(v1->name, "frame no.", "cosine distance", instrumenter.getTimeSeries());
-    // }
 
     return 0;
 }

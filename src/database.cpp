@@ -154,7 +154,7 @@ public:
     {
         if(min_scenes != -1) {
             scenes = hierarchicalScenes(get_distances(reader, ColorComparator2D{}), min_scenes);
-            std::cout << "Detected Scenes: " << scenes.size() << std::endl;
+            std::cout << std::endl << "Detected Scenes: " << scenes.size() << std::endl;
         }
         iterator = scenes.begin();
     }
@@ -646,6 +646,8 @@ QueryVideo make_query_adapter(const SIFTVideo &video, const FileDatabase &db)
     scene_bag_adapter adapter{
         scene_detect_cursor{*video.color(), static_cast<int>(threshold)},
         frame_bag_adapter{video.frames(), *frame_vocab}, *scene_vocab};
+
+    std::cout << std::endl;
 
     return QueryVideo{video, std::make_unique<decltype(adapter)>(std::move(adapter))};
 }
