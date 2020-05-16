@@ -69,6 +69,12 @@ def call_execs(args):
         # print(call_args)
         subprocess.call(call_args)
 
+        viewer_args = ['./python/viewer.py','./results/sample.mp4.csv',path]
+        if len(args.paths) == 1:
+            viewer_args.append('-v')
+        if args.type == 'QUERY':
+            subprocess.call(viewer_args)
+
 
 def main():
     parser = argparse.ArgumentParser(
