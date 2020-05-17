@@ -79,6 +79,11 @@ public:
 
     bool saveVocab(const ContainerVocab &vocab, const std::string &key);
     std::optional<ContainerVocab> loadVocab(const std::string &key) const;
+    bool hasVocab(const std::string& key) const;
+    template<typename T>
+    bool hasVocab() const {
+        return hasVocab(T::vocab_name);
+    } 
 
     DatabaseMetadata loadMetadata() const;
 };

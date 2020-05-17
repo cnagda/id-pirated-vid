@@ -321,18 +321,22 @@ std::unique_ptr<ICursor<Frame>> DatabaseVideo::frames() const
 std::unique_ptr<ICursor<SerializableScene>> DatabaseVideo::getScenes() const
 {
     auto scene_source = make_scene_source(db.getFileLoader(), name);
-    auto vocab = loadVocabulary<SerializableScene>(db);
+    auto vocab = db.hasVocab<SerializableScene>();
     if (db.loadStrategy == Eager &&
         db.loadMetadata() != loadMetadata() &&
         vocab)
     {
-        scene_bag_adapter source{scene_source, frames(), *vocab};
+        scene_bag_adapter source{scene_source, frames(), *loadVocabulary<SerializableScene>(db)};
         return std::make_unique<decltype(source)>(std::move(source));
     }
     else
     {
         return std::make_unique<decltype(scene_source)>(std::move(scene_source));
     }
+}
+
+bool FileDatabase::hasVocab(const std::string& key) const {
+    return fs::exists(databaseRoot / key);
 }
 
 FileDatabase::FileDatabase(const std::string &databasePath,
