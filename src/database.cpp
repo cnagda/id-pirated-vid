@@ -10,11 +10,10 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <fstream>
-#include <atomic>
 #include "concepts.hpp"
 #include <future>
 
-#define VIDEO_METADATA_FILENAME "metadata.bin"
+#define VIDEO_METADATA_FILENAME "metadata.txt"
 
 using namespace std;
 using namespace cv;
@@ -79,14 +78,14 @@ class scene_bag_adapter : public ICursor<SerializableScene>
     SceneRead scene_reader;
     FrameRead frame_reader;
 
-    Vocab<SerializableScene> vocab;
+    BOWExtractor extractor;
     size_t f_index = 0;
 
 public:
-    scene_bag_adapter(SceneRead &&s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(std::move(f)), vocab(v) {}
-    scene_bag_adapter(SceneRead &s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(f), vocab(v) {}
-    scene_bag_adapter(SceneRead &s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), vocab(v) {}
-    scene_bag_adapter(SceneRead &&s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), vocab(v) {}
+    scene_bag_adapter(SceneRead &&s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(std::move(f)), extractor(v) {}
+    scene_bag_adapter(SceneRead &s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(f), extractor(v) {}
+    scene_bag_adapter(SceneRead &s, FrameRead &&f, const Vocab<SerializableScene> &v) : scene_reader(s), frame_reader(std::move(f)), extractor(v) {}
+    scene_bag_adapter(SceneRead &&s, FrameRead &f, const Vocab<SerializableScene> &v) : scene_reader(std::move(s)), frame_reader(f), extractor(v) {}
 
     void skip(unsigned int n) override {
         if constexpr(has_arrow_v<SceneRead>) {
@@ -135,7 +134,7 @@ public:
             }
 
             // std::cout << "bagging scene of length: " << frames.size() << std::endl;
-            val->frameBag = baggify(frames.begin(), frames.end(), BOWExtractor{vocab});
+            val->frameBag = baggify(frames.begin(), frames.end(), extractor);
             return val;
         }
         return std::nullopt;
@@ -155,7 +154,7 @@ public:
     {
         if(min_scenes != -1) {
             scenes = hierarchicalScenes(get_distances(reader, ColorComparator2D{}), min_scenes);
-            std::cout << "Detected Scenes: " << scenes.size() << std::endl;
+            std::cout << std::endl << "Detected Scenes: " << scenes.size() << std::endl;
         }
         iterator = scenes.begin();
     }
@@ -179,10 +178,14 @@ class CaptureSource : public ICursor<cv::UMat>
 {
     VideoCapture cap;
     size_t counter = 0;
-    const size_t frameCount;
 
 public:
-    CaptureSource(const std::string &filename) : cap(filename), frameCount(cap.get(cv::CAP_PROP_FRAME_COUNT)) {}
+    const size_t frameCount;
+    const float frameRate;
+
+    CaptureSource(const std::string &filename) : cap(filename), 
+        frameCount(cap.get(cv::CAP_PROP_FRAME_COUNT)),
+        frameRate(cap.get(cv::CAP_PROP_FPS)) {}
 
     std::optional<cv::UMat> read() override
     {
@@ -277,6 +280,11 @@ std::unique_ptr<ICursor<cv::Mat>> SIFTVideo::color() const
 std::unique_ptr<ICursor<Frame>> SIFTVideo::frames() const
 {
     return std::make_unique<FrameSource>(filename, callback, cropsize);
+}
+
+InputVideoProperties SIFTVideo::getProperties() const {
+    CaptureSource source(filename);
+    return {source.frameCount, source.frameRate};
 }
 
 std::unique_ptr<ICursor<Frame>> SIFTVideo::frames(const Vocab<Frame>& vocab) const {
@@ -394,12 +402,17 @@ auto make_cursor_source(Read&& source)
 void writeMetadata(const VideoMetadata &data, const fs::path &videoDir)
 {
     ofstream stream(videoDir / VIDEO_METADATA_FILENAME);
-    stream.write((char *)&data, sizeof(data));
+    stream << "frameHash: " << data.frameHash << std::endl;
+    stream << "sceneHash: " << data.sceneHash << std::endl;
+    stream << "threshold: " << data.threshold << std::endl;
+    stream << "frameCount: " << data.frameCount << std::endl;
+    stream << "sceneCount: " << data.sceneCount << std::endl;
+    stream << "frameRate: " << data.frameRate << std::endl;
 }
 
 std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
 {
-    VideoMetadata metadata{};
+    VideoMetadata metadata(video.getProperties());
     fs::path video_dir{databaseRoot / video.name};
     loader.initVideoDir(video.name);
     loader.clearFrames(video.name);
@@ -411,8 +424,6 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
     Extract2DColorHistogram color;
     SaveFrameSink saveFrame(video.name, getFileLoader());
     // std::cout << std::endl;
-
-    std::atomic<size_t> frameCount = 0;
 
     tbb::parallel_pipeline(16,
         tbb::make_filter<void, ordered_umat>(tbb::filter::serial_out_of_order, [&](tbb::flow_control& fc){
@@ -428,14 +439,10 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const SIFTVideo &video)
             pair.first.colorHistogram = color(pair.second).data;
             return ordered_frame{pair.second.rank, pair.first};
         }) &
-        tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, [&](auto frame) {
-            frameCount.fetch_add(1, std::memory_order_relaxed);
-            saveFrame(frame);
-        }));
+        tbb::make_filter<ordered_frame, void>(tbb::filter::parallel, saveFrame));
 
     std::cout << std::endl;
 
-    metadata.frameCount = frameCount.load(std::memory_order_relaxed);
     writeMetadata(metadata, video_dir);
     return saveVideo(DatabaseVideo{*this, video.name});
 }
@@ -515,11 +522,14 @@ std::optional<DatabaseVideo> FileDatabase::saveVideo(const DatabaseVideo &video)
             loader.saveScene(video.name, index++, *scene);
         }
         std::cout << std::endl;
+
+        saveMetadata.sceneCount = index;
     } else {
         std::cout << "Note: Not extracting scenes" << std::endl;
         auto writeScenes = std::async(std::launch::async, [&](){
             size_t index = 0;
             while(auto scene = sceneCursor->read()) loader.saveScene(video.name, index++, *scene);
+            saveMetadata.sceneCount = index;
         });
         auto writeFrames = std::async(std::launch::async, [&](){
             size_t index = 0;
@@ -600,8 +610,14 @@ VideoMetadata DatabaseVideo::loadMetadata() const
 {
     std::ifstream stream(db.databaseRoot / name / VIDEO_METADATA_FILENAME);
     VideoMetadata data{};
+    std::string dummy;
 
-    stream.read((char *)&data, sizeof(data));
+    stream >> dummy >> data.frameHash;
+    stream >> dummy >> data.sceneHash;
+    stream >> dummy >> data.threshold;
+    stream >> dummy >> data.frameCount;
+    stream >> dummy >> data.sceneCount;
+    stream >> dummy >> data.frameRate;
 
     return data;
 }
@@ -630,6 +646,8 @@ QueryVideo make_query_adapter(const SIFTVideo &video, const FileDatabase &db)
     scene_bag_adapter adapter{
         scene_detect_cursor{*video.color(), static_cast<int>(threshold)},
         frame_bag_adapter{video.frames(), *frame_vocab}, *scene_vocab};
+
+    std::cout << std::endl;
 
     return QueryVideo{video, std::make_unique<decltype(adapter)>(std::move(adapter))};
 }

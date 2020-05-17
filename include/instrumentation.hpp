@@ -6,9 +6,18 @@
 #include <optional>
 #include "database_iface.hpp"
 #include "fs_compat.hpp"
-#include <functional>
+#include <fstream>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
+
+struct MatchInfo
+{
+    std::string video;
+    double confidence;
+    double knownFrameRate;
+    size_t startQuery, endQuery, startKnown, endKnown;
+};
 
 struct FrameSimilarityInfo
 {
@@ -19,7 +28,6 @@ struct FrameSimilarityInfo
 };
 
 typedef std::string Label;
-typedef std::function<void(FrameSimilarityInfo)> SimilarityReporter;
 
 struct Point2f
 {
@@ -38,45 +46,20 @@ public:
     virtual void exportTimeseries(const Label &title, const Label &xaxis, const Label &yaxis, const std::vector<TimeSeries> &data) const = 0;
 };
 
-template <class Video>
 class VideoMatchingInstrumenter
 {
 private:
-    const Video &target;
+    IVideo target;
     std::unordered_map<std::string, std::vector<Point2f>> videoTracker;
 
 public:
-    VideoMatchingInstrumenter(const Video &targetVideo) : target(targetVideo) {}
+    VideoMatchingInstrumenter(const IVideo &targetVideo) : target(targetVideo) {}
     void clear();
-    void addFrameSimilarity(FrameSimilarityInfo info)
-    {
-        if (info.v1 && info.v2)
-        {
-            auto& known = (info.v1->name == target.name) ? *info.v2 : *info.v1;
-            videoTracker[known.name].push_back({info.f1Idx, info.similarity});
-        }
-    }
-    std::vector<TimeSeries> getTimeSeries() const
-    {
-        std::vector<TimeSeries> out;
-        for (auto &[name, points] : videoTracker)
-        {
-            std::vector<Point2f> dataCopy(points);
-            std::sort(dataCopy.begin(), dataCopy.end(), [](auto p1, auto p2) { return p1.x < p2.x; });
-            out.push_back({name, dataCopy});
-        }
-
-        return out;
-    }
+    void addFrameSimilarity(const FrameSimilarityInfo& info);
+    std::vector<TimeSeries> getTimeSeries() const;
 };
 
-template <class Video>
-SimilarityReporter getReporter(VideoMatchingInstrumenter<Video> &instrumenter)
-{
-    return [&instrumenter](auto f) { instrumenter.addFrameSimilarity(f); };
-}
-
-class FSExporter : public IExporter
+class FSExporter
 {
 protected:
     const fs::path outputDir;
@@ -87,15 +70,42 @@ public:
 
 class CSVExporter : public FSExporter
 {
+    template<typename It>
+    void writeRow(std::ostream& output, It begin, It end) const {
+        if(begin != end) {
+            output << *begin;
+        }
+
+        for(auto i = begin + 1; i != end; i++) {
+            output << "," << *i;
+        }
+
+        output << std::endl;
+    }
+    template<typename It>
+    void writeCSVToDir(const std::string& filename, const std::vector<std::string>& headers, It start, It end) const {
+        std::ofstream output(outputDir / filename);
+
+        auto n_cols = headers.size();
+        writeRow(output, headers.begin(), headers.end());
+
+        auto current = start;
+        while(current != end) {
+            auto row_end = current + n_cols;
+            writeRow(output, current, row_end);
+            current = row_end;
+        }
+    }
 public:
+    using FSExporter::FSExporter;
     const std::string delimiter = ",";
-    void exportTimeseries(const Label &title, const Label &xaxis, const Label &yaxis, const std::vector<TimeSeries> &data) const override;
+    void exportMatchLogs(const std::string& filename, const std::vector<MatchInfo>&) const;
 };
 
 class EmmaExporter : public FSExporter
 {
 public:
-    void exportTimeseries(const Label &title, const Label &xaxis, const Label &yaxis, const std::vector<TimeSeries> &data) const override;
+    void exportTimeseries(const Label &title, const Label &xaxis, const Label &yaxis, const std::vector<TimeSeries> &data) const;
 };
 
 #endif

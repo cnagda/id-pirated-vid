@@ -26,12 +26,11 @@ std::vector<std::pair<unsigned int, unsigned int>> thresholdScenes(const std::ve
 std::vector<std::pair<unsigned int, unsigned int>> hierarchicalScenes(const std::vector<double>& distances, int min_scene_length)
 {
     std::vector<bool> excluded(distances.size(), 0);
-    std::vector<std::pair<double, int>> sorted_distances;
+    std::vector<std::pair<double, int>> sorted_distances(distances.size());
 
-    for (int i = 0; i < distances.size(); i++)
-    {
-        sorted_distances.emplace_back(distances[i], i);
-    }
+    std::transform(distances.begin(), distances.end(), sorted_distances.begin(), [index = 0](double val) mutable {
+        return std::make_pair(val, index++);
+    });
 
     std::vector<int> retval;
     std::sort(sorted_distances.begin(), sorted_distances.end(), [](auto l, auto r) { return l.first > r.first; });
@@ -241,10 +240,10 @@ Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase
 			if(descriptor_levels[0].rows >= N){
 				overflow(descriptor_levels, K, N, 0);
 			}
+
+            frames ->skip(speedinator);
 		}
     }
-
-    return Vocab<SerializableScene>(constructVocabulary(descriptor_levels.begin(), descriptor_levels.end(), K));
 
     // flush all remaining features to lowest level
     for (int i = 0; i < descriptor_levels.size(); i++)
@@ -285,70 +284,92 @@ double boneheadedSimilarity(IVideo &v1, IVideo &v2, std::function<double(Frame, 
 }*/
 
 template<typename Reader>
-std::optional<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &db)
+std::vector<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &db)
 {
     typedef typename decltype(reader.read())::value_type value_type;
     auto intcomp = [](auto f1, auto f2) { return cosineSimilarity(f1, f2) > 0.8 ? 3 : -3; };
 
-    MatchInfo match{};
-    std::vector<cv::Mat> targetScenes;
+    std::vector<MatchInfo> match;
 
-    if constexpr(std::is_same_v<value_type, SerializableScene>)
-        while(auto scene = reader.read()) targetScenes.push_back(scene->frameBag);
+    // load query information into array
+    std::vector<cv::Mat> targetDescriptors;
+    std::vector<std::pair<unsigned int, unsigned int>> query_scenes;
+
+    if constexpr(std::is_same_v<value_type, SerializableScene>) {
+        while(auto scene = reader.read()) {
+            targetDescriptors.push_back(scene->frameBag);
+            query_scenes.emplace_back(scene->startIdx, scene->endIdx);
+        }
+    }
     else if constexpr(std::is_same_v<value_type, Frame>)
-        while(auto frame = reader.read()) targetScenes.push_back(frame->frameDescriptor);
+        while(auto frame = reader.read()) targetDescriptors.push_back(frame->frameDescriptor);
 
-    for (auto v2 : db.listVideos())
+    // calculate alignments for each video in database
+    for (const std::string& v2 : db.listVideos())
     {
         std::cout << "Calculating match for " << v2 << std::endl;
-        std::vector<cv::Mat> knownScenes;
+        std::vector<cv::Mat> knownDescriptors;
+        std::vector<std::pair<unsigned int, unsigned int>> db_scenes;
         auto v = db.loadVideo(v2);
+        double frameRate = v->loadMetadata().frameRate;
 
         if constexpr(std::is_same_v<value_type, SerializableScene>) {
             auto scenes = v->getScenes();
-            while(auto scene = scenes->read()) knownScenes.push_back(scene->frameBag);
+            while(auto scene = scenes->read()) {
+                knownDescriptors.push_back(scene->frameBag);
+                db_scenes.emplace_back(scene->startIdx, scene->endIdx);
+            }
         } else if constexpr(std::is_same_v<value_type, Frame>) {
             auto frames = v->frames();
-            while(auto frame = frames->read()) knownScenes.push_back(frame->frameDescriptor);
+            while(auto frame = frames->read()) knownDescriptors.push_back(frame->frameDescriptor);
         }
 
-        auto &&alignments = calculateAlignment(knownScenes, targetScenes, intcomp, 3, 2);
+        auto &&alignments = calculateAlignment(knownDescriptors, targetDescriptors, intcomp, 3, 2);
         // std::cout << targetScenes.size() << " " << knownScenes.size() << std::endl;
         if (alignments.size() > 0)
         {
-            auto &a = alignments[0];
-            std::cout << "Score: " << a.score << std::endl;
-            if (a.score > match.matchConfidence)
+            std::cout << "Score: " << alignments[0].score << std::endl;
+            for (auto a: alignments)
             {
-                match = MatchInfo{static_cast<double>(a.score), a.startKnown, a.endKnown, v2, alignments};
+                if constexpr(std::is_same_v<value_type, SerializableScene>) {
+                    match.push_back(MatchInfo{v->name,
+                        static_cast<double>(a.score),
+                        frameRate,
+                        query_scenes[a.startUnknown].first,
+                        query_scenes[a.endUnknown - 1].second,
+                        db_scenes[a.startKnown].first,
+                        db_scenes[a.endKnown - 1].second});
+                } else if constexpr(std::is_same_v<value_type, Frame>)
+                    match.push_back(MatchInfo{v->name, 
+                        static_cast<double>(a.score),
+                        frameRate, 
+                        a.startUnknown, 
+                        a.endUnknown, 
+                        a.startKnown, 
+                        a.endKnown});
             }
         } else {
             std::cout << "Score: 0" << std::endl;
         }
     }
 
-    if (match.matchConfidence > 0.5)
-    {
-        return match;
-    }
+    std::sort(match.begin(), match.end(), [](const MatchInfo& a, const MatchInfo& b){
+        return a.confidence > b.confidence;
+    });
 
-    return std::nullopt;
+    return match;
 }
 
-std::optional<MatchInfo> findMatch(QueryVideo& video, const FileDatabase &db) {
+std::vector<MatchInfo> findMatch(QueryVideo& video, const FileDatabase &db) {
     return internal_findMatch(*video.getScenes(), db);
 }
 
-std::optional<MatchInfo> findMatch(QueryVideo&& video, const FileDatabase &db) {
+std::vector<MatchInfo> findMatch(QueryVideo&& video, const FileDatabase &db) {
     return internal_findMatch(*video.getScenes(), db);
 }
 
-std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<Frame>> frames, const FileDatabase &db) {
+std::vector<MatchInfo> findMatch(std::unique_ptr<ICursor<Frame>> frames, const FileDatabase &db) {
     return internal_findMatch(*frames, db);
-}
-
-std::optional<MatchInfo> findMatch(std::unique_ptr<ICursor<SerializableScene>> scenes, const FileDatabase &db) {
-    return internal_findMatch(*scenes, db);
 }
 
 double BOWComparator::operator()(Frame &f1, Frame &f2)

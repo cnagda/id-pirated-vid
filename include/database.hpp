@@ -44,9 +44,11 @@ struct DatabaseMetadata {
     }
 };
 
-struct VideoMetadata : public DatabaseMetadata {
-    size_t frameCount;
+struct VideoMetadata : public DatabaseMetadata, public InputVideoProperties {
     size_t sceneCount;
+
+    VideoMetadata() = default;
+    VideoMetadata(const InputVideoProperties& other): DatabaseMetadata(), InputVideoProperties(other), sceneCount(0) {}
 };
 
 
