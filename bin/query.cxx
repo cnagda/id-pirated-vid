@@ -49,26 +49,6 @@ int main(int argc, char **argv)
         matches = findMatch(video2, fd);
     }
 
-    std::string bestmatch = "";
-
-    if(matches.size() > 0) {
-        bestmatch = matches[0].video;
-    }
-
-    int count = 0;
-
-    for(auto a: matches)
-    {
-        count++;
-        std::cout << "Alignment " << count << ", Score: " << a.confidence << std::endl;
-        std::cout << "Frame range in " << a.video << ": [" << a.startKnown << ", " << a.endKnown << ")" << std::endl;
-        std::cout << "Frame range in " << video2.name << ": [" << a.startQuery << ", " << a.endQuery << ")" << std::endl
-                    << std::endl;
-    }
-
-    f << bestmatch;
-    f.close();
-
     double queryFrameRate = video.getProperties().frameRate;
 
     std::vector<MatchInfo> timestampMatches(matches.size());
