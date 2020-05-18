@@ -55,17 +55,6 @@ int main(int argc, char **argv)
         bestmatch = matches[0].video;
     }
 
-    int count = 0;
-
-    for(auto a: matches)
-    {
-        count++;
-        std::cout << "Alignment " << count << ", Score: " << a.confidence << std::endl;
-        std::cout << "Frame range in " << a.video << ": [" << a.startKnown << ", " << a.endKnown << ")" << std::endl;
-        std::cout << "Frame range in " << video2.name << ": [" << a.startQuery << ", " << a.endQuery << ")" << std::endl
-                    << std::endl;
-    }
-
     f << bestmatch;
     f.close();
 
