@@ -185,12 +185,15 @@ class Previewer:
 
         self.init_screen()
 
+
 def read_logfile(logpath):
+    video_names = set()
     reader = csv.reader(open(logpath, "r"), delimiter=",")
     x = list(reader)[1:]
     y = []
     for row in x:
         r = []
+        video_names.add(str(row[VIDNAME]))
         r.append(str(row[VIDNAME]))
         r.append(float(row[SCORE]))
         r.append(int(row[DB_START]))
@@ -201,9 +204,15 @@ def read_logfile(logpath):
 
     logfile = np.array(y,dtype='object')
 
-    logfile = logfile[np.argsort(logfile[:, SCORE])[::-1]]
+    if len(logfile) > 1:
+        logfile = logfile[np.argsort(logfile[:, SCORE])[::-1]]
 
-    logfile = logfile[logfile[:,1] > np.mean(logfile[:,1]) + 1.5*np.std(logfile[:,1])]
+        # TODO: CHANDNI PLEASE EDIT HERE
+        # logfile = logfile[logfile[:,1] > np.mean(logfile[:,1]) + 1.5*np.std(logfile[:,1])]
+
+    with open("./results/resultcache.txt", "w") as file:
+        for item in video_names:
+            file.write(f"{item}\n")
 
     return logfile
 
@@ -220,6 +229,9 @@ def str_timestamp(num_ms):
 
 
 def print_log(logfile):
+    if len(logfile) < 1:
+        print("NO MATCHES FOUND")
+        return
     print("{}:{:>30}{:>12}{:>30}{:>30}".format(
             "#", "Name of Matching Video","Score","Range in DB", "Range in Query"))
     for i, row in enumerate(logfile):
@@ -233,6 +245,13 @@ def print_log(logfile):
         print("{}:{:>30}{:>12}{:>30}{:>30}".format(
                 i, row[VIDNAME],row[SCORE],db_range, query_range))
 
+
+def my_glob(path):
+    expanded = []
+    for r,d,f in os.walk(path):
+        for file in f:
+            expanded.append(f"{r}/{file}")
+    return expanded
 
 def main():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -262,27 +281,22 @@ def main():
         print("Logfile does not exist at this path")
         return
 
-
-    if not args.visualize:
-        logfile = read_logfile(args.logfile)
-        print_log(logfile)
+    logfile = read_logfile(args.logfile)
+    print_log(logfile)
+    if not args.visualize or len(logfile) < 1:
         return
 
 
-    db_video_path = input("Please enter directory of videos in database: ")
-    if not os.path.isdir(db_video_path):
-        print("Not a valid directory")
-        return
+    db_video_path = input("Please enter directory of videos in database to view alignments: ")
+    while not os.path.isdir(db_video_path):
+        print("Not a valid directory, please try again.")
+        db_video_path = input("Please enter directory of videos in database to view alignments: ")
 
 
-    vids = glob.glob(db_video_path + "/*")
+    vids = my_glob(db_video_path)
 
     # dict of vidname to path
     db_vids = {os.path.basename(vid) :vid for vid in vids}
-
-
-    logfile = read_logfile(args.logfile)
-    print_log(logfile)
 
 
     selection=""

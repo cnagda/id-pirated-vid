@@ -69,8 +69,9 @@ def call_execs(args):
         # print(call_args)
         subprocess.call(call_args)
 
-        viewer_args = ['./python/viewer.py','./results/sample.mp4.csv',path]
-        if len(args.paths) == 1:
+        logpath = f"./results/{os.path.basename(path)}.csv"
+        viewer_args = ['./viewer.py',logpath,path]
+        if args.visualize:
             viewer_args.append('-v')
         if args.type == 'QUERY':
             subprocess.call(viewer_args)
@@ -134,6 +135,11 @@ def main():
         'paths',
         help='path(s) to directories/files to add',
         nargs='+'
+    )
+    parser_query.add_argument(
+        '-v','--visualize',
+        action='store_true',
+        help='visualize video matches'
     )
 
     args = parser.parse_args()
