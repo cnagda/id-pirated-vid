@@ -349,7 +349,11 @@ std::vector<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &d
                         a.endKnown});
             }
         } else {
-            std::cout << "Score: 0" << std::endl;
+            match.push_back(
+                MatchInfo{
+                    v->name, 0, frameRate, 0, 0, 0, 0);
+                }
+            )
         }
     }
 
