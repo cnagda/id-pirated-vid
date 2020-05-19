@@ -209,20 +209,21 @@ def read_logfile(logpath):
     #     logfile = logfile[np.argsort(logfile[:, SCORE])[::-1]]
     #     logfile = logfile[logfile[:,1] > np.mean(logfile[:,1]) + 1.5*np.std(logfile[:,1])]
     #
-    # with open("./results/resultcache.txt", "w") as file:
-    #     for item in video_names:
-    #         file.write(f"{item}\n")
 
     logfile = pd.read_csv(logpath, index_col=None)
-    video_names = logfile['Database Video'].tolist()
 
     df = logfile.groupby('Database Video').sum().reset_index()
     threshold = df['Confidence'].mean() + 1.5*df['Confidence'].std()
     df = df.loc[df['Confidence'] > threshold]
     df = df.sort_values('Confidence')
+    video_names = df['Database Video'].tolist()
 
     logfile = logfile[logfile['Database Video'].isin(df['Database Video']).tolist()]
     logfile = logfile.to_numpy()
+
+    with open("./results/resultcache.txt", "w") as file:
+        for item in video_names:
+            file.write(f"{item}\n")
 
     return logfile
 
