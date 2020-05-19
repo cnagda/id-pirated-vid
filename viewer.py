@@ -215,10 +215,13 @@ def read_logfile(logpath):
 
     logfile = pd.read_csv(logpath, index_col=None)
     video_names = logfile['Database Video'].tolist()
-    logfile = logfile.groupby('Database Video').sum().reset_index()
-    threshold = logfile['Confidence'].mean() + 1.5*logfile['Confidence'].std()
-    logfile = logfile[logfile['Confidence'] > threshold]
-    logfile = logfile.sort_values('Confidence')
+
+    df = logfile.groupby('Database Video').sum().reset_index()
+    threshold = df['Confidence'].mean() + 1.5*df['Confidence'].std()
+    df = df.loc[df['Confidence'] > threshold]
+    df = df.sort_values('Confidence')
+
+    logfile = logfile[logfile['Database Video'].isin(df['Database Video']).tolist()]
     logfile = logfile.to_numpy()
 
     return logfile
