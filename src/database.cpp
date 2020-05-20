@@ -353,18 +353,19 @@ std::unique_ptr<ICursor<Frame>> DatabaseVideo::frames() const
 
 std::unique_ptr<ICursor<cv::Mat>> DatabaseVideo::frameBags() const
 {
-    auto frame_source = make_frame_source(db.getFileLoader(), name, Descriptor);
     auto vocab = db.hasVocab<Frame>();
 
     if (db.loadStrategy == Eager &&
         db.loadMetadata().frameHash != loadMetadata().frameHash &&
         vocab)
     {
+        auto frame_source = make_frame_source(db.getFileLoader(), name, Features);
         mat_bag_adapter source{frame_source, *loadVocabulary<Frame>(db)};
         return std::make_unique<decltype(source)>(std::move(source));
     }
     else
     {
+        auto frame_source = make_frame_source(db.getFileLoader(), name, Descriptor);
         return std::make_unique<decltype(frame_source)>(std::move(frame_source));
     }
 }
