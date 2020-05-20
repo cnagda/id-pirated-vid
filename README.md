@@ -79,6 +79,8 @@ make test
 
 # Usage
 
+## `piracy.py`
+
 After building the project, run the command line interface from the root project
 folder by executing `piracy.py`
 
@@ -94,7 +96,7 @@ type:
   {ADD,QUERY}
 ```
 
-## ADD
+### ADD
 
 Add video(s) to the database or recalculate the database frame/scene vocabulary.
 When adding multiple videos with optional arguments, frame/scene vocabulary
@@ -115,7 +117,9 @@ optional arguments:
   -thresholdScene TS  threshold for inter-scene similarity
 ```
 
-## QUERY
+`kFrame` and `kScene` should be roughly based on the size of your database.
+
+### QUERY
 
 Query the database for each video at `paths` to check for piracy.
 
@@ -127,21 +131,173 @@ positional arguments:
   paths       path(s) to directories/files to add
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help       show this help message and exit
+  -v, --visualize  visualize video matches
 ```
+
+If using the `-v` argument, you will be asked for a path to the directory
+containing the video files used to construct the database. You will be able
+to select and view matching alignments.
+
+## `viewer.py`
+
+If you have already run a query and would like to view the results again, find
+the corresponding logfile in your `results` folder and run `viewer.py`
+
+```
+usage: viewer.py [-h] [-v] logfile querypath
+
+View results of query
+
+positional arguments:
+  logfile          path to result logfile
+  querypath        path to query video
+
+optional arguments:
+  -h, --help       show this help message and exit
+  -v, --visualize  visualize video matches
+```
+
+Similarly to a `piracy.py QUERY`, the `-v` argument lets you view the matching
+clips side by side if you know the path to the videos in the database.
 
 ## Examples
 
 Create a database from videos in directory `/data/videos/` and compute frame/scene
 descriptors and scenes:
 ```
-piracy.py ADD ./build/database ./data/videos/ -kFrame 2000 -kScene 200 -thresholdScene 0.15
+./piracy.py ADD ./build/database/ ./data/videos/ -kFrame 20000 -kScene 4000 -thresholdScene 0.15
 ```
 
 Check to see if video `/data/pirated.mp4` matches any videos in the database:
 ```
-piracy.py QUERY ./build/database ./data/pirated.mp4
+./piracy.py QUERY ./build/database/ ./data/pirated.mp4
 ```
+
+Later, if you want to view the matches again:
+```
+./viewer.py ./results/pirated.mp4.csv ./data/pirated.mp4
+```
+
+# Evaluation
+
+If you would like to evaluate the success of the piracy detector, you may use
+our script `tester.py` in the `python` folder.
+
+## `tester.py`
+
+Note that you must run `tester.py` from the root project directory.
+
+```
+$ ./python/tester.py -h
+
+usage: tester.py [-h] SOURCEDIR DBPATH
+
+Test attack videos with premade database
+
+positional arguments:
+  SOURCEDIR   path to directory of attack videos
+  DBPATH      path to directory to output testing videos
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
+
+## Labeling Attack Videos
+
+The script will tag each video as a "success" or "failure" which is used to
+create a report. To take advantage of this functionality, you must label your
+attack videos you test.
+
+### If the video is pirated
+
+If the video is pirated, its name should be `"<db name>_<kind of attack>.mp4"`
+or an extension of your choice, where `<db name>` is the base name of a video in
+the database (without the extension) and `<kind of attack>` is any string that
+describes the attack that you want to appear in the report. Multiple videos with
+the same `<kind of attack>` will appear in the same row of the report.
+
+The only restriction is that `<db name>` cannot contain underscores. Note that
+this means the names of the videos in the database also cannot contain
+underscores if you would like to use `tester.py`.
+
+We append `_inserted` at the end of `<kind of attack>` if the pirated clip is
+inserted into another video that isn't in the database. We use this to test the
+ability of our algorithm to detect random small clips. If you do this, your
+report will have an extra column for inserted clips.
+
+### If the video is not pirated
+
+You may use any naming scheme you would like for videos that don't appear in the
+database, as the measure of success is whether any match is found or not. To be
+properly counted, the video name up until the first underscore (or the whole
+video name if there is no underscore) cannot appear anywhere within any of the
+names of the videos in the database.
+
+### Examples
+
+Let's say your database has the following folders:
+```
+video.mp4
+example.mp4
+sample.mp4
+```
+
+The following are acceptable labels for videos that pirate these:
+```
+video_exact_match.mp4
+example_projection.mp4
+sample_frame_rate_up.mp4
+```
+
+The following are acceptable labels for videos that are not pirated:
+```
+not_a_pirated_video.mp4
+original_video.mp4
+```
+
+The following would not be an acceptable label for an original video:
+```
+vid_notpirated.mp4              "vid" appears in video.mp4
+```
+
+## Viewing the Report
+
+After you run `tester.py`, you can see the report by running:
+```
+$ cd python/ ; python3 make_report.py
+```
+
+`make_report.py` can also be run with a single argument specifying a path to
+a pickle containing results generated by `tester.py`. `tester.py` automatically
+saves this file as `results.pkl` in the `results` folder.
+
+## Generating Attack Videos
+
+If you do not have attack videos in mind to test, you can use our script
+`pirater.py` to make attack videos.
+
+```
+usage: pirater.py [-h] SOURCEDIR DESTDIR EXTRAVID
+
+Generate testing videos with inserter clips.
+
+positional arguments:
+  SOURCEDIR   path to directory of full videos to use as a base
+  DESTDIR     path to directory to output testing videos
+  EXTRAVID    path to extra video not in the db for insertion
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
+
+There are currently 17 types of attacks, and a short clip of each attack is also
+inserted into a video that isn't in the database, for a total of 34 videos for
+every video in `SOURCEDIR`.
+
+Feel free to fork and modify the script for your own purposes. You can easily
+comment out attacks or add attacks. You can also comment out the inserted clip
+part if you do not want them.
 
 # Contributing
 
