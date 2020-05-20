@@ -20,7 +20,7 @@ counter = -1
 speedinator = 10
 
 debug = False
-showbox = False
+showbox = True
 
 ys = []
 xs = []
@@ -44,13 +44,23 @@ while(cap.isOpened()):
         break
 
     #image = cv2.resize(image, (1920, 1080))
+    #image = cv2.resize(image, (0,0), fx = .1, fy = .1)
+
     # FIXME swap
     width, height = image.shape[:2]
-    linesize = int(min(width, height)/4)
+    linesize = int(min(width, height)/6)
+    #linesize = int(min(width, height)/4
 
 
-    image_slic = seg.slic(image,n_segments=155)
-    #image_slic = seg.slic(image,n_segments=30)
+    a = 3
+    b = -50
+    #image = cv2.convertScaleAbs(image, alpha=a, beta=b)
+    #image_slic = seg.slic(image,n_segments=155)
+    image_slic = seg.slic(image,n_segments=30)
+    #image_slic = seg.slic(image, n_segments=155, compactness=50)
+    #image_slic = seg.slic(image, slic_zero = True)
+
+
     image_slic = image_slic.astype(np.uint8)
 
     colored = color.label2rgb(image_slic, image, kind='avg')
@@ -210,7 +220,7 @@ besty = int(my[0])
 if(showbox):
     cv2.imshow('image',image)
     cv2.waitKey(0)
-    v2.destroyAllWindows()
+    cv2.destroyAllWindows()
 
 print("================================================================ END LINE DETECTION ==============================================================================")
 
@@ -255,6 +265,8 @@ while(cap.isOpened()):
         hist = cv2.calcHist([csv], channels, None, histSize, ranges, accumulate=False)
         cv2.normalize(hist, hist, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
         return hist
+
+    #print("FIXME subimgs size")
 
     hists = list(map(ashist, subimgs))
 

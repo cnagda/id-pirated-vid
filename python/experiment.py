@@ -112,64 +112,117 @@ padding = int(min(width, height)/8)
 
 
 def maxsubarray(arr):
-    dp = [0 for i in range(len(arr))]
-    dp[0] = nums[0]
-    for i in range(1,len(nums)):
-        dp[i] = max(dp[i-1]+nums[i],nums[i])
-        return max(dp)
+    #print("SHAPE" + str(arr.shape))
 
-lines = cv2.HoughLines(edges,1,np.pi/180,linesize)
+    arr = arr.ravel()
 
-tolerance = 1
-index = 0
-maxlines = 220
-intervals = 180
-slotwidth = 360 // intervals
-ortho_dist = 90 // slotwidth
-if(90 % slotwidth != 0):
-    print("Error, bad number of intervals. Needs to be divisible by 90 or something. Not entirely sure, math is hard")
-# stores lines as tuples (x0, y0, dx=b, dy=a) based on angle
+    s = arr.shape[0]
 
-xs = []
-ys = []
+    #print(arr.shape)
+    #print(s)
 
-print(lines.shape)
+    dp = [0 for i in range(s)]
+    dp = np.asarray(dp, dtype=int)
 
-if lines is not None:
-    for i in range(0, len(lines)):
-        index += 1
-        if(index > maxlines):
-            break
+    prev = [0 for i in range(s)]
+    prev = np.asarray(prev, dtype=int)
 
-        rho = lines[i][0][0]
-        theta = lines[i][0][1]
-        a = math.cos(theta)
-        b = math.sin(theta)
-        x0 = a * rho
-        y0 = b * rho
-        pt1 = (int(x0 + 1000*(-b)), int(y0 + 1000*(a)))
-        pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
-        #cv2.line(img, pt1, pt2, (0,0,255), 3, cv2.LINE_AA)
+    dp[0] = arr[0]
+    for i in range(1, s):
+        #print("REMOVE")
 
-        angle = math.atan2(a, b) * 180/np.pi
-        if(angle < 0):
-            angle += 360
+        cont = dp[i-1]+arr[i]
+        new = arr[i]
 
+        if(cont > new):
+            dp[i] = cont
+            prev[i] = prev[i - 1]
+        else:
+            dp[i] = new
+            prev[i] = i
 
+        #dp[i] = max(dp[i-1]+nums[i],nums[i])
 
-        horiz = (angle <= tolerance or angle >= 360 - tolerance or abs(angle - 180) <= tolerance)
-        vert  = (abs(angle - 90) <= tolerance or abs(angle - 270) <= tolerance)
+    end = dp.argmax(axis = 0)
+    start = prev[end]
 
-        valid = (horiz and y0 > padding and y0 < height - padding) or (vert and x0 > padding and x0 < width - padding)
+    #print(arr)
+    #print("==========================================================================================================")
+    #print(dp)
+    #print("==========================================================================================================")
+    #print(prev)
+        #return max(dp)
+    return (start, end)
 
-        if(valid and (horiz or vert)):
-            cv2.line(total_image, pt1, pt2, (255,255,255), 3, cv2.LINE_AA)
+#flat = np.sum(edges, axis = 0)
+#flat[0] = 0
+#s = flat.shape[0]
+#flat[s - 1] = 0
+#print("Maxcol: " + str(flat.argmax(axis=0)) + "/" + str(s))
+#print(flat)
+#print("==========================================================================================================")
 
-        if(valid and horiz):
-            ys.append(y0)
-        if(valid and vert):
-            xs.append(x0)
+edges = edges.astype(int)
+edges[edges == 0] = -255
 
-cv2.imshow('img', total_image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+for i in range(width):
+    col = edges[:, i]
+    start, end = maxsubarray(col)
+    if(end - start > 20):
+        print("Col " + str(i) + "/" + str(width) + ": " + str(start) + " -> " + str(end))
+
+#lines = cv2.HoughLines(edges,1,np.pi/180,linesize)
+#
+#tolerance = 1
+#index = 0
+#maxlines = 220
+#intervals = 180
+#slotwidth = 360 // intervals
+#ortho_dist = 90 // slotwidth
+#if(90 % slotwidth != 0):
+#    print("Error, bad number of intervals. Needs to be divisible by 90 or something. Not entirely sure, math is hard")
+## stores lines as tuples (x0, y0, dx=b, dy=a) based on angle
+#
+#xs = []
+#ys = []
+#
+#print(lines.shape)
+#
+#if lines is not None:
+#    for i in range(0, len(lines)):
+#        index += 1
+#        if(index > maxlines):
+#            break
+#
+#        rho = lines[i][0][0]
+#        theta = lines[i][0][1]
+#        a = math.cos(theta)
+#        b = math.sin(theta)
+#        x0 = a * rho
+#        y0 = b * rho
+#        pt1 = (int(x0 + 1000*(-b)), int(y0 + 1000*(a)))
+#        pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
+#        #cv2.line(img, pt1, pt2, (0,0,255), 3, cv2.LINE_AA)
+#
+#        angle = math.atan2(a, b) * 180/np.pi
+#        if(angle < 0):
+#            angle += 360
+#
+#
+#
+#        horiz = (angle <= tolerance or angle >= 360 - tolerance or abs(angle - 180) <= tolerance)
+#        vert  = (abs(angle - 90) <= tolerance or abs(angle - 270) <= tolerance)
+#
+#        valid = (horiz and y0 > padding and y0 < height - padding) or (vert and x0 > padding and x0 < width - padding)
+#
+#        if(valid and (horiz or vert)):
+#            cv2.line(total_image, pt1, pt2, (255,255,255), 3, cv2.LINE_AA)
+#
+#        if(valid and horiz):
+#            ys.append(y0)
+#        if(valid and vert):
+#            xs.append(x0)
+#
+#cv2.imshow('img', total_image)
+#cv2.waitKey(0)
+#cv2.destroyAllWindows()
