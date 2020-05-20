@@ -33,26 +33,48 @@ def expand_paths(paths):
 
 def call_execs(args):
     for i, path in enumerate(args.paths):
+        print('--------------------------------------------------------------')
         call_args = []
         if args.type == 'ADD':
             call_args.append('./build/add')
             call_args.append(args.databasePath)
             call_args.append(path)
+            kScene = "-1"
+            kFrame = "-1"
+            thresholdScene = "-1"
             if i == len(args.paths) - 1:
-                call_args.append(str(args.kScene))
-                call_args.append(str(args.kFrame))
-                call_args.append(str(args.thresholdScene))
-            else:
-                call_args.append("-1")
-                call_args.append("-1")
-                call_args.append("-1")
+                kScene = str(args.kScene)
+                kFrame = str(args.kFrame)
+                thresholdScene = str(args.thresholdScene)
+            call_args.append(kScene)
+            call_args.append(kFrame)
+            call_args.append(thresholdScene)
+
+            print(f"Adding Video from Path: {path}")
+            print(f"Options:   kFrame: {kFrame}   kScene: {kScene}   thresholdScene: {thresholdScene}")
+
+            # if kFrame != "-1":
+            #     print("Will reconstruct frame vocabulary")
+            # if kScene != "-1":
+            #     print("Will reconstruct scene vocabulary")
+            # if thresholdScene != "-1":
+            #     print("Will reconstruct scenes")
         else:
             call_args.append('./build/query')
             call_args.append(args.databasePath)
             call_args.append(path)
 
-        print(call_args)
+            print(f"Querying Video from Path: {path}")
+
+        # print(call_args)
         subprocess.call(call_args)
+
+        logpath = f"./results/{os.path.basename(path)}.csv"
+        viewer_args = ['./viewer.py',logpath,path]
+        if args.visualize:
+            viewer_args.append('-v')
+        if args.type == 'QUERY':
+            subprocess.call(viewer_args)
 
 
 def main():
@@ -113,6 +135,11 @@ def main():
         'paths',
         help='path(s) to directories/files to add',
         nargs='+'
+    )
+    parser_query.add_argument(
+        '-v','--visualize',
+        action='store_true',
+        help='visualize video matches'
     )
 
     args = parser.parse_args()

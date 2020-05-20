@@ -22,7 +22,7 @@ cv::Mat constructVocabulary(Matrix &&descriptors, unsigned int K, cv::Mat labels
 
     cv::kmeans(descriptors, K, labels, cv::TermCriteria(), 1, cv::KMEANS_PP_CENTERS, retval);
 
-    std::cout << "About to return" << std::endl;
+    // std::cout << "About to return" << std::endl;
 
     return retval;
     //return trainer.cluster(descriptors);

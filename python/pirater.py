@@ -224,13 +224,13 @@ class Attack:
     def insert_clip(self, video):
         nonpirated_length = math.floor(self.base_video.duration)
         pirated_length = video.duration
-        split_point_one = randrange(8,math.floor(nonpirated_length * 3 / 5))
-        split_point_two = randrange(math.floor(nonpirated_length / 2), math.floor(nonpirated_length * 4 / 5))
-        start_clip = randrange(math.floor(pirated_length * 1 / 5), math.floor(pirated_length * 2 / 5))
-        clip_length = randrange(6, 10)
+        split_point_one = randrange(math.floor(nonpirated_length * 1 / 5),math.floor(nonpirated_length * 2 / 5))
+        split_point_two = randrange(math.floor(nonpirated_length * 3 / 5), math.floor(nonpirated_length * 4 / 5))
+        start_clip = randrange(0, math.floor(pirated_length * 1 / 5))
+        clip_length = randrange(5, 9)
         clip1 = self.base_video.subclip(t_start=split_point_two)
         clip2 = video.subclip(t_start=start_clip, t_end=start_clip + clip_length)
-        clip3 = self.base_video.subclip(t_start=6, t_end=split_point_one)
+        clip3 = self.base_video.subclip(t_start=0, t_end=split_point_one)
         return concatenate_videoclips([clip1,clip2,clip3])
 
 

@@ -31,7 +31,7 @@ std::string to_string(const fs::path &path)
 }
 
 template <typename Range>
-void writeSequential(ofstream &fs, const Range &range)
+void writeSequential(ostream &fs, const Range &range)
 {
     size_t length = range.size();
     fs.write((char *)&length, sizeof(length));
@@ -42,7 +42,7 @@ void writeSequential(ofstream &fs, const Range &range)
 }
 
 template <typename T>
-std::vector<T> readSequence(ifstream &fs)
+std::vector<T> readSequence(istream &fs)
 {
     size_t length = 0;
     fs.read((char *)&length, sizeof(length));
@@ -53,7 +53,7 @@ std::vector<T> readSequence(ifstream &fs)
     return items;
 }
 
-cv::Mat readMat(ifstream &fs)
+cv::Mat readMat(istream &fs)
 {
     int type = 0, dims = 0;
     fs.read((char *)&type, sizeof(type));     // type
@@ -80,7 +80,7 @@ cv::Mat readMat(ifstream &fs)
     }
 }
 
-void writeMat(const cv::Mat &mat, ofstream &fs)
+void writeMat(const cv::Mat &mat, ostream &fs)
 {
     int type = mat.type(), dims = mat.dims;
     fs.write((char *)&type, sizeof(int));     // type
@@ -273,6 +273,24 @@ void FileLoader::clearFrames(const std::string &video) const
 void FileLoader::clearScenes(const std::string &video) const
 {
     clearDir(rootDir / video / "scenes");
+}
+
+size_t FileLoader::countFrames(const std::string& video) const {
+    size_t count = 0;
+    for(auto& entry : fs::directory_iterator(rootDir / video / "frames")) {
+        if(entry.path().extension() == ".sift")
+            count++;
+    }
+
+    return count;
+}
+size_t FileLoader::countScenes(const std::string& video) const {
+    size_t count = 0;
+    for(auto& entry : fs::directory_iterator(rootDir / video / "scenes")) {
+        count++;
+    }
+
+    return count;
 }
 
 void clearDir(fs::path path)

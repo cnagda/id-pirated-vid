@@ -42,24 +42,38 @@ def main():
     with open('./results/dump.txt', 'w') as f2:
         f2.write("")
 
+
+    options = [ name for name in os.listdir(args.dbpath) if os.path.isdir(os.path.join(args.dbpath, name)) ]
+
     for vidpath in vidpaths:
-        # print(f"Querying: {vidpath}")
         vidname = os.path.basename(vidpath)
+        print(f"Querying: {vidpath}")
 
         # Run query
         output = subprocess.check_output(['python3', 'piracy.py', 'QUERY', args.dbpath, vidpath])
 
         # Check if result matches expected
-        result = ""
         with open("./results/resultcache.txt") as file:
-            result = file.read()
+            vidlist = file.readlines()
         success = 0
         outstr = "Failure"
         # Name is assumed to contain a single extension ie .mpg
         pirated_from = vidname.split("_")[0]
-        if result.split(".")[0] == pirated_from:
-            success = 1
-            outstr = "Success"
+        for result in vidlist:
+            if result.split(".")[0] == pirated_from:
+                success = 1
+                outstr = "Success"
+
+        # Not meant to be in database
+        if len(vidlist) == 0:
+            found = False
+            for vid in options:
+                if pirated_from in vid:
+                    found = True
+            if not found:
+                success = 1
+                outstr = "Success"
+
         # print(outstr)
 
         # record 0 for failure, 1 for success

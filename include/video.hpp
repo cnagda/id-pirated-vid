@@ -33,6 +33,11 @@ inline bool matEqual(const cv::Mat &a, const cv::Mat &b)
 struct Frame;
 struct SerializableScene;
 
+struct InputVideoProperties {
+    size_t frameCount;
+    float frameRate;
+};
+
 struct SIFTVideo : public IVideo
 {
     std::string filename;
@@ -45,6 +50,8 @@ struct SIFTVideo : public IVideo
     std::unique_ptr<ICursor<Frame>> frames(const Vocab<Frame>&) const;
     std::unique_ptr<ICursor<cv::UMat>> images() const;
     std::unique_ptr<ICursor<cv::Mat>> color() const;
+
+    InputVideoProperties getProperties() const;
 };
 
 struct Frame

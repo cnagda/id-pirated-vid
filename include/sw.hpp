@@ -5,7 +5,7 @@
 #include <utility>
 #include <iostream>
 #include "matrix.hpp"
-#include "matcher.hpp"
+#include <algorithm>
 #include <iostream>
 #include <atomic>
 #include <tbb/parallel_do.h>
@@ -17,6 +17,23 @@ typedef VectorMatrix<uint8_t> SourceMatrix;
 typedef VectorMatrix<int_fast32_t> ScoreMatrix;
 
 template <typename It>
+struct ItAlignment
+{
+    It startKnown, startUnknown, endKnown, endUnknown;
+    unsigned int score;
+
+    template <typename = std::void_t<std::is_integral<It>>>
+    operator std::string()
+    {
+        return std::to_string(startKnown) + " " + std::to_string(endKnown) +
+               " " + std::to_string(startUnknown) + " " + std::to_string(endUnknown) + " " +
+               std::to_string(score);
+    }
+};
+
+typedef ItAlignment<unsigned int> Alignment;
+
+template <typename It>
 std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix &matrix, const SourceMatrix &sources, unsigned int maxAlignments)
 {
     std::vector<ItAlignment<It>> alignments;
@@ -25,7 +42,7 @@ std::vector<ItAlignment<It>> findAlignments(It known, It unknown, ScoreMatrix &m
     {
         auto [i, j] = slowMatrixMax(matrix);
 
-        std::cout << "i: " << i << " j: " << j << std::endl;
+        // std::cout << "i: " << i << " j: " << j << std::endl;
         if (i <= 0 || j <= 0)
         {
             return alignments;

@@ -51,36 +51,44 @@ std::unique_ptr<FileDatabase> DatabaseFixture::db;
 TEST_F(DatabaseFixture, NotInDatabase)
 {
     auto video = make_query_adapter(getSIFTVideo("../sample.mp4"), *db);
-    auto match = findMatch(video, *db);
-    if (match)
+    auto matches = findMatch(video, *db);
+    for(auto match: matches)
     {
-        std::cout << "confidence: " << match->matchConfidence << " video: " << match->video << std::endl;
+        std::cout << "confidence: " << match.confidence << " video: " << match.video << std::endl;
+        EXPECT_LT(match.confidence, 6);
     }
-    EXPECT_LT(match->matchConfidence, 6);
 }
 
 TEST_F(DatabaseFixture, InDatabase)
 {
     auto video = db->loadVideo(db->listVideos()[0]);
     ASSERT_TRUE(video);
-    auto match = findMatch(make_query_adapter(*video), *db);
-    ASSERT_TRUE(match);
-    auto topMatch = match.value();
-    auto scenes = read_all(*video->getScenes());
+
+    auto matches = findMatch(make_query_adapter(*video), *db);
+
+    ASSERT_GT(matches.size(), 0);
+    auto topMatch = matches[0];
+
     EXPECT_EQ(topMatch.video, video->name);
-    EXPECT_EQ(topMatch.startFrame, 0);
-    EXPECT_EQ(topMatch.endFrame, scenes.size());
+    EXPECT_EQ(topMatch.startKnown, 0);
+    EXPECT_EQ(topMatch.startKnown, topMatch.startQuery);
+    EXPECT_EQ(topMatch.endKnown, topMatch.endQuery);
+    EXPECT_EQ(topMatch.endKnown, video->loadMetadata().frameCount);
 }
 
 
 TEST_F(DatabaseFixture, InDatabaseQueryAdapter)
 {
-    auto video = make_query_adapter(getSIFTVideo("../coffee.mp4"), *db);
-    auto match = findMatch(video, *db);
-    ASSERT_TRUE(match);
-    auto topMatch = match.value();
-    auto scenes = read_all(*db->loadVideo("coffee.mp4")->getScenes());
-    EXPECT_EQ(topMatch.video, video.name);
-    EXPECT_EQ(topMatch.startFrame, 0);
-    EXPECT_EQ(topMatch.endFrame, scenes.size());
+    auto inputVideo = getSIFTVideo("../coffee.mp4");
+
+    auto matches = findMatch(make_query_adapter(inputVideo, *db), *db);
+
+    ASSERT_GT(matches.size(), 0);
+    auto topMatch = matches[0];
+
+    EXPECT_EQ(topMatch.video, inputVideo.name);
+    EXPECT_EQ(topMatch.startKnown, 0);
+    EXPECT_EQ(topMatch.startKnown, topMatch.startQuery);
+    EXPECT_EQ(topMatch.endKnown, topMatch.endQuery);
+    EXPECT_EQ(topMatch.endKnown, inputVideo.getProperties().frameCount);
 }
