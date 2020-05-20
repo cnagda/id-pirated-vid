@@ -39,13 +39,13 @@ int main(int argc, char **argv)
 
     auto video = getSIFTVideo(argv[VIDPATH]);
     auto &fd = *query_database_factory(argv[DBPATH], -1, -1, -1).release();
-    auto video2 = make_query_adapter(video, fd);
 
     std::vector<MatchInfo> matches;
 
     if(argc == 4) {
         matches = findMatch(video.frames(), fd);
     } else if(argc == 3) {
+        auto video2 = make_query_adapter(video, fd);
         matches = findMatch(video2, fd);
     }
 

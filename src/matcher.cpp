@@ -320,8 +320,8 @@ std::vector<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &d
                 db_scenes.emplace_back(scene->startIdx, scene->endIdx);
             }
         } else if constexpr(std::is_same_v<value_type, Frame>) {
-            auto frames = v->frames();
-            while(auto frame = frames->read()) knownDescriptors.push_back(frame->frameDescriptor);
+            auto frames = v->frameBags();
+            while(auto frame = frames->read()) knownDescriptors.push_back(*frame);
         }
 
         auto &&alignments = calculateAlignment(knownDescriptors, targetDescriptors, intcomp, 3, 2);
@@ -369,6 +369,10 @@ std::vector<MatchInfo> findMatch(QueryVideo&& video, const FileDatabase &db) {
 }
 
 std::vector<MatchInfo> findMatch(std::unique_ptr<ICursor<Frame>> frames, const FileDatabase &db) {
+    return internal_findMatch(*frames, db);
+}
+
+std::vector<MatchInfo> findMatch(std::unique_ptr<ICursor<cv::Mat>> frames, const FileDatabase &db) {
     return internal_findMatch(*frames, db);
 }
 

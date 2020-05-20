@@ -38,6 +38,39 @@ size_t getHash(ifstream &input)
 
 
 template <typename Read>
+class mat_bag_adapter : public ICursor<cv::Mat>
+{
+    Read reader;
+    BOWExtractor extractor;
+
+public:
+    mat_bag_adapter(Read &&r, const ContainerVocab &v) : reader(std::move(r)), extractor(v) {}
+    mat_bag_adapter(Read &r, const ContainerVocab &v) : reader(r), extractor(v) {}
+
+    void skip(unsigned int n) override {
+        if constexpr(has_arrow_v<Read>) {
+            reader->skip(n);
+        } else {
+            reader.skip(n);
+        }
+    }
+
+    std::optional<cv::Mat> read() override
+    {
+        if constexpr(has_arrow_v<Read>) {
+            if (auto val = reader->read()) {
+                return baggify(*val, extractor);
+            }
+        } else {
+            if (auto val = reader.read()) {
+                return baggify(*val, extractor);
+            }
+        }
+        return std::nullopt;
+    }
+};
+
+template <typename Read>
 class frame_bag_adapter : public ICursor<Frame>
 {
     Read reader;
@@ -303,17 +336,36 @@ SIFTVideo getSIFTVideo(const std::string &filepath, std::function<void(UMat, Fra
 std::unique_ptr<ICursor<Frame>> DatabaseVideo::frames() const
 {
     auto frame_source = make_frame_source(db.getFileLoader(), name);
-    auto vocab = loadVocabulary<Frame>(db);
+    auto vocab = db.hasVocab<Frame>();
 
     if (db.loadStrategy == Eager &&
         db.loadMetadata().frameHash != loadMetadata().frameHash &&
         vocab)
     {
-        frame_bag_adapter source{frame_source, *vocab};
+        frame_bag_adapter source{frame_source, *loadVocabulary<Frame>(db)};
         return std::make_unique<decltype(source)>(std::move(source));
     }
     else
     {
+        return std::make_unique<decltype(frame_source)>(std::move(frame_source));
+    }
+}
+
+std::unique_ptr<ICursor<cv::Mat>> DatabaseVideo::frameBags() const
+{
+    auto vocab = db.hasVocab<Frame>();
+
+    if (db.loadStrategy == Eager &&
+        db.loadMetadata().frameHash != loadMetadata().frameHash &&
+        vocab)
+    {
+        auto frame_source = make_frame_source(db.getFileLoader(), name, Features);
+        mat_bag_adapter source{frame_source, *loadVocabulary<Frame>(db)};
+        return std::make_unique<decltype(source)>(std::move(source));
+    }
+    else
+    {
+        auto frame_source = make_frame_source(db.getFileLoader(), name, Descriptor);
         return std::make_unique<decltype(frame_source)>(std::move(frame_source));
     }
 }
