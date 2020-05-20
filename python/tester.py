@@ -65,12 +65,14 @@ def main():
                 outstr = "Success"
 
         # Not meant to be in database
-        if len(vidlist) == 0:
-            found = False
-            for vid in options:
-                if pirated_from in vid:
-                    found = True
-            if not found:
+        # if len(vidlist) == 0:
+        found = False
+        for vid in options:
+            if pirated_from in vid:
+                found = True
+        if not found:
+            vidname = f"{pirated_from}_not_in_db.mp4"
+            if len(vidlist) == 0:
                 success = 1
                 outstr = "Success"
 
