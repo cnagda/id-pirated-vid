@@ -105,7 +105,7 @@ cv2.imshow('img', total_image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-width, height = total_image.shape[:2]
+height, width = total_image.shape[:2]
 linesize = int(min(width, height)/8)
 
 padding = int(min(width, height)/8)
@@ -154,22 +154,62 @@ def maxsubarray(arr):
         #return max(dp)
     return (start, end)
 
-#flat = np.sum(edges, axis = 0)
-#flat[0] = 0
-#s = flat.shape[0]
-#flat[s - 1] = 0
-#print("Maxcol: " + str(flat.argmax(axis=0)) + "/" + str(s))
+flat = np.sum(edges, axis = 0)
+flat[0] = 0
+s = flat.shape[0]
+flat[s - 1] = 0
+print("Flat shape: " + str(s))
+#print(flat)
+
+#plt.plot(range(s), flat)
+#plt.show()
+
+print("Maxcol: " + str(flat.argmax()) + "/" + str(s))
 #print(flat)
 #print("==========================================================================================================")
 
 edges = edges.astype(int)
 edges[edges == 0] = -255
 
-for i in range(width):
+maxc = -1
+maxcs = -1
+maxce = -1
+
+maxr = -1
+maxrs = -1
+maxre = 0-1
+
+for i in range(3, width - 3):
     col = edges[:, i]
     start, end = maxsubarray(col)
-    if(end - start > 20):
-        print("Col " + str(i) + "/" + str(width) + ": " + str(start) + " -> " + str(end))
+
+    if(end - start > maxce - maxcs):
+        maxce = end
+        maxcs = start
+        maxc = i
+
+    #print("Col " + str(i) + "/" + str(width) + ": " + str(start) + " -> " + str(end))
+
+for i in range(3, height - 3):
+    row = edges[i, :]
+    start, end = maxsubarray(row)
+    
+    if(end - start > maxce - maxcs):
+        maxre = end
+        maxrs = start
+        maxr = i
+
+
+cap = cv2.VideoCapture(sys.argv[1])
+ret, image = cap.read()
+
+
+cv2.line(image, (maxc, maxcs), (maxc, maxce), (0,0,255), 3, cv2.LINE_AA)
+cv2.line(image, (maxrs, maxr), (maxre, maxr), (0,0,255), 3, cv2.LINE_AA)
+
+cv2.imshow('img', image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 #lines = cv2.HoughLines(edges,1,np.pi/180,linesize)
 #
