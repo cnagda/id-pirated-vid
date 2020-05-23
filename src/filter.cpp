@@ -1,6 +1,7 @@
 #include "filter.hpp"
 #include "imgproc.hpp"
 #include <opencv2/xfeatures2d.hpp>
+#include <opencv2/features2d.hpp>
 #include <vector>
 #include "matcher.hpp"
 #include <cassert>
@@ -44,6 +45,8 @@ Frame ExtractSIFT::withKeyPoints(const cv::UMat& image) const
 
     return frame;
 }
+
+ExtractAKAZE::ExtractAKAZE() : detector(cv::AKAZE::create()) {}
 
 ordered_mat Extract2DColorHistogram::operator()(const ordered_umat& image) const
 {
