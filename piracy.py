@@ -32,11 +32,19 @@ def expand_paths(paths):
     return expanded
 
 def call_execs(args):
+    root_dir = os.path.abspath(os.path.dirname(__file__))
+    python_dir = os.path.join(root_dir, "python")
+    app_dir = root_dir
+    if not os.path.exists(os.path.join(app_dir, "add")):
+        app_dir = os.path.join(root_dir, "build")
+        if not os.path.exists(os.path.join(app_dir, "add")):
+            raise Exception("can't find the build dir")
+    
     for i, path in enumerate(args.paths):
         print('--------------------------------------------------------------')
         call_args = []
         if args.type == 'ADD':
-            call_args.append('./build/add')
+            call_args.append(os.path.join(app_dir, "add"))
             call_args.append(args.databasePath)
             call_args.append(path)
             kScene = "-1"
@@ -60,7 +68,7 @@ def call_execs(args):
             # if thresholdScene != "-1":
             #     print("Will reconstruct scenes")
         else:
-            call_args.append('./build/query')
+            call_args.append(os.path.join(app_dir, "query"))
             call_args.append(args.databasePath)
             call_args.append(path)
 
@@ -69,8 +77,8 @@ def call_execs(args):
         # print(call_args)
         subprocess.call(call_args)
 
-        logpath = f"./results/{os.path.basename(path)}.csv"
-        viewer_args = ['./viewer.py',logpath,path]
+        logpath = os.path.join(app_dir, "results", f"{os.path.basename(path)}.csv")
+        viewer_args = [os.path.join(root_dir, "viewer.py"),logpath,path]
         if args.visualize:
             viewer_args.append('-v')
         if args.type == 'QUERY':
