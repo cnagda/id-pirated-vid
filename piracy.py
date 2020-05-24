@@ -77,9 +77,11 @@ def call_execs(args):
         # print(call_args)
         subprocess.call(call_args)
 
-        if args.type == 'QUERY' and args.visualize:
+        if args.type == 'QUERY':
             logpath = os.path.join(app_dir, "results", f"{os.path.basename(path)}.csv")
-            viewer_args = [os.path.join(root_dir, "viewer.py"),logpath,path, "-v"]
+            viewer_args = [os.path.join(root_dir, "viewer.py"),logpath,path]
+            if args.visualize:
+                viewer_args.append('-v')
             subprocess.call(viewer_args)
 
 
