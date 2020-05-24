@@ -1,14 +1,8 @@
 from skimage import data
 import numpy as np
-import matplotlib.pyplot as plt
 import sys
-import skimage.segmentation as seg
 import cv2
-import skimage.draw as draw
-import skimage.color as color
-from sklearn.cluster import MeanShift, estimate_bandwidth
 from moviepy.editor import *
-import math
 
 print("Args: " +  str(sys.argv))
 if(len(sys.argv) != 2):
