@@ -48,14 +48,6 @@ cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local \
  -DMKL_USE_MULTITHREAD=ON -DMKL_WITH_TBB=ON -DWITH_TBB=ON <opencv_src>
 ```
 
-
-## Installing python dependencies
-
-To install all the python modules run
-```
-pip install -r requirements.txt
-```
-
 ## Building project
 ```
 mkdir build
@@ -71,6 +63,11 @@ cd build
 cmake .. -DBUILD_TESTING=ON
 make
 make test
+```
+
+## Installing python dependencies
+```
+pip install -r requirements.txt
 ```
 
 # Usage
