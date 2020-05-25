@@ -172,6 +172,18 @@ Later, if you want to view the matches again:
 ./viewer.py ./results/pirated.mp4.csv ./data/pirated.mp4
 ```
 
+## Visualize Kmeans
+```
+./visualize <num_points>
+```
+This command will save the classified points to visualize.mat and the vocab to vocab.mat
+
+then run gnuplot
+```
+gnuplot> set xrange[-100:100]
+gnuplot> set yrange[-100:100]
+gnuplot> plot 'visualize.mat' with points palette pt 7
+```
 # Evaluation
 
 If you would like to evaluate the success of the piracy detector, you may use
