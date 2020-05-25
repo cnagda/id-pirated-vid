@@ -44,6 +44,7 @@ cv::Mat constructVocabulary(It start, It end, unsigned int K, cv::Mat labels = c
 Vocab<Frame> constructFrameVocabulary(const FileDatabase &database, unsigned int K, unsigned int speedinator = 1);
 Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase &database, unsigned int K, unsigned int speedinator = 1);
 Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, unsigned int K, unsigned int N, unsigned int speedinator);
+cv::Mat constructDemoVocabularyHierarchical(const std::vector<cv::Point2f>& points, unsigned int K, unsigned int N);
 Vocab<SerializableScene> constructSceneVocabularyHierarchical(const FileDatabase &database, unsigned int K, unsigned int N, unsigned int speedinator);
 
 class BOWExtractor {

@@ -40,6 +40,14 @@ public:
     Frame withKeyPoints(const cv::UMat&) const;
 };
 
+class ExtractAKAZE : public ExtractSIFT
+{
+    cv::Ptr<cv::FeatureDetector> detector;
+
+public:
+    ExtractAKAZE();
+};
+
 class Extract2DColorHistogram
 {
 public:

@@ -10,7 +10,8 @@ import pickle
 # Attack video naming scheme: NameInDB_kindofattack.*
 
 def main():
-
+    python_folder = os.path.abspath(os.path.dirname(__file__))
+    root_dir = os.path.normpath(os.path.join(python_folder, ".."))
     # Read command-line args
     parser = argparse.ArgumentParser(
         description='Test attack videos with premade database')
@@ -39,7 +40,7 @@ def main():
     results = dict()
 
     # Empty dump file at beginning
-    with open('./results/dump.txt', 'w') as f2:
+    with open(os.path.join(root_dir, "results", "dump.txt"), 'w') as f2:
         f2.write("")
 
 
@@ -50,10 +51,10 @@ def main():
         print(f"Querying: {vidpath}")
 
         # Run query
-        output = subprocess.check_output(['python3', 'piracy.py', 'QUERY', args.dbpath, vidpath])
+        output = subprocess.check_output(['python3', os.path.join(root_dir, 'piracy.py'), 'QUERY', args.dbpath, vidpath])
 
         # Check if result matches expected
-        with open("./results/resultcache.txt") as file:
+        with open(os.path.join(root_dir, "results", "resultcache.txt")) as file:
             vidlist = file.readlines()
         success = 0
         outstr = "Failure"
@@ -81,13 +82,13 @@ def main():
         # record 0 for failure, 1 for success
         results[vidname] = success
 
-        with open('./results/dump.txt', 'a') as f2:
+        with open(os.path.join(root_dir, "results", "dump.txt"), 'a') as f2:
             f2.write(f"{vidname}\n{output}\n{outstr}\n")
 
-    with open('./results/allresults.txt','w') as f:
+    with open(os.path.join(root_dir, "results", "allresults.txt"),'w') as f:
         f.write(str(results))
 
-    with open("./results/allresults.pkl", 'wb') as f:
+    with open(os.path.join(root_dir, "results", "allresults.pkl"), 'wb') as f:
         pickle.dump(results, f, pickle.HIGHEST_PROTOCOL)
 
     print(results)

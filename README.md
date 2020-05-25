@@ -48,18 +48,6 @@ cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local \
  -DMKL_USE_MULTITHREAD=ON -DMKL_WITH_TBB=ON -DWITH_TBB=ON <opencv_src>
 ```
 
-## Using ffmpeg
-
-To read in an mp4 and dump all the frames through ffmpeg ->
-```
-ffmpeg -i Ambulance_selector2.mp4 frames%d.bmp
-```
-
-To read in an mp4 and dump frames at 24fps
-```
-ffmpeg -i Ambulance_selector2.mp4 -r 24 frames%d.bmp
-```
-
 ## Building project
 ```
 mkdir build
@@ -75,6 +63,11 @@ cd build
 cmake .. -DBUILD_TESTING=ON
 make
 make test
+```
+
+## Installing python dependencies
+```
+pip install -r requirements.txt
 ```
 
 # Usage
@@ -179,6 +172,18 @@ Later, if you want to view the matches again:
 ./viewer.py ./results/pirated.mp4.csv ./data/pirated.mp4
 ```
 
+## Visualize Kmeans
+```
+./visualize <num_points>
+```
+This command will save the classified points to visualize.mat and the vocab to vocab.mat
+
+then run gnuplot
+```
+gnuplot> set xrange[-100:100]
+gnuplot> set yrange[-100:100]
+gnuplot> plot 'visualize.mat' with points palette pt 7
+```
 # Evaluation
 
 If you would like to evaluate the success of the piracy detector, you may use

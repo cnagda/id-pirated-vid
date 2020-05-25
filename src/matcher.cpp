@@ -156,7 +156,48 @@ void overflow(std::vector<cv::Mat> &descriptor_levels, unsigned int K, unsigned 
     }
     // std::cout << std::endl;
 }
+cv::Mat constructDemoVocabularyHierarchical(const std::vector<cv::Point2f>& points, unsigned int K, unsigned int N) {
+    if (K > N)
+    {
+        throw std::runtime_error("constructFrameVocabularyHierarchical: error, K > N");
+    }
 
+    //cv::Mat descriptors;
+
+    std::vector<cv::Mat> descriptor_levels(1);
+    unsigned int total_rows = 0;
+
+    for (auto point : points)
+    {
+        // counter++;
+        // if (counter % speedinator != 0) {  continue;  }
+        descriptor_levels[0].push_back(point);
+        // limit largest kmeans run
+        if (descriptor_levels[0].rows >= N)
+        {
+            total_rows += descriptor_levels[0].rows;
+            std::cout << "Constructing Vocabulary. Processing " << total_rows << " points\r";
+            std::cout.flush();
+            overflow(descriptor_levels, K, N, 0);
+        }
+    }
+
+    // flush all remaining features to lowest level
+    for (int i = 0; i < descriptor_levels.size(); i++)
+    {
+        // if K == 2000 and at lowest level this is the vocabulary
+        if (descriptor_levels[i].rows != K || i != descriptor_levels.size() - 1)
+        {
+            total_rows += descriptor_levels[i].rows;
+            std::cout << "Constructing Vocabulary. Processing " << total_rows << " points\r";
+            std::cout.flush();
+            overflow(descriptor_levels, K, N, i);
+        }
+    }
+    std::cout << std::endl;
+    // can return empty matrix if data has fewer than K descriptors
+    return descriptor_levels.back();
+}
 // N is maximum size on which to perform clustering
 Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, unsigned int K, unsigned int N, unsigned int speedinator)
 {
@@ -320,8 +361,8 @@ std::vector<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &d
                 db_scenes.emplace_back(scene->startIdx, scene->endIdx);
             }
         } else if constexpr(std::is_same_v<value_type, Frame>) {
-            auto frames = v->frames();
-            while(auto frame = frames->read()) knownDescriptors.push_back(frame->frameDescriptor);
+            auto frames = v->frameBags();
+            while(auto frame = frames->read()) knownDescriptors.push_back(*frame);
         }
 
         auto &&alignments = calculateAlignment(knownDescriptors, targetDescriptors, intcomp, 3, 2);
@@ -369,6 +410,10 @@ std::vector<MatchInfo> findMatch(QueryVideo&& video, const FileDatabase &db) {
 }
 
 std::vector<MatchInfo> findMatch(std::unique_ptr<ICursor<Frame>> frames, const FileDatabase &db) {
+    return internal_findMatch(*frames, db);
+}
+
+std::vector<MatchInfo> findMatch(std::unique_ptr<ICursor<cv::Mat>> frames, const FileDatabase &db) {
     return internal_findMatch(*frames, db);
 }
 

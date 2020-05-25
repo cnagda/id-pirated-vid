@@ -97,6 +97,7 @@ public:
     DatabaseVideo(const FileDatabase &database, const std::string &key) : IVideo(key), db(database) {};
 
     std::unique_ptr<ICursor<Frame>> frames() const;
+    std::unique_ptr<ICursor<cv::Mat>> frameBags() const;
     std::unique_ptr<ICursor<SerializableScene>> getScenes() const;
 
     VideoMetadata loadMetadata() const;

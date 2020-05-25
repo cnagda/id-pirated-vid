@@ -23,7 +23,10 @@ add_subdirectory(src)
 add_subdirectory(bin)
 
 file(COPY assets/ DESTINATION ${CMAKE_BINARY_DIR})
-add_custom_target(python_scripts cp -R ${CMAKE_CURRENT_SOURCE_DIR}/python ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/python DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY piracy.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY viewer.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 
 if(BUILD_TESTING)
     add_subdirectory(tests)
