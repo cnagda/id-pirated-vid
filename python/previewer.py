@@ -1,19 +1,19 @@
-import pygame as pg
+import sys, os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+
 import numpy as np
 import time
-from moviepy.editor import *
+import pygame as pg
 
+from moviepy.video.io.VideoFileClip import *
+from moviepy.video.fx.resize import resize
 from moviepy.decorators import convert_masks_to_RGB, requires_duration
 from moviepy.tools import cvsecs
 
 from random import randrange
 
-VIDNAME = 0
-Q_START = 4
-Q_END = 5
-DB_START = 2
-DB_END = 3
-SCORE = 1
+import python.logfile
+from python.logfile import *
 
 # Adapted from moviepy's preview()
 class Previewer:
@@ -37,6 +37,7 @@ class Previewer:
 
         pg.font.init()
         mylargefont = pg.font.SysFont('Arial', 30)
+        mymediumfont = pg.font.SysFont('Arial', 26)
 
         surf1 = mylargefont.render('Query video', False, (255, 255, 255))
         surf2 = mylargefont.render('Database video', False, (255, 255, 255))
@@ -46,6 +47,22 @@ class Previewer:
 
         self.screen.blit(surf1, loc1)
         self.screen.blit(surf2, loc2)
+
+        db_range = "{} - {}".format(
+                str_timestamp(self.db_range[0]),
+                str_timestamp(self.db_range[1]))
+        query_range = "{} - {}".format(
+                str_timestamp(self.q_range[0]),
+                str_timestamp(self.q_range[1]))
+
+        range1 = mymediumfont.render(query_range, False, (255, 255, 255))
+        range2 = mymediumfont.render(db_range, False, (255, 255, 255))
+
+        loc3 = ((self.margin + self.video_w / 2 - range1.get_size()[0] / 2),(self.margin * 2 + self.margin / 4.0 + self.video_h))
+        loc4 = ((self.margin * 2 + self.video_w * 3 / 2 - range2.get_size()[0] / 2),(self.margin * 2 + self.margin / 4.0 + self.video_h))
+
+        self.screen.blit(range1, loc3)
+        self.screen.blit(range2, loc4)
 
         self.play_pause_loc = (self.viewer_w / 2, self.margin * 3 + self.video_h)
 
@@ -135,6 +152,8 @@ class Previewer:
         while clicked is False:
             (clicked, exit) = self.check_events(self.play_pause_loc)
             if exit:
+                pg.display.quit()
+                pg.quit()
                 return
 
 
@@ -160,9 +179,12 @@ class Previewer:
         self.video_w = 400
         self.margin = 50
         self.viewer_w = self.margin * 3 + self.video_w * 2
-        self.queryvid = VideoFileClip(querypath).subclip(row[Q_START] / 1000., row[Q_END] / 1000.).resize(width=self.video_w)
-        self.dbvid = VideoFileClip(dbpath).subclip(row[DB_START] / 1000., row[DB_END] / 1000. ).resize(width=self.video_w)
+        self.queryvid = VideoFileClip(querypath).subclip(row[Q_START] / 1000., row[Q_END] / 1000.).fx(resize, width=self.video_w)
+        self.dbvid = VideoFileClip(dbpath).subclip(row[DB_START] / 1000., row[DB_END] / 1000. ).fx(resize,width=self.video_w)
         self.video_h = max(self.queryvid.h, self.dbvid.h)
         self.viewer_h = self.video_h + self.margin * 4
+
+        self.db_range = (row[DB_START], row[DB_END])
+        self.q_range = (row[Q_START], row[Q_END])
 
         self.init_screen()
