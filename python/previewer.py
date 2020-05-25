@@ -72,6 +72,8 @@ class Previewer:
 
         self.draw_button('PLAY', self.play_pause_loc)
 
+        pg.display.set_caption('Pirated Clip Viewer')
+
 
 
     def imdisplay(self, imarray1, imarray2):
