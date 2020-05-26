@@ -27,21 +27,17 @@ int main(int argc, char ** argv) {
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    std::uniform_int_distribution d(-100, 100);
+    std::normal_distribution d(50.0, 15.0);
 
     int numPoints = std::stoi(argv[1]);
+    int fourth = numPoints / 4;
     std::vector<cv::Point2f> points(numPoints);
-    std::generate(points.begin(), points.end(), [&](){ return cv::Point2f{d(gen), d(gen)}; });
+    std::generate_n(points.begin(), fourth, [&](){ return cv::Point2f{d(gen), d(gen)}; });
+    std::generate_n(points.begin() + fourth + 1, fourth, [&](){ return cv::Point2f{d(gen) - 50, d(gen)}; });
+    std::generate_n(points.begin() + 2 * fourth + 1, fourth, [&](){ return cv::Point2f{d(gen), d(gen) - 50}; });
+    std::generate(points.begin() + 3 * fourth + 1, points.end(), [&](){ return cv::Point2f{d(gen) - 50, d(gen) - 50}; });
 
     auto vocab = constructDemoVocabularyHierarchical(points, 3, 50);
-
-    std::vector<std::array<int, 3>> matPoints(points.size());
-    std::transform(points.begin(), points.end(), matPoints.begin(), 
-        [&](auto i) -> std::array<int, 3> {
-            return {i.x, i.y, findIndex(vocab, i)};
-        });
-
-    points.clear();
 
     {
         std::ofstream vocabOut("vocab.mat");
@@ -51,8 +47,8 @@ int main(int argc, char ** argv) {
     }
 
     std::ofstream out("visualize.mat");
-    for(auto point : matPoints) {
-        out << point[0] << " " << point[1] << " " << point[2] << std::endl;
+    for(auto point : points) {
+        out << point.x << " " << point.y << " " << findIndex(vocab, point) << std::endl;
     }
 
     return 0;
