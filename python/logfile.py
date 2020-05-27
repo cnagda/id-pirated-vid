@@ -11,29 +11,7 @@ DB_START = 2
 DB_END = 3
 SCORE = 1
 
-def read_logfile(logpath):
-    # video_names = set()
-    # reader = csv.reader(open(logpath, "r"), delimiter=",")
-    # x = list(reader)[1:]
-    # y = []
-    # for row in x:
-    #     r = []
-    #     video_names.add(str(row[VIDNAME]))
-    #     r.append(str(row[VIDNAME]))
-    #     r.append(float(row[SCORE]))
-    #     r.append(int(row[DB_START]))
-    #     r.append(int(row[DB_END]))
-    #     r.append(int(row[Q_START]))
-    #     r.append(int(row[Q_END]))
-    #     y.append(r)
-    #
-    # logfile = np.array(y,dtype='object')
-    #
-    # if len(logfile) > 1:
-    #     logfile = logfile[np.argsort(logfile[:, SCORE])[::-1]]
-    #     logfile = logfile[logfile[:,1] > np.mean(logfile[:,1]) + 1.5*np.std(logfile[:,1])]
-    #
-
+def read_logfile(logpath, shortestmatch):
     logfile = pd.read_csv(logpath, index_col=None)
 
     df = logfile.groupby('Database Video').sum().reset_index()
@@ -41,6 +19,9 @@ def read_logfile(logpath):
     df = df.loc[df['Confidence'] > threshold]
     df = df.sort_values('Confidence')
     video_names = df['Database Video'].tolist()
+
+    df['Length'] = df.apply(lambda row: float(row['End Time'] - row['Start Time']) / 1000, axis=1)
+    df = df.loc[df['Length'] > shortestmatch]
 
     logfile = logfile[logfile['Database Video'].isin(df['Database Video']).tolist()]
     logfile = logfile.to_numpy()

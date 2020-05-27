@@ -170,10 +170,13 @@ positional arguments:
 optional arguments:
   -h, --help       show this help message and exit
   -v, --visualize  visualize video matches
+  -shortestmatch   minimum length of matching video clip (in seconds)
 ```
 
 Similarly to a `piracy.py QUERY`, the `-v` argument lets you view the matching
-clips side by side if you know the path to the videos in the database.
+clips side by side if you know the path to the videos in the database. If you
+wish to exclude video cip matched which are too short specifiy the
+`-shortestpath` with minimum number of seconds.
 
 ## Examples
 

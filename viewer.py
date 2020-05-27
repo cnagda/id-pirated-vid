@@ -41,13 +41,20 @@ def main():
         help='visualize video matches'
     )
 
+    parser.add_argument(
+        '-shortestmatch',
+        metavar = '',
+        type=int,
+        help='minimum length of matching video clip (in seconds)',
+        default=0)
+
     args = parser.parse_args()
 
     if not os.path.isfile(args.logfile):
         print("Logfile does not exist at this path")
         return
 
-    logfile = read_logfile(args.logfile)
+    logfile = read_logfile(args.logfile, args.shortestmatch)
     print_log(logfile)
     if not args.visualize or len(logfile) < 1:
         return
