@@ -9,14 +9,9 @@ from moviepy.video.fx.crop import crop
 
 
 def maxsubarray(arr):
-    #print("SHAPE" + str(arr.shape))
-
     arr = arr.ravel()
 
     s = arr.shape[0]
-
-    #print(arr.shape)
-    #print(s)
 
     dp = [0 for i in range(s)]
     dp = np.asarray(dp, dtype=int)
@@ -26,8 +21,7 @@ def maxsubarray(arr):
 
     dp[0] = arr[0]
     for i in range(1, s):
-        #print("REMOVE")
-
+        
         cont = dp[i-1]+arr[i]
         new = arr[i]
 
@@ -38,17 +32,9 @@ def maxsubarray(arr):
             dp[i] = new
             prev[i] = i
 
-        #dp[i] = max(dp[i-1]+nums[i],nums[i])
-
     end = dp.argmax(axis = 0)
     start = prev[end]
 
-    #print(arr)
-    #print("==========================================================================================================")
-    #print(dp)
-    #print("==========================================================================================================")
-    #print(prev)
-        #return max(dp)
     return (start, end)
 
 def main():
@@ -110,8 +96,6 @@ def main():
 
         counter += 1
 
-        #image = cv2.imread(sys.argv[1])
-
         ret, image = cap.read()
 
 
@@ -135,32 +119,16 @@ def main():
         else:
             total_image += laplacian
 
-
-        #ret, laplacian = cv2.threshold(laplacian,127,255,cv2.THRESH_BINARY)
-
         allimages.append(laplacian)
 
-        #cv2.imshow('img', sobel_8u)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
-
-    #print(total_image)
-
-    #av = np.mean(allimages, axis=0)
     total_image = total_image.astype(float)
     total_image /= counter
 
-    #print(total_image)
-
-    #print(allimages[0].shape)
-    #print(av.shape)
     total_image = np.clip(total_image, 0, 255)
 
     total_image *= (255 / total_image.max())
 
     total_image = total_image.astype(np.uint8)
-
-    #print(total_image)
 
     if(debug):
         cv2.imshow('img', total_image)
@@ -168,7 +136,6 @@ def main():
         cv2.destroyAllWindows()
 
     total_image = cv2.threshold(total_image, 20, 255, cv2.THRESH_BINARY)[1]
-    #edges = cv2.Canny(total_image,0,0)
     edges = total_image
 
     if(debug):
@@ -182,20 +149,10 @@ def main():
     padding = int(min(width, height)/8)
 
 
-
     flat = np.sum(edges, axis = 0)
     flat[0] = 0
     s = flat.shape[0]
     flat[s - 1] = 0
-    # print("Flat shape: " + str(s))
-    #print(flat)
-
-    #plt.plot(range(s), flat)
-    #plt.show()
-
-    # print("Maxcol: " + str(flat.argmax()) + "/" + str(s))
-    #print(flat)
-    #print("==========================================================================================================")
 
     edges = edges.astype(int)
     edges[edges == 0] = -255
