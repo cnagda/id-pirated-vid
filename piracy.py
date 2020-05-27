@@ -79,6 +79,9 @@ def call_execs(args):
             call_args.append(args.databasePath)
             call_args.append(path)
 
+            if args.frames is True:
+                call_args.append("--frames")
+
             print(f"Querying Video from Path: {path}")
 
         # print(call_args)
@@ -155,6 +158,11 @@ def main():
         '-v','--visualize',
         action='store_true',
         help='visualize video matches'
+    )
+    parser_query.add_argument(
+        '--frames',
+        action='store_true',
+        help='match frames instead of scenes; slower but more accurate'
     )
 
     parser_info = subparsers.add_parser('INFO')
