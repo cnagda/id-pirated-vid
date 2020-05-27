@@ -129,7 +129,7 @@ optional arguments:
   -v, --visualize    visualize video matches
   -shortestmatch SM  minimum length of matching video clip (in seconds)
   --frames           match frames instead of scenes; slower but more accurate
-  --picture          additionally looks for picture-in-picture attacks
+  --picture          additionally looks for picture-in-picture attacks (subimage must share exactly one corner with outer image to be detected)
 ```
 
 If using the `-v` argument, you will be asked for a path to the directory
@@ -240,7 +240,7 @@ positional arguments:
 optional arguments:
   -h, --help         show this help message and exit
   --frames           match frames instead of scenes; slower but more accurate
-  --picture          additionally looks for picture-in-picture attacks
+  --picture          additionally looks for picture-in-picture attacks (subimage must share exactly one corner with outer image to be detected)
   -shortestmatch SM  minimum length of matching video clip (in seconds)
 ```
 
