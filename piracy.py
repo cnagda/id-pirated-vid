@@ -84,7 +84,7 @@ def call_query(args):
             vidlist = []
             print("Looking for picture in picture\n")
             subprocess.call([
-                'python3', os.path.join(python_dir, "experiment.py"), path])
+                'python3', os.path.join(python_dir, "subimage_detector.py"), path])
 
             outer_path = os.path.join(results_dir, "outervideo.mp4")
             box_path = os.path.join(results_dir, "boxvideo.mp4")
