@@ -89,7 +89,7 @@ def call_execs(args):
 
         if args.type == 'QUERY':
             logpath = os.path.join(os.getcwd(), "results", f"{os.path.basename(path)}.csv")
-            viewer_args = [os.path.join(root_dir, "viewer.py"),logpath,path]
+            viewer_args = [os.path.join(root_dir, "viewer.py"),'-shortestpath', str(args.shortestpath), logpath, path]
             if args.visualize:
                 viewer_args.append('-v')
             subprocess.call(viewer_args)
@@ -158,6 +158,13 @@ def main():
         '-v','--visualize',
         action='store_true',
         help='visualize video matches'
+    )
+    parser.add_argument(
+        '-shortestmatch',
+        metavar = 'SM',
+        type=int,
+        help='minimum length of matching video clip (in seconds)',
+        default=0
     )
     parser_query.add_argument(
         '--frames',
