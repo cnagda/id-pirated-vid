@@ -2,7 +2,9 @@ from skimage import data
 import numpy as np
 import sys
 import cv2
-from moviepy.editor import *
+# from moviepy.editor import *
+from moviepy.video.io.VideoFileClip import *
+from moviepy.video.fx.crop import crop
 
 print("Args: " +  str(sys.argv))
 if(len(sys.argv) != 2):
@@ -249,7 +251,7 @@ yl = min(p1[1], p2[1])
 yh = max(p1[1], p2[1])
 
 video = VideoFileClip(sys.argv[1])
-boxvideo = video.crop(x1 = xl, y1 = yl, x2 = xh, y2 = yh)
+boxvideo = video.fx(crop, x1 = xl, y1 = yl, x2 = xh, y2 = yh)
 
 boxvideo.write_videofile("boxvideo.mp4")
 
