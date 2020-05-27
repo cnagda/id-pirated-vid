@@ -117,17 +117,19 @@ optional arguments:
 Query the database for each video at `paths` to check for piracy.
 
 ```
-usage: piracy.py QUERY [-h] [-v] [--frames] dbPath paths [paths ...]
+usage: piracy.py QUERY [-h] [-v] [-shortestmatch SM] [--frames] [--picture]
+                       dbPath paths [paths ...]
 
 positional arguments:
-  dbPath           path to database of known videos
-  paths            path(s) to directories/files to add
+  dbPath             path to database of known videos
+  paths              path(s) to directories/files to add
 
 optional arguments:
-  -h, --help       show this help message and exit
-  -v, --visualize  visualize video matches
-  --frames         match frames instead of scenes; slower but more accurate
-  -shortestmatch   minimum length of matching video clip (in seconds)
+  -h, --help         show this help message and exit
+  -v, --visualize    visualize video matches
+  -shortestmatch SM  minimum length of matching video clip (in seconds)
+  --frames           match frames instead of scenes; slower but more accurate
+  --picture          additionally looks for picture-in-picture attacks
 ```
 
 If using the `-v` argument, you will be asked for a path to the directory
@@ -163,7 +165,7 @@ If you have already run a query and would like to view the results again, find
 the corresponding logfile in your `results` folder and run `viewer.py`
 
 ```
-usage: viewer.py [-h] [-v] logfile querypath
+usage: viewer.py [-h] [-v] [-shortestmatch] logfile querypath
 
 View results of query
 
@@ -179,8 +181,8 @@ optional arguments:
 
 Similarly to a `piracy.py QUERY`, the `-v` argument lets you view the matching
 clips side by side if you know the path to the videos in the database. If you
-wish to exclude video cip matched which are too short specifiy the
-`-shortestmatch` with minimum number of seconds.
+wish to exclude video clip matches that are short, specifiy the
+`-shortestmatch` with a minimum number of seconds.
 
 ## Examples
 
@@ -226,18 +228,20 @@ Note that you should run `tester.py` from the root project directory.
 ```
 $ ./python/tester.py -h
 
-usage: tester.py [-h] [--frames] SOURCEDIR DBPATH
+usage: tester.py [-h] [--frames] [--picture] [-shortestmatch SM]
+                 SOURCEDIR DBPATH
 
 Test attack videos with premade database
 
 positional arguments:
-  SOURCEDIR   path to directory of attack videos
-  DBPATH      path to directory to output testing videos
+  SOURCEDIR          path to directory of attack videos
+  DBPATH             path to directory to output testing videos
 
 optional arguments:
-  -h, --help  show this help message and exit
-  --frames    match frames instead of scenes; slower but more accurate
-  -shortestmatch   minimum length of matching video clip (in seconds)
+  -h, --help         show this help message and exit
+  --frames           match frames instead of scenes; slower but more accurate
+  --picture          additionally looks for picture-in-picture attacks
+  -shortestmatch SM  minimum length of matching video clip (in seconds)
 ```
 
 ## Labeling Attack Videos
