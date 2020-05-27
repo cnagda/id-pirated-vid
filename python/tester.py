@@ -32,6 +32,11 @@ def main():
         help='match frames instead of scenes; slower but more accurate'
     )
     parser.add_argument(
+        '--picture',
+        action='store_true',
+        help='additionally looks for picture-in-picture attacks'
+    )
+    parser.add_argument(
         '-shortestmatch',
         metavar = 'SM',
         type=int,
@@ -63,12 +68,24 @@ def main():
         vidname = os.path.basename(vidpath)
         print(f"Querying: {vidpath}")
 
-        frames = ""
+        call_args = []
+        call_args.append('python3')
+        call_args.append(os.path.join(root_dir, 'piracy.py'))
+        call_args.append('QUERY')
+        call_args.append(args.dbpath)
+        call_args.append(vidpath)
+        call_args.append('-shortestmatch')
+        call_args.append(str(args.shortestmatch))
+
+
         if args.frames is True:
-            frames = "--frames"
+            call_args.append("--frames")
+
+        if args.picture is True:
+            call_args.append("--picture")
 
         # Run query
-        output = subprocess.check_output(['python3', os.path.join(root_dir, 'piracy.py'), 'QUERY', args.dbpath, vidpath, frames, '-shortestmatch', args.shortestmatch])
+        output = subprocess.check_output(call_args)
 
         # Check if result matches expected
         with open(os.path.join(root_dir, "results", "resultcache.txt")) as file:
