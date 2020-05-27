@@ -1,4 +1,3 @@
-from skimage import data
 import argparse
 import numpy as np
 import sys
