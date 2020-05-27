@@ -26,6 +26,12 @@ def main():
     parser.add_argument('dbpath', metavar='DBPATH', type=str,
                         help='path to directory to output testing videos')
 
+    parser.add_argument(
+        '--frames',
+        action='store_true',
+        help='match frames instead of scenes; slower but more accurate'
+    )
+
     args = parser.parse_args()
 
 
@@ -50,8 +56,12 @@ def main():
         vidname = os.path.basename(vidpath)
         print(f"Querying: {vidpath}")
 
+        frames = ""
+        if args.frames is True:
+            frames = "--frames"
+
         # Run query
-        output = subprocess.check_output(['python3', os.path.join(root_dir, 'piracy.py'), 'QUERY', args.dbpath, vidpath])
+        output = subprocess.check_output(['python3', os.path.join(root_dir, 'piracy.py'), 'QUERY', args.dbpath, vidpath, frames])
 
         # Check if result matches expected
         with open(os.path.join(root_dir, "results", "resultcache.txt")) as file:
