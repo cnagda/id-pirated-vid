@@ -127,6 +127,7 @@ optional arguments:
   -h, --help       show this help message and exit
   -v, --visualize  visualize video matches
   --frames         match frames instead of scenes; slower but more accurate
+  -shortestmatch   minimum length of matching video clip (in seconds)
 ```
 
 If using the `-v` argument, you will be asked for a path to the directory
@@ -135,6 +136,9 @@ to select and view matching alignments.
 
 Using the `--frames` option will be significantly slower. It isn't recommended
 for normal use.
+
+If you wish to exclude video cip matched which are too short specifiy the
+`-shortestmatch` with minimum number of seconds.
 
 ### INFO
 
@@ -176,7 +180,7 @@ optional arguments:
 Similarly to a `piracy.py QUERY`, the `-v` argument lets you view the matching
 clips side by side if you know the path to the videos in the database. If you
 wish to exclude video cip matched which are too short specifiy the
-`-shortestpath` with minimum number of seconds.
+`-shortestmatch` with minimum number of seconds.
 
 ## Examples
 
@@ -233,6 +237,7 @@ positional arguments:
 optional arguments:
   -h, --help  show this help message and exit
   --frames    match frames instead of scenes; slower but more accurate
+  -shortestmatch   minimum length of matching video clip (in seconds)
 ```
 
 ## Labeling Attack Videos
