@@ -214,12 +214,12 @@ our script `tester.py` in the `python` folder.
 
 ## `tester.py`
 
-Note that you must run `tester.py` from the root project directory.
+Note that you should run `tester.py` from the root project directory.
 
 ```
 $ ./python/tester.py -h
 
-usage: tester.py [-h] SOURCEDIR DBPATH
+usage: tester.py [-h] [--frames] SOURCEDIR DBPATH
 
 Test attack videos with premade database
 
@@ -229,6 +229,7 @@ positional arguments:
 
 optional arguments:
   -h, --help  show this help message and exit
+  --frames    match frames instead of scenes; slower but more accurate
 ```
 
 ## Labeling Attack Videos
