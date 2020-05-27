@@ -189,7 +189,7 @@ def main():
         action='store_true',
         help='visualize video matches'
     )
-    parser.add_argument(
+    parser_query.add_argument(
         '-shortestmatch',
         metavar = 'SM',
         type=int,
