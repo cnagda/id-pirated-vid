@@ -31,6 +31,13 @@ def main():
         action='store_true',
         help='match frames instead of scenes; slower but more accurate'
     )
+    parser.add_argument(
+        '-shortestmatch',
+        metavar = 'SM',
+        type=int,
+        help='minimum length of matching video clip (in seconds)',
+        default=0
+    )
 
     args = parser.parse_args()
 
@@ -61,7 +68,7 @@ def main():
             frames = "--frames"
 
         # Run query
-        output = subprocess.check_output(['python3', os.path.join(root_dir, 'piracy.py'), 'QUERY', args.dbpath, vidpath, frames])
+        output = subprocess.check_output(['python3', os.path.join(root_dir, 'piracy.py'), 'QUERY', args.dbpath, vidpath, frames, '-shortestmatch', args.shortestmatch])
 
         # Check if result matches expected
         with open(os.path.join(root_dir, "results", "resultcache.txt")) as file:
