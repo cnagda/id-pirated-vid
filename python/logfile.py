@@ -20,8 +20,10 @@ def read_logfile(logpath, shortestmatch):
     df = df.sort_values('Confidence')
     video_names = df['Database Video'].tolist()
 
-    df['Length'] = df.apply(lambda row: float(row['End Time'] - row['Start Time']) / 1000, axis=1)
+    # df['Length'] = df.apply(lambda row: float(row['End Time'] - row['Start Time']) / 1000, axis=1)
+    df['Length'] = (df['End Time'] - df['Start Time']) / 1000.
     df = df.loc[df['Length'] > shortestmatch]
+
 
     logfile = logfile[logfile['Database Video'].isin(df['Database Video']).tolist()]
     logfile = logfile.to_numpy()

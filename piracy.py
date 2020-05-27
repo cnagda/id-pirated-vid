@@ -90,6 +90,7 @@ def call_query(args):
             box_path = os.path.join(results_dir, "boxvideo.mp4")
 
             if os.path.exists(outer_path) and os.path.exists(box_path):
+                print("Will query twice (outervideo.mp4 and boxvideo.mp4)")
                 vidlist.append(box_path)
                 vidlist.append(outer_path)
             else:
