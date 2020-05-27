@@ -78,15 +78,15 @@ After building the project, run the command line interface from the root project
 folder by executing `piracy.py`
 
 ```
-usage: piracy.py [-h] {ADD,QUERY} ...
+usage: piracy.py [-h] {ADD,QUERY,INFO} ...
 
 Check videos for pirated content
 
 optional arguments:
-  -h, --help   show this help message and exit
+  -h, --help        show this help message and exit
 
 type:
-  {ADD,QUERY}
+  {ADD,QUERY,INFO}
 ```
 
 ### ADD
@@ -117,20 +117,41 @@ optional arguments:
 Query the database for each video at `paths` to check for piracy.
 
 ```
-usage: piracy.py QUERY [-h] dbPath paths [paths ...]
+usage: piracy.py QUERY [-h] [-v] [--frames] dbPath paths [paths ...]
 
 positional arguments:
-  dbPath      path to database of known videos
-  paths       path(s) to directories/files to add
+  dbPath           path to database of known videos
+  paths            path(s) to directories/files to add
 
 optional arguments:
   -h, --help       show this help message and exit
   -v, --visualize  visualize video matches
+  --frames         match frames instead of scenes; slower but more accurate
 ```
 
 If using the `-v` argument, you will be asked for a path to the directory
 containing the video files used to construct the database. You will be able
 to select and view matching alignments.
+
+Using the `--frames` option will be significantly slower. It isn't recommended
+for normal use.
+
+### INFO
+
+Get info about the database
+
+```
+usage: piracy.py INFO [-h] dbPath
+
+positional arguments:
+  dbPath      path to database of known videos
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
+
+The info will include the `kFrame`, `kScene`, and `thresholdScene` values for
+the database as well as a list of videos in the database.
 
 ## `viewer.py`
 
@@ -171,6 +192,8 @@ Later, if you want to view the matches again:
 ```
 ./viewer.py ./results/pirated.mp4.csv ./data/pirated.mp4
 ```
+
+# Visualizations
 
 ## Visualize Kmeans
 ```
