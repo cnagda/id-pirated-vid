@@ -3,6 +3,16 @@ import argparse
 import subprocess
 import os
 
+
+root_dir = os.path.abspath(os.path.dirname(__file__))
+python_dir = os.path.join(root_dir, "python")
+results_dir = os.path.join(root_dir, "results")
+app_dir = root_dir
+if not os.path.exists(os.path.join(app_dir, "add")):
+    app_dir = os.path.join(root_dir, "build")
+    if not os.path.exists(os.path.join(app_dir, "add")):
+        raise Exception("can't find the build dir")
+
 def validate_args(args):
     # TODO: add more validation
 
@@ -31,68 +41,87 @@ def expand_paths(paths):
                 print(f"Invalid path: {path}, ignoring this one")
     return expanded
 
-def call_execs(args):
-    root_dir = os.path.abspath(os.path.dirname(__file__))
-    python_dir = os.path.join(root_dir, "python")
-    app_dir = root_dir
-    if not os.path.exists(os.path.join(app_dir, "add")):
-        app_dir = os.path.join(root_dir, "build")
-        if not os.path.exists(os.path.join(app_dir, "add")):
-            raise Exception("can't find the build dir")
 
-    call_args = []
-    if args.type == 'INFO':
-        call_args.append(os.path.join(app_dir, "info"))
+def call_add(args):
+    for i, path in enumerate(args.paths):
+        print('--------------------------------------------------------------')
+        call_args = []
+
+        call_args.append(os.path.join(app_dir, "add"))
         call_args.append(args.databasePath)
+        call_args.append(path)
+        kScene = "-1"
+        kFrame = "-1"
+        thresholdScene = "-1"
+        if i == len(args.paths) - 1:
+            kScene = str(args.kScene)
+            kFrame = str(args.kFrame)
+            thresholdScene = str(args.thresholdScene)
+        call_args.append(kScene)
+        call_args.append(kFrame)
+        call_args.append(thresholdScene)
+
+        print(f"Adding Video from Path: {path}")
+        print(f"Options:   kFrame: {kFrame}   kScene: {kScene}   thresholdScene: {thresholdScene}")
+
+        # if kFrame != "-1":
+        #     print("Will reconstruct frame vocabulary")
+        # if kScene != "-1":
+        #     print("Will reconstruct scene vocabulary")
+        # if thresholdScene != "-1":
+        #     print("Will reconstruct scenes")
+
         subprocess.call(call_args)
-        return
+
+def call_query(args):
 
     for i, path in enumerate(args.paths):
         print('--------------------------------------------------------------')
         call_args = []
-        if args.type == 'ADD':
-            call_args.append(os.path.join(app_dir, "add"))
-            call_args.append(args.databasePath)
-            call_args.append(path)
-            kScene = "-1"
-            kFrame = "-1"
-            thresholdScene = "-1"
-            if i == len(args.paths) - 1:
-                kScene = str(args.kScene)
-                kFrame = str(args.kFrame)
-                thresholdScene = str(args.thresholdScene)
-            call_args.append(kScene)
-            call_args.append(kFrame)
-            call_args.append(thresholdScene)
+        vidlist = []
+        vidlist.append(path)
+        if args.picture is True:
+            vidlist = []
+            print("Looking for picture in picture\n")
+            subprocess.call([
+                'python3', os.path.join(python_dir, "experiment.py"), path])
 
-            print(f"Adding Video from Path: {path}")
-            print(f"Options:   kFrame: {kFrame}   kScene: {kScene}   thresholdScene: {thresholdScene}")
+            outer_path = os.path.join(results_dir, "outervideo.mp4")
+            box_path = os.path.join(results_dir, "boxvideo.mp4")
 
-            # if kFrame != "-1":
-            #     print("Will reconstruct frame vocabulary")
-            # if kScene != "-1":
-            #     print("Will reconstruct scene vocabulary")
-            # if thresholdScene != "-1":
-            #     print("Will reconstruct scenes")
-        else:
+            if os.path.exists(outer_path) and os.path.exists(box_path):
+                vidlist.append(box_path)
+                vidlist.append(outer_path)
+            else:
+                vidlist.append(path)
+
+        matchlist = set()
+        for vidpath in vidlist:
+            call_args = []
             call_args.append(os.path.join(app_dir, "query"))
             call_args.append(args.databasePath)
-            call_args.append(path)
+            call_args.append(vidpath)
 
             if args.frames is True:
                 call_args.append("--frames")
 
-            print(f"Querying Video from Path: {path}")
+            print(f"Querying Video from Path: {vidpath}")
 
-        # print(call_args)
-        subprocess.call(call_args)
+            # print(call_args)
+            subprocess.call(call_args)
 
-        if args.type == 'QUERY':
-            logpath = os.path.join(os.getcwd(), "results", f"{os.path.basename(path)}.csv")
-            viewer_args = [os.path.join(root_dir, "viewer.py"),'-shortestmatch', str(args.shortestmatch), logpath, path]
+
+            logpath = os.path.join(results_dir, f"{os.path.basename(vidpath)}.csv")
+            viewer_args = [os.path.join(root_dir, "viewer.py"),'-shortestmatch', str(args.shortestmatch), logpath, vidpath]
             if args.visualize:
                 viewer_args.append('-v')
             subprocess.call(viewer_args)
+
+            with open(os.path.join(results_dir, "resultcache.txt")) as file:
+                matchlist.update(file.readlines())
+        with open(os.path.join(results_dir, "resultcache.txt"), 'w') as file:
+            for item in matchlist:
+                file.write(f"{item}\n")
 
 
 def main():
@@ -171,6 +200,11 @@ def main():
         action='store_true',
         help='match frames instead of scenes; slower but more accurate'
     )
+    parser_query.add_argument(
+        '--picture',
+        action='store_true',
+        help='additionally looks for picture-in-picture attacks'
+    )
 
     parser_info = subparsers.add_parser('INFO')
     parser_info.add_argument(
@@ -187,7 +221,14 @@ def main():
             args.paths = expand_paths(args.paths)
         except:
             args.paths = []
-        call_execs(args)
+
+        if args.type == "ADD":
+            call_add(args)
+        elif args.type == "QUERY":
+            call_query(args)
+        elif args.type == "INFO":
+            subprocess.call([os.path.join(app_dir, "info"), args.databasePath])
+
 
 if __name__ == "__main__":
     main()
