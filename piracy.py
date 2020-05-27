@@ -39,7 +39,14 @@ def call_execs(args):
         app_dir = os.path.join(root_dir, "build")
         if not os.path.exists(os.path.join(app_dir, "add")):
             raise Exception("can't find the build dir")
-    
+
+    call_args = []
+    if args.type == 'INFO':
+        call_args.append(os.path.join(app_dir, "info"))
+        call_args.append(args.databasePath)
+        subprocess.call(call_args)
+        return
+
     for i, path in enumerate(args.paths):
         print('--------------------------------------------------------------')
         call_args = []
@@ -150,11 +157,21 @@ def main():
         help='visualize video matches'
     )
 
+    parser_info = subparsers.add_parser('INFO')
+    parser_info.add_argument(
+        'databasePath',
+        metavar='dbPath',
+        help='path to database of known videos'
+    )
+
     args = parser.parse_args()
     # print(args)
     is_valid = validate_args(args)
     if is_valid:
-        args.paths = expand_paths(args.paths)
+        try:
+            args.paths = expand_paths(args.paths)
+        except:
+            args.paths = []
         call_execs(args)
 
 if __name__ == "__main__":
