@@ -189,7 +189,7 @@ wish to exclude video clip matches that are short, specifiy the
 Create a database from videos in directory `/data/videos/` and compute frame/scene
 descriptors and scenes:
 ```
-./piracy.py ADD ./build/database/ ./data/videos/ -kFrame 20000 -kScene 4000 -thresholdScene 0.15
+./piracy.py ADD ./build/database/ ./data/videos/ -kFrame 20000 -kScene 4000 -thresholdScene 30
 ```
 
 Check to see if video `/data/pirated.mp4` matches any videos in the database:
