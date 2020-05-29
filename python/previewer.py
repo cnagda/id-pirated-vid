@@ -75,7 +75,7 @@ class Previewer:
         pg.display.set_caption('Pirated Clip Viewer')
 
 
-
+    # Adapted from moviepy's preview()
     def imdisplay(self, imarray1, imarray2):
         # imarr1 on left, imarr2 on right
         a = pg.surfarray.make_surface(imarray1.swapaxes(0, 1))
@@ -111,6 +111,7 @@ class Previewer:
         self.draw_button('PAUSE', self.play_pause_loc)
         return False
 
+    # Adapted from moviepy's preview()
     def play_from_beginning(self, fps=10):
 
         img1 = self.queryvid.get_frame(0)
