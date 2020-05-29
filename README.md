@@ -132,7 +132,7 @@ optional arguments:
   -v, --visualize    visualize video matches
   -shortestmatch SM  minimum length of matching video clip (in seconds)
   --frames           match frames instead of scenes; slower but more accurate
-  --subimage         additionally looks for a sugimage that shares exactly one
+  --subimage         additionally looks for a subimage that shares exactly one
                      corner (such as a picture-in-picture attack)
 ```
 
@@ -284,7 +284,7 @@ positional arguments:
 optional arguments:
   -h, --help         show this help message and exit
   --frames           match frames instead of scenes; slower but more accurate
-  --subimage         additionally looks for a sugimage that shares exactly one
+  --subimage         additionally looks for a subimage that shares exactly one
                      corner (such as a picture-in-picture attack)
   -shortestmatch SM  minimum length of matching video clip (in seconds)
 ```

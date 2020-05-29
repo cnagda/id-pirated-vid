@@ -34,7 +34,7 @@ def main():
     parser.add_argument(
         '--subimage',
         action='store_true',
-        help='additionally looks for a sugimage that shares exactly one corner (such as a picture-in-picture attack)'
+        help='additionally looks for a subimage that shares exactly one corner (such as a picture-in-picture attack)'
     )
     parser.add_argument(
         '-shortestmatch',
