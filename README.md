@@ -225,7 +225,7 @@ optional arguments:
 
 Similarly to a `piracy.py QUERY`, the `-v` argument lets you view the matching
 clips side by side if you know the path to the videos in the database. If you
-wish to exclude video clip matches that are short, specifiy the
+wish to exclude video clip matches that are short, specify the
 `-shortestmatch` with a minimum number of seconds.
 
 ## Examples
