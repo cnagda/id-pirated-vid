@@ -80,7 +80,10 @@ folder by executing `piracy.py`
 ```
 usage: piracy.py [-h] {ADD,QUERY,INFO} ...
 
-Check videos for pirated content
+Check videos for pirated content. Use ADD to create or update a database. Use
+QUERY to check an existing database for one or more videos. Use INFO to see
+parameters for an existing database. For more information, try ADD, QUERY, or
+INFO with the -h option.
 
 optional arguments:
   -h, --help        show this help message and exit
@@ -117,7 +120,7 @@ optional arguments:
 Query the database for each video at `paths` to check for piracy.
 
 ```
-usage: piracy.py QUERY [-h] [-v] [-shortestmatch SM] [--frames] [--picture]
+usage: piracy.py QUERY [-h] [-v] [-shortestmatch SM] [--frames] [--subimage]
                        dbPath paths [paths ...]
 
 positional arguments:
@@ -129,18 +132,59 @@ optional arguments:
   -v, --visualize    visualize video matches
   -shortestmatch SM  minimum length of matching video clip (in seconds)
   --frames           match frames instead of scenes; slower but more accurate
-  --picture          additionally looks for picture-in-picture attacks (subimage must share exactly one corner with outer image to be detected)
+  --subimage         additionally looks for a sugimage that shares exactly one
+                     corner (such as a picture-in-picture attack)
 ```
+
+#### `--visualize`
 
 If using the `-v` argument, you will be asked for a path to the directory
 containing the video files used to construct the database. You will be able
 to select and view matching alignments.
 
+#### `--frames`
+
 Using the `--frames` option will be significantly slower. It isn't recommended
 for normal use.
 
-If you wish to exclude video cip matched which are too short specifiy the
+#### `-shortestmatch SM`
+
+If you wish to exclude video clip matches that are too short, specify the
 `-shortestmatch` with minimum number of seconds.
+
+For example, if you only want matches that are more than 3 seconds, you would
+type `-shortestmatch 3` and you will not see matches that are 3 seconds or less.
+
+#### `--subimage`
+
+Some videos may use a subimage of pirated content, such as in a picture-in-picture
+attack, so we provide an option to check for a subimage. Note that the subimage
+must share a corner with the video.
+
+Using the `--subimage` option will first check for a subimage. If one is found,
+we actually run two queries: first with the subimage (called `boxvideo.mp4`) and
+second with the rest of the video with a black box on top of the subimage
+(this one is called `outervideo.mp4`). These videos are stored in your `results`
+folder if you are interested in viewing them. If no subimage is found, the query
+proceeds with the entire video.
+
+You can also check for a subimage independently of a query and view the
+resulting videos in your `results` folder if a subimage was found, as the
+subimage code is in a separate module in `python/subimage_detector.py`.
+
+```
+usage: subimage_detector.py [-h] srcpath
+
+Find subimage and save separate files
+
+positional arguments:
+  srcpath     path to video with potential subimage
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
+
+
 
 ### INFO
 
@@ -228,7 +272,7 @@ Note that you should run `tester.py` from the root project directory.
 ```
 $ ./python/tester.py -h
 
-usage: tester.py [-h] [--frames] [--picture] [-shortestmatch SM]
+usage: tester.py [-h] [--frames] [--subimage] [-shortestmatch SM]
                  SOURCEDIR DBPATH
 
 Test attack videos with premade database
@@ -240,7 +284,8 @@ positional arguments:
 optional arguments:
   -h, --help         show this help message and exit
   --frames           match frames instead of scenes; slower but more accurate
-  --picture          additionally looks for picture-in-picture attacks (subimage must share exactly one corner with outer image to be detected)
+  --subimage         additionally looks for a sugimage that shares exactly one
+                     corner (such as a picture-in-picture attack)
   -shortestmatch SM  minimum length of matching video clip (in seconds)
 ```
 

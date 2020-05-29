@@ -32,9 +32,9 @@ def main():
         help='match frames instead of scenes; slower but more accurate'
     )
     parser.add_argument(
-        '--picture',
+        '--subimage',
         action='store_true',
-        help='additionally looks for picture-in-picture attacks'
+        help='additionally looks for a sugimage that shares exactly one corner (such as a picture-in-picture attack)'
     )
     parser.add_argument(
         '-shortestmatch',
@@ -81,8 +81,8 @@ def main():
         if args.frames is True:
             call_args.append("--frames")
 
-        if args.picture is True:
-            call_args.append("--picture")
+        if args.subimage is True:
+            call_args.append("--subimage")
 
         # Run query
         output = subprocess.check_output(call_args)

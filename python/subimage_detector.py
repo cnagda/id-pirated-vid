@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import numpy as np
 import sys
@@ -20,7 +21,7 @@ def maxsubarray(arr):
 
     dp[0] = arr[0]
     for i in range(1, s):
-        
+
         cont = dp[i-1]+arr[i]
         new = arr[i]
 
@@ -61,13 +62,13 @@ def main():
         quit()
 
     parser = argparse.ArgumentParser(
-        description='Find picture in picture and save separate files'
+        description='Find subimage and save separate files'
     )
 
     parser.add_argument(
         'srcpath',
         type=str,
-        help='path to video with potential picture in picture'
+        help='path to video with potential subimage'
     )
 
     args = parser.parse_args()
@@ -186,7 +187,7 @@ def main():
 
 
     if(maxce - maxcs < linesize or maxre - maxrs < linesize):
-        print("Did not detect picture in picture")
+        print("Did not detect subimage")
         return
 
     cap = cv2.VideoCapture(args.srcpath)

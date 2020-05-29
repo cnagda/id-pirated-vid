@@ -80,9 +80,9 @@ def call_query(args):
         call_args = []
         vidlist = []
         vidlist.append(path)
-        if args.picture is True:
+        if args.subimage is True:
             vidlist = []
-            print("Looking for picture in picture\n")
+            print("Looking for subimage\n")
             subprocess.call([
                 'python3', os.path.join(python_dir, "subimage_detector.py"), path])
 
@@ -127,7 +127,11 @@ def call_query(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Check videos for pirated content'
+        description='Check videos for pirated content. '+
+        'Use ADD to create or update a database. ' +
+        'Use QUERY to check an existing database for one or more videos. ' +
+        'Use INFO to see parameters for an existing database. ' +
+        'For more information, try ADD, QUERY, or INFO with the -h option.'
     )
 
     '''
@@ -202,9 +206,9 @@ def main():
         help='match frames instead of scenes; slower but more accurate'
     )
     parser_query.add_argument(
-        '--picture',
+        '--subimage',
         action='store_true',
-        help='additionally looks for picture-in-picture attacks'
+        help='additionally looks for a sugimage that shares exactly one corner (such as a picture-in-picture attack)'
     )
 
     parser_info = subparsers.add_parser('INFO')
