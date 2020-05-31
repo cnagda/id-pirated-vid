@@ -2,8 +2,6 @@
 
 # id-pirated-vid
 
-# Description
-
 Our application allows users create a database of known videos and query videos against the
 database to detect pirated content. This is done through a command line interface implemented in Python. 
 All processing is done in C++.
@@ -371,13 +369,12 @@ part if you do not want them.
 # Credits
 Team:
 
-* Kaelan Mikowicz: ktmikowicz@ucdavis.edu 
-* Chandni Nagda: cjnagda@ucdavis.edu
-* Emma Kristovich: emkristovich@ucdavis.edu
-* Andrei Blebea: aoblebea@ucdavis.edu
+* Kaelan Mikowicz: [@klanmiko](https://github.com/klanmiko)
+* Chandni Nagda: [@cnagda](https://github.com/cnagda)
+* Emma Kristovich: [@emkristo](https://github.com/emkristo)
+* Andrei Blebea: [@The-Boogeyman](https://github.com/The-Boogeyman)
 
-
-Thank you to our mentors Brian, Lucas, and Troy at Telestream
+Thank you to our mentors Brian, Lucas, and Troy at Telestream, Inc.
 
 # License
 Our project is under the MIT License. See [LICENSE.txt](LICENSE.txt) for the full license.
