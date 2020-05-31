@@ -4,48 +4,31 @@
 
 # Description
 
-Users create a database of known videos and can compare query videos against the
-database to find piracy.
+Our application allows users create a database of known videos and query videos against the
+database to detect pirated content. This is done through a command line interface implemented in Python. 
+All processing is done in C++.
 
 # Installation
 
-## Using Vagrant
+## Installing OpenCV
 
-First install vagrant. (Exercise left to reader)
+### Option 1: Using Vagrant
 
-Then from the host machine use vagrant to provision a VM
+1. First install vagrant. Then from the host machine use vagrant to provision a VM.
+2. To start the VM with virtualbox default provider run `vagrant up` within the project directory. This will run provisioning if provisioning has not been started. To restart the vm use `vagrant reload` which will skip provisioning. To connect to the vm, either use `vagrant ssh` or open up virtualbox/VMWare/hyperv and connect graphically. The project folder stays synced to the host machine under `/vagrant` in the ubuntu client OS. We will add an option to run our programs without debug GUI in the future.
 
-To start the VM with virtualbox default provider:
-```
-vagrant up
-```
-
-This will run provisioning if provisioning has not been started. To restart the vm use `vagrant reload` which will skip provisioning.
-
-To connect to the vm, either use `vagrant ssh` or open up virtualbox/VMWare/hyperv and connect graphically. The project folder stays synced to the host machine under `/vagrant` in the ubuntu client OS. We will add an option to run our programs without debug GUI in the future.
-
+### Option 2: Use a Script
 Alternatively, run provisionVM.sh in Ubuntu to install dependencies and build opencv with SIFT
 
+### Option3 : Build OpenCV on your own
 Alternatively, build opencv itself with opencv_contrib.
 My build string:
 ```
 cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local \
  -DOPENCV_EXTRA_MODULES_PATH=<opencv_contrib>/modules \
--D WITH_CUDA=ON -D WITH_VA=ON -D WITH_VA_INTEL=ON -D WITH_CUBLAS=ON \
--D WITH_FFMPEG=ON -D WITH_OPENMP=ON  -DOPENCV_ENABLE_NONFREE=ON \
+-D WITH_FFMPEG=ON -DOPENCV_ENABLE_NONFREE=ON \
  -D BUILD_EXAMPLES=OFF -D WITH_GTK=ON -D BUILD_opencv_apps=OFF -D BUILD_DOCS=OFF \
  -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF <opencv_src>
-```
-
-Alternatively
-```
-cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local \
- -DOPENCV_EXTRA_MODULES_PATH=<opencv_contrib>/modules \
--D WITH_CUDA=ON -D WITH_VA=ON -D WITH_VA_INTEL=ON -D WITH_CUBLAS=ON \
--D WITH_FFMPEG=ON -D WITH_OPENMP=ON  -DOPENCV_ENABLE_NONFREE=ON \
- -D BUILD_EXAMPLES=OFF -D WITH_GTK=ON -D BUILD_opencv_apps=OFF -D BUILD_DOCS=OFF \
- -D BUILD_PERF_TESTS=OFF -D BUILD_TESTS=OFF -DWITH_CUBLAS=ON -DWITH_MKL=ON \
- -DMKL_USE_MULTITHREAD=ON -DMKL_WITH_TBB=ON -DWITH_TBB=ON <opencv_src>
 ```
 
 ## Building project
@@ -385,8 +368,16 @@ Feel free to fork and modify the script for your own purposes. You can easily
 comment out attacks or add attacks. You can also comment out the inserted clip
 part if you do not want them.
 
-# Contributing
-
 # Credits
+Team:
+
+* Kaelan Mikowicz: ktmikowicz@ucdavis.edu 
+* Chandni Nagda: cjnagda@ucdavis.edu
+* Emma Kristovich: emkristovich@ucdavis.edu
+* Andrei Blebea: aoblebea@ucdavis.edu
+
+
+Thank you to our mentors Brian, Lucas, and Troy at Telestream
 
 # License
+Our project is under the MIT License. See [LICENSE.txt](LICENSE.txt) for the full license.
