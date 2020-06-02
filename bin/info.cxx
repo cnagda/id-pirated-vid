@@ -40,5 +40,6 @@ int main(int argc, char **argv)
         std::cout << std::left << std::setw(40) << vid << "\t";
         if (++count %2 == 0) {  std::cout << std::endl;  }
     }
+    std::cout << std::endl;
 
 }
