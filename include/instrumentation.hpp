@@ -17,6 +17,12 @@ struct MatchInfo
     double confidence;
     double knownFrameRate;
     size_t startQuery, endQuery, startKnown, endKnown;
+    double meanSimilarity;
+
+    MatchInfo() = default;
+
+    MatchInfo(std::string v, double c, double kfr, size_t sq, size_t eq, size_t sk, size_t ek, double ms = 0) : video(v), confidence(c), knownFrameRate(kfr), startQuery(sq), endQuery(eq), startKnown(sk), endKnown(eq), meanSimilarity(ms){
+    }
 };
 
 struct FrameSimilarityInfo
