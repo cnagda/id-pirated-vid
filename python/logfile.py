@@ -6,12 +6,12 @@ import os
 
 
 VIDNAME = 0
-Q_START = 4
-Q_END = 5
-DB_START = 2
-DB_END = 3
-SCORE = 1
-LENGTH = 6
+Q_START = 5
+Q_END = 6
+DB_START = 3
+DB_END = 4
+SIM = 2
+LENGTH = 7
 
 WHITE = '\u001b[37m'
 BLUE = '\033[94m'
@@ -44,7 +44,6 @@ def join_from_path(logpath1, logpath2, destdir):
                 p1 = l1 / (l1 + l2)
                 p2 = l2 / (l1 + l2)
                 newscore = row1['Confidence']*p1 + row2['Confidence']*p2
-                print('index: ' + str(index1) + ', score: ' + str(newscore))
                 result.iloc[index1, result.columns.get_loc('Confidence')] = newscore
                 result.iloc[index1, result.columns.get_loc('Start Time')] = min(row1['Start Time'], row2['Start Time'])
                 result.iloc[index1, result.columns.get_loc('Query Start Time')] = min(row1['Query Start Time'], row2['Query Start Time'])
@@ -55,28 +54,27 @@ def join_from_path(logpath1, logpath2, destdir):
     outpath = os.path.join(destdir, "combined.mp4.csv")
     result.to_csv(outpath, index=False)
     return outpath
-    
+
 def read_logfile(logpath, shortestmatch):
     logfile = pd.read_csv(logpath, index_col=None)
 
     df = logfile.groupby('Database Video').sum().reset_index()
     threshold = df['Confidence'].mean() + 1.5*df['Confidence'].std()
     df = df.loc[df['Confidence'] > threshold]
-    df = df.sort_values('Confidence')
+    df['Length'] = (df['End Time'] - df['Start Time']) / 1000.
+    df = df.sort_values(['Confidence', 'Length'])
     video_names = df['Database Video'].tolist()
 
     # df['Length'] = df.apply(lambda row: float(row['End Time'] - row['Start Time']) / 1000, axis=1)
-    df['Length'] = (df['End Time'] - df['Start Time']) / 1000.
     df = df.loc[df['Length'] > shortestmatch]
-
-
-    # logfile = logfile[logfile['Database Video'].isin(df['Database Video']).tolist()]
+    logfile = logfile[logfile['Database Video'].isin(df['Database Video']).tolist()]
+    logfile['Length'] = (logfile['End Time'] - logfile['Start Time']) / 1000.
 
     with open("./results/resultcache.txt", "w") as file:
         for item in video_names:
             file.write(f"{item}\n")
 
-    return df.to_numpy()
+    return logfile.to_numpy()
 
 def str_timestamp(num_ms):
     n_sec = int(dt.timedelta(milliseconds=num_ms).total_seconds())
@@ -95,15 +93,14 @@ def print_log(logfile):
         print("NO MATCHES FOUND")
         return
     print(f"\n{BOLD}MATCH(ES) FOUND:{ENDC}\n")
-    print("{}:{:>30}{:>12}{:>20}{:>24}{:>24}".format(
-            "#", "Name of Matching Video","Score","Length (sec.)", "Range in DB", "Range in Query"))
+    print("{}:{:>30}{:>16}{:>20}{:>24}{:>24}".format(
+            "#", "Name of Matching Video","Similarity","Length (sec.)", "Range in DB", "Range in Query"))
     for i, row in enumerate(logfile):
-
-        score = row[SCORE]
+        score = row[SIM] * 100
         score_color = RED
-        if score > 70:
+        if score > 90:
             score_color = GREEN
-        elif score > 50:
+        elif score > 75:
             score_color = YELLOW
 
         db_range = "{} - {}".format(
@@ -112,6 +109,6 @@ def print_log(logfile):
         query_range = "{} - {}".format(
                 str_timestamp(row[Q_START]),
                 str_timestamp(row[Q_END]))
-        print("{}:\033[94m{:>30}\033[0m{}{:>12}\033[0m\u001b[38;5;244m{:>20}{:>24}{:>24}\033[0m".format(
-                i, row[VIDNAME],score_color,row[SCORE],row[LENGTH],db_range, query_range))
+        print("{}:\033[94m{:>30}\033[0m{}{:>15.3f}%\033[0m\u001b[38;5;244m{:>20}{:>24}{:>24}\033[0m".format(
+                i, row[VIDNAME],score_color,score,row[LENGTH],db_range, query_range))
     print("\n")
