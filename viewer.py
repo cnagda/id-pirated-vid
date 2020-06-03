@@ -20,7 +20,7 @@ def my_glob(path):
     return expanded
 
 def main():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    # os.system('cls' if os.name == 'nt' else 'clear')
     parser = argparse.ArgumentParser(
         description='View results of query')
 

@@ -74,7 +74,8 @@ def call_add(args):
         subprocess.call(call_args)
 
 def call_query(args):
-
+    matchvids = []
+    nomatchvids = []
     for i, path in enumerate(args.paths):
         print('--------------------------------------------------------------')
         call_args = []
@@ -82,7 +83,7 @@ def call_query(args):
         vidlist.append(path)
         if args.subimage is True:
             vidlist = []
-            print("Looking for subimage\n")
+            print(f"Looking for subimage in {os.path.basename(path)}")
             subprocess.call([
                 'python3', os.path.join(python_dir, "subimage_detector.py"), path])
 
@@ -90,13 +91,16 @@ def call_query(args):
             box_path = os.path.join(results_dir, "boxvideo.mp4")
 
             if os.path.exists(outer_path) and os.path.exists(box_path):
-                print("Will query twice (outervideo.mp4 and boxvideo.mp4)")
+                print("\n\nSubimage found, will query twice (outervideo.mp4 and boxvideo.mp4)")
                 vidlist.append(box_path)
                 vidlist.append(outer_path)
             else:
                 vidlist.append(path)
 
         matchlist = set()
+        no_match_either_subimage = 0
+
+        # this either executes on the main video or the two subimages
         for vidpath in vidlist:
             call_args = []
             call_args.append(os.path.join(app_dir, "query"))
@@ -108,21 +112,56 @@ def call_query(args):
 
             print(f"Querying Video from Path: {vidpath}")
 
-            # print(call_args)
             subprocess.call(call_args)
 
 
             logpath = os.path.join(results_dir, f"{os.path.basename(vidpath)}.csv")
             viewer_args = [os.path.join(root_dir, "viewer.py"),'-shortestmatch', str(args.shortestmatch), logpath, vidpath]
-            if args.visualize:
+            if args.visualize and len(vidlist) < 2:
                 viewer_args.append('-v')
             subprocess.call(viewer_args)
 
             with open(os.path.join(results_dir, "resultcache.txt")) as file:
-                matchlist.update(file.readlines())
+                lines = file.readlines()
+                matchlist.update(lines)
+
+                # if there were matches
+                if len(lines) > 0:
+                    # if the match came from a subimage, add name of original
+                    if len(vidlist) > 1:
+                        matchvids.append(f"{os.path.basename(vidpath)} of video {os.path.basename(path)}")
+                    else:
+                        matchvids.append(os.path.basename(vidpath))
+
+                else: # if there were no matches
+                    # if the nonmatch came from a subimage, increment counter
+                    # else add the nonmatch to the nonmatch list
+                    if len(vidlist) > 1:
+                        no_match_either_subimage += 1
+                    else:
+                        nomatchvids.append(os.path.basename(vidpath))
+        if no_match_either_subimage == 2:
+            nomatchvids.append(os.path.basename(path))
+        elif len(vidlist) == 2 and args.visualize: # visualize subimage
+            print("\nVisualizing overall video match:")
+            if "boxvideo.mp4" in matchvids[-1] and os.path.basename(path) in matchvids[-1]:
+                logpath = os.path.join(results_dir, "boxvideo.mp4.csv")
+            else:
+                logpath = os.path.join(results_dir, "outervideo.mp4.csv")
+            viewer_args = [os.path.join(root_dir, "viewer.py"),'-shortestmatch', str(args.shortestmatch), logpath, path, '-v']
+            subprocess.call(viewer_args)
+
+        # Create new result list for tester
         with open(os.path.join(results_dir, "resultcache.txt"), 'w') as file:
             for item in matchlist:
                 file.write(f"{item}\n")
+
+    print('--------------------------------------------------------------')
+    print("Summary of Results")
+    for matchingvid in matchvids:
+        print(f"Match found in {matchingvid}")
+    for notmatching in nomatchvids:
+        print(f"No match found in {notmatching}")
 
 
 def main():

@@ -10,6 +10,13 @@ Q_END = 5
 DB_START = 2
 DB_END = 3
 SCORE = 1
+LENGTH = 6
+
+BLUE = '\033[94m'
+GREEN = '\033[92m'
+YELLOW = '\033[93m'
+RED = '\033[91m'
+ENDC = '\033[0m'
 
 def read_logfile(logpath, shortestmatch):
     logfile = pd.read_csv(logpath, index_col=None)
@@ -25,14 +32,13 @@ def read_logfile(logpath, shortestmatch):
     df = df.loc[df['Length'] > shortestmatch]
 
 
-    logfile = logfile[logfile['Database Video'].isin(df['Database Video']).tolist()]
-    logfile = logfile.to_numpy()
+    # logfile = logfile[logfile['Database Video'].isin(df['Database Video']).tolist()]
 
     with open("./results/resultcache.txt", "w") as file:
         for item in video_names:
             file.write(f"{item}\n")
 
-    return logfile
+    return df.to_numpy()
 
 def str_timestamp(num_ms):
     n_sec = int(dt.timedelta(milliseconds=num_ms).total_seconds())
@@ -50,9 +56,17 @@ def print_log(logfile):
     if len(logfile) < 1:
         print("NO MATCHES FOUND")
         return
-    print("{}:{:>30}{:>12}{:>30}{:>30}".format(
-            "#", "Name of Matching Video","Score","Range in DB", "Range in Query"))
+    print("\nMATCH(ES) FOUND:\n")
+    print("{}:{:>30}{:>12}{:>20}{:>24}{:>24}".format(
+            "#", "Name of Matching Video","Score","Length (sec.)", "Range in DB", "Range in Query"))
     for i, row in enumerate(logfile):
+
+        score = row[SCORE]
+        score_color = RED
+        if score > 70:
+            score_color = GREEN
+        elif score > 50:
+            score_color = YELLOW
 
         db_range = "{} - {}".format(
                 str_timestamp(row[DB_START]),
@@ -60,5 +74,6 @@ def print_log(logfile):
         query_range = "{} - {}".format(
                 str_timestamp(row[Q_START]),
                 str_timestamp(row[Q_END]))
-        print("{}:{:>30}{:>12}{:>30}{:>30}".format(
-                i, row[VIDNAME],row[SCORE],db_range, query_range))
+        print("{}:\033[94m{:>30}\033[0m{}{:>12}\033[0m\u001b[38;5;244m{:>20}{:>24}{:>24}\033[0m".format(
+                i, row[VIDNAME],score_color,row[SCORE],row[LENGTH],db_range, query_range))
+    print("\n")
