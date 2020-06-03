@@ -26,11 +26,36 @@ UNDERLINE = '\u001b[4m'
 def join_from_path(logpath1, logpath2, destdir):
     log1 = pd.read_csv(logpath1, index_col=None)
     log2 = pd.read_csv(logpath2, index_col=None)
-    result = pd.concat([log1, log2])
 
-    print (result)
+    result = log1
 
-    return os.path.join(destdir, "combined.mp4.csv")
+    log1 = log1.reset_index()
+    log1.columns.values[0] = 'id'
+    log1['id'] = log1.index
+
+    nonzero1 = log1.loc[log1['Confidence'] > 0]
+    nonzero2 = log2.loc[log2['Confidence'] > 0]
+
+    for index1, row1 in nonzero1.iterrows():
+        for index2, row2 in nonzero2.iterrows():
+            if ((row1['Database Video'] == row2['Database Video']) and ((row2['Start Time'] <= row1['Start Time'] < row2['End Time']) or (row1['Start Time'] <= row2['Start Time'] < row1['End Time']))):
+                l1 = row1['End Time'] - row1['Start Time']
+                l2 = row2['End Time'] - row2['Start Time']
+                p1 = l1 / (l1 + l2)
+                p2 = l2 / (l1 + l2)
+                newscore = row1['Confidence']*p1 + row2['Confidence']*p2
+                print('index: ' + str(index1) + ', score: ' + str(newscore))
+                result.iloc[index1, result.columns.get_loc('Confidence')] = newscore
+                result.iloc[index1, result.columns.get_loc('Start Time')] = min(row1['Start Time'], row2['Start Time'])
+                result.iloc[index1, result.columns.get_loc('Query Start Time')] = min(row1['Query Start Time'], row2['Query Start Time'])
+                result.iloc[index1, result.columns.get_loc('End Time')] = max(row1['End Time'], row2['End Time'])
+                result.iloc[index1, result.columns.get_loc('Query End Time')] = max(row1['Query End Time'], row2['Query End Time'])
+
+    # print(result)
+    outpath = os.path.join(destdir, "combined.mp4.csv")
+    result.to_csv(outpath, index=False)
+    return outpath
+    
 def read_logfile(logpath, shortestmatch):
     logfile = pd.read_csv(logpath, index_col=None)
 
