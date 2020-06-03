@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 import datetime as dt
 import csv
+import os
 
 
 VIDNAME = 0
@@ -18,6 +19,15 @@ YELLOW = '\033[93m'
 RED = '\033[91m'
 ENDC = '\033[0m'
 
+
+def join_from_path(logpath1, logpath2, destdir):
+    log1 = pd.read_csv(logpath1, index_col=None)
+    log2 = pd.read_csv(logpath2, index_col=None)
+    result = pd.concat([log1, log2])
+
+    print (result)
+
+    return os.path.join(destdir, "combined.mp4.csv")
 def read_logfile(logpath, shortestmatch):
     logfile = pd.read_csv(logpath, index_col=None)
 

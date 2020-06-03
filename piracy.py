@@ -2,6 +2,8 @@
 import argparse
 import subprocess
 import os
+import python.logfile
+from python.logfile import *
 
 
 root_dir = os.path.abspath(os.path.dirname(__file__))
@@ -148,6 +150,8 @@ def call_query(args):
                 logpath = os.path.join(results_dir, "boxvideo.mp4.csv")
             else:
                 logpath = os.path.join(results_dir, "outervideo.mp4.csv")
+
+            # logpath = join_from_path(os.path.join(results_dir, "boxvideo.mp4.csv"), os.path.join(results_dir, "outervideo.mp4.csv"), results_dir)
             viewer_args = [os.path.join(root_dir, "viewer.py"),'-shortestmatch', str(args.shortestmatch), logpath, path, '-v']
             subprocess.call(viewer_args)
 
