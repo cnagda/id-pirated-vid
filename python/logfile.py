@@ -13,12 +13,15 @@ DB_END = 3
 SCORE = 1
 LENGTH = 6
 
+WHITE = '\u001b[37m'
 BLUE = '\033[94m'
 GREEN = '\033[92m'
 YELLOW = '\033[93m'
 RED = '\033[91m'
 ENDC = '\033[0m'
-
+GREY = '\u001b[38;5;244m'
+BOLD = '\u001b[1m'
+UNDERLINE = '\u001b[4m'
 
 def join_from_path(logpath1, logpath2, destdir):
     log1 = pd.read_csv(logpath1, index_col=None)
@@ -66,7 +69,7 @@ def print_log(logfile):
     if len(logfile) < 1:
         print("NO MATCHES FOUND")
         return
-    print("\nMATCH(ES) FOUND:\n")
+    print(f"\n{BOLD}MATCH(ES) FOUND:{ENDC}\n")
     print("{}:{:>30}{:>12}{:>20}{:>24}{:>24}".format(
             "#", "Name of Matching Video","Score","Length (sec.)", "Range in DB", "Range in Query"))
     for i, row in enumerate(logfile):

@@ -187,7 +187,7 @@ public:
     {
         if(min_scenes != -1) {
             scenes = hierarchicalScenes(get_distances(reader, ColorComparator2D{}), min_scenes);
-            std::cout << std::endl << "Detected Scenes: " << scenes.size() << std::endl;
+            std::cout << "\u001b[38;5;244mDetected Scenes: " << scenes.size() << std::endl;
         }
         iterator = scenes.begin();
     }
@@ -216,7 +216,7 @@ public:
     const size_t frameCount;
     const float frameRate;
 
-    CaptureSource(const std::string &filename) : cap(filename), 
+    CaptureSource(const std::string &filename) : cap(filename),
         frameCount(cap.get(cv::CAP_PROP_FRAME_COUNT)),
         frameRate(cap.get(cv::CAP_PROP_FPS)) {}
 

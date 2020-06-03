@@ -105,7 +105,7 @@ Vocab<SerializableScene> constructSceneVocabulary(const FileDatabase &database, 
     cv::UMat copy;
     descriptors.copyTo(copy);
 
-    std::cout << "Constructing Scene Vocabulary. Processing " << descriptors.rows << " frame descriptors" << std::endl;
+    std::cout << "\u001b[37m" <<"Constructing Scene Vocabulary. Processing " << descriptors.rows << " frame descriptors" << std::endl;
 
     return Vocab<SerializableScene>(constructVocabulary(copy, K));
 }
@@ -226,7 +226,7 @@ Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, 
             if (descriptor_levels[0].rows >= N)
             {
                 total_rows += descriptor_levels[0].rows;
-                std::cout << "Constructing Frame Vocabulary. Processing " << total_rows << " SIFT features\r";
+                std::cout << "\u001b[37m" <<"Constructing Frame Vocabulary. Processing " << total_rows << " SIFT features\r";
                 std::cout.flush();
                 overflow(descriptor_levels, K, N, 0);
             }
@@ -242,7 +242,7 @@ Vocab<Frame> constructFrameVocabularyHierarchical(const FileDatabase &database, 
         if (descriptor_levels[i].rows != K || i != descriptor_levels.size() - 1)
         {
             total_rows += descriptor_levels[i].rows;
-            std::cout << "Constructing Frame Vocabulary. Processing " << total_rows << " SIFT features\r";
+            std::cout << "\u001b[37m" <<"Constructing Frame Vocabulary. Processing " << total_rows << " SIFT features\r";
             std::cout.flush();
             overflow(descriptor_levels, K, N, i);
         }
@@ -389,7 +389,7 @@ std::vector<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &d
                     }
 
                     double avg = tot / num;
-                        
+
                     match.push_back(MatchInfo{v->name,
                         static_cast<double>(a.score),
                         frameRate,
@@ -400,12 +400,12 @@ std::vector<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &d
                         avg});
 
                 } else if constexpr(std::is_same_v<value_type, Frame>)
-                    match.push_back(MatchInfo{v->name, 
+                    match.push_back(MatchInfo{v->name,
                         static_cast<double>(a.score),
-                        frameRate, 
-                        a.startUnknown, 
-                        a.endUnknown, 
-                        a.startKnown, 
+                        frameRate,
+                        a.startUnknown,
+                        a.endUnknown,
+                        a.startKnown,
                         a.endKnown});
             }
         } else {

@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     {
         for (auto& v : db->listVideos())
         {
-            std::cout << "Recalculating Scenes for " << v << std::endl;
+            std::cout << "\u001b[37m\nRecalculating Scenes for " << v << std::endl;
             auto video = db->loadVideo(v);
             db->saveVideo(*video);
         }

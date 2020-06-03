@@ -63,8 +63,8 @@ def call_add(args):
         call_args.append(kFrame)
         call_args.append(thresholdScene)
 
-        print(f"Adding Video from Path: {path}")
-        print(f"Options:   kFrame: {kFrame}   kScene: {kScene}   thresholdScene: {thresholdScene}")
+        print(f"{BOLD}Adding Video from Path:{ENDC} {path}")
+        print(f"Options:   kFrame: {GREY}{kFrame}{ENDC}   kScene: {GREY}{kScene}{ENDC}   thresholdScene: {GREY}{thresholdScene}{ENDC}")
 
         # if kFrame != "-1":
         #     print("Will reconstruct frame vocabulary")
@@ -72,8 +72,9 @@ def call_add(args):
         #     print("Will reconstruct scene vocabulary")
         # if thresholdScene != "-1":
         #     print("Will reconstruct scenes")
-
+        print(GREY)
         subprocess.call(call_args)
+        print(ENDC)
 
 def call_query(args):
     matchvids = []
@@ -85,15 +86,16 @@ def call_query(args):
         vidlist.append(path)
         if args.subimage is True:
             vidlist = []
-            print(f"Looking for subimage in {os.path.basename(path)}")
+            print(f"{BOLD}Looking for subimage{ENDC} in {os.path.basename(path)}")
+            print(GREY)
             subprocess.call([
                 'python3', os.path.join(python_dir, "subimage_detector.py"), path])
-
+            print(ENDC)
             outer_path = os.path.join(results_dir, "outervideo.mp4")
             box_path = os.path.join(results_dir, "boxvideo.mp4")
 
             if os.path.exists(outer_path) and os.path.exists(box_path):
-                print("\n\nSubimage found, will query twice (outervideo.mp4 and boxvideo.mp4)")
+                print(f"\n\n{UNDERLINE}{BOLD}Subimage found, will query twice (outervideo.mp4 and boxvideo.mp4){ENDC}\n")
                 vidlist.append(box_path)
                 vidlist.append(outer_path)
             else:
@@ -112,10 +114,13 @@ def call_query(args):
             if args.frames is True:
                 call_args.append("--frames")
 
-            print(f"Querying Video from Path: {vidpath}")
+            print(f"{BOLD}Querying Video from Path:{ENDC} {vidpath}")
+
+            print(GREY)
 
             subprocess.call(call_args)
 
+            print(ENDC)
 
             logpath = os.path.join(results_dir, f"{os.path.basename(vidpath)}.csv")
             viewer_args = [os.path.join(root_dir, "viewer.py"),'-shortestmatch', str(args.shortestmatch), logpath, vidpath]
@@ -160,12 +165,13 @@ def call_query(args):
             for item in matchlist:
                 file.write(f"{item}\n")
 
-    print('--------------------------------------------------------------')
-    print("Summary of Results")
+    print('\n\n--------------------------------------------------------------')
+    print(f"{BOLD}{UNDERLINE}Summary of Results{ENDC}")
     for matchingvid in matchvids:
-        print(f"Match found in {matchingvid}")
+        print(f"{GREEN}Match found{ENDC} in {matchingvid}")
     for notmatching in nomatchvids:
-        print(f"No match found in {notmatching}")
+        print(f"{RED}No match found{ENDC} in {notmatching}")
+    print("\n")
 
 
 def main():
