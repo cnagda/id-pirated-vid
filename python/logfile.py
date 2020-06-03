@@ -21,6 +21,7 @@ RED = '\033[91m'
 ENDC = '\033[0m'
 GREY = '\u001b[38;5;244m'
 BOLD = '\u001b[1m'
+BOLDOFF = '\u001b[21m'
 UNDERLINE = '\u001b[4m'
 
 def join_from_path(logpath1, logpath2, destdir):

@@ -187,7 +187,7 @@ public:
     {
         if(min_scenes != -1) {
             scenes = hierarchicalScenes(get_distances(reader, ColorComparator2D{}), min_scenes);
-            std::cout << "\u001b[38;5;244mDetected Scenes: " << scenes.size() << std::endl;
+            std::cout << std::endl << "\u001b[38;5;244mDetected Scenes: " << scenes.size() << std::endl;
         }
         iterator = scenes.begin();
     }

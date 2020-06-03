@@ -151,12 +151,12 @@ def call_query(args):
             nomatchvids.append(os.path.basename(path))
         elif len(vidlist) == 2 and args.visualize: # visualize subimage
             print("\nVisualizing overall video match:")
-            if "boxvideo.mp4" in matchvids[-1] and os.path.basename(path) in matchvids[-1]:
-                logpath = os.path.join(results_dir, "boxvideo.mp4.csv")
-            else:
-                logpath = os.path.join(results_dir, "outervideo.mp4.csv")
+            # if "boxvideo.mp4" in matchvids[-1] and os.path.basename(path) in matchvids[-1]:
+            #     logpath = os.path.join(results_dir, "boxvideo.mp4.csv")
+            # else:
+            #     logpath = os.path.join(results_dir, "outervideo.mp4.csv")
 
-            # logpath = join_from_path(os.path.join(results_dir, "boxvideo.mp4.csv"), os.path.join(results_dir, "outervideo.mp4.csv"), results_dir)
+            logpath = join_from_path(os.path.join(results_dir, "boxvideo.mp4.csv"), os.path.join(results_dir, "outervideo.mp4.csv"), results_dir)
             viewer_args = [os.path.join(root_dir, "viewer.py"),'-shortestmatch', str(args.shortestmatch), logpath, path, '-v']
             subprocess.call(viewer_args)
 
@@ -166,7 +166,7 @@ def call_query(args):
                 file.write(f"{item}\n")
 
     print('\n\n--------------------------------------------------------------')
-    print(f"{BOLD}{UNDERLINE}Summary of Results{ENDC}")
+    print(f"{BOLD}{UNDERLINE}Summary of Results{BOLDOFF}{ENDC}")
     for matchingvid in matchvids:
         print(f"{GREEN}Match found{ENDC} in {matchingvid}")
     for notmatching in nomatchvids:
