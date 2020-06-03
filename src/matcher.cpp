@@ -373,13 +373,32 @@ std::vector<MatchInfo> internal_findMatch(Reader&& reader, const FileDatabase &d
             for (auto a: alignments)
             {
                 if constexpr(std::is_same_v<value_type, SerializableScene>) {
+                    double tot = 0;
+                    int num = 0;
+                    for(int i = a.startUnknown; i < a.endUnknown; i++){
+                            double best = -1;
+
+                        for(int j = a.startKnown; j < a.endKnown; j++){
+                            if(double t; (t = cosineSimilarity(targetDescriptors[i], knownDescriptors[j])) > best){
+                                best = t;
+                            }
+                        }
+
+                        tot += best;
+                        num++;
+                    }
+
+                    double avg = tot / num;
+                        
                     match.push_back(MatchInfo{v->name,
                         static_cast<double>(a.score),
                         frameRate,
                         query_scenes[a.startUnknown].first,
                         query_scenes[a.endUnknown - 1].second,
                         db_scenes[a.startKnown].first,
-                        db_scenes[a.endKnown - 1].second});
+                        db_scenes[a.endKnown - 1].second,
+                        avg});
+
                 } else if constexpr(std::is_same_v<value_type, Frame>)
                     match.push_back(MatchInfo{v->name, 
                         static_cast<double>(a.score),
